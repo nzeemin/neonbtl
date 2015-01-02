@@ -35,7 +35,7 @@ CMotherboard::CMotherboard ()
 
     // Allocate memory for RAM and ROM
     m_pRAM = (BYTE*) ::malloc(128 * 1024);  //::memset(m_pRAM, 0, 128 * 1024);
-    m_pROM = (BYTE*) ::malloc(64 * 1024);  ::memset(m_pROM, 0, 64 * 1024);
+    m_pROM = (BYTE*) ::malloc(16 * 1024);  ::memset(m_pROM, 0, 16 * 1024);
 
     SetConfiguration(0);  // Default configuration
 
@@ -58,17 +58,13 @@ void CMotherboard::SetConfiguration(WORD conf)
 {
     //m_Configuration = conf;
 
-    // Define memory map
-    m_MemoryMap = 0xf0;  // By default, 000000-077777 is RAM, 100000-177777 is ROM
-    m_MemoryMapOnOff = 0xff;  // By default, all 8K blocks are valid
-    if (m_Configuration & BK_COPT_FDD)  // FDD with 16KB extra memory
-        m_MemoryMap = 0xf0 - 32 - 64;  // 16KB extra memory mapped to 120000-157777
-    if ((m_Configuration & (BK_COPT_BK0010 | BK_COPT_ROM_FOCAL)) == (BK_COPT_BK0010 | BK_COPT_ROM_FOCAL))
-        m_MemoryMapOnOff = 0xbf;
+    //// Define memory map
+    //m_MemoryMap = 0xf0;  // By default, 000000-077777 is RAM, 100000-177777 is ROM
+    //m_MemoryMapOnOff = 0xff;  // By default, all 8K blocks are valid
 
     // Clean RAM/ROM
     ::memset(m_pRAM, 0, 128 * 1024);
-    ::memset(m_pROM, 0, 64 * 1024);
+    ::memset(m_pROM, 0, 16 * 1024);
 
     //// Pre-fill RAM with "uninitialized" values
     //WORD * pMemory = (WORD *) m_pRAM;
@@ -105,7 +101,6 @@ void CMotherboard::Reset ()
     m_Port177660 = 0100;
     m_Port177662rd = 0;
     m_Port177662wr = 047400;
-    m_Port177664 = 01330;
     m_Port177714in = m_Port177714out = 0;
     m_Port177716 = ((m_Configuration & BK_COPT_BK0011) ? 0140000 : 0100000) | 0300;
     m_Port177716mem = 0000002;
@@ -123,10 +118,10 @@ void CMotherboard::Reset ()
 }
 
 // Load 8 KB ROM image from the buffer
-//   bank - number of 8k ROM bank, 0..7
+//   bank - number of 8k ROM bank, 0..1
 void CMotherboard::LoadROM(int bank, const BYTE* pBuffer)
 {
-    ASSERT(bank >= 0 && bank <= 7);
+    ASSERT(bank >= 0 && bank <= 1);
     ::memcpy(m_pROM + 8192 * bank, pBuffer, 8192);
 }
 
@@ -216,12 +211,12 @@ void CMotherboard::SetRAMByte(BYTE chunk, WORD offset, BYTE byte)
 
 WORD CMotherboard::GetROMWord(WORD offset) const
 {
-    ASSERT(offset < 1024 * 64);
+    ASSERT(offset < 1024 * 16);
     return *((WORD*)(m_pROM + offset));
 }
 BYTE CMotherboard::GetROMByte(WORD offset) const
 {
-    ASSERT(offset < 1024 * 64);
+    ASSERT(offset < 1024 * 16);
     return m_pROM[offset];
 }
 
@@ -627,25 +622,16 @@ void CMotherboard::SetByte(WORD address, BOOL okHaltMode, BYTE byte)
 // Calculates video buffer start address, for screen drawing procedure
 const BYTE* CMotherboard::GetVideoBuffer()
 {
-    if (m_Configuration & BK_COPT_BK0011)
-    {
-        DWORD offset = (m_Port177662wr & 0100000) ? 6 : 5;
-        offset *= 040000;
-        return (m_pRAM + offset);
-    }
-    else
-    {
-        return (m_pRAM + 040000);
-    }
+    return m_pRAM + 040000;  //STUB
 }
 
 int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, WORD* pOffset) const
 {
-	if (okHaltMode && address <= 040000)
-	{
+    if (okHaltMode && address <= 040000)
+    {
         *pOffset = address;
-		return ADDRTYPE_ROM;
-	}
+        return ADDRTYPE_ROM;
+    }
 
     if (address >= 0160000 && address < 170000)  // Port
     {
@@ -653,9 +639,9 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, W
         return ADDRTYPE_IO;
     }
 
-	//TODO: Ëîãèêà äèñïåò÷åðà ïàìÿòè
+    //TODO: Ëîãèêà äèñïåò÷åðà ïàìÿòè
     *pOffset = address;
-	return ADDRTYPE_RAM;
+    return ADDRTYPE_RAM;
 }
 
 BYTE CMotherboard::GetPortByte(WORD address)
@@ -670,16 +656,16 @@ WORD CMotherboard::GetPortWord(WORD address)
 {
     switch (address)
     {
-	case 0161060:
-		//TODO: DLBUF -- Programmable parallel port
-		return 0;
-	case 0161062:
-		//TODO: DLCSR -- Programmable parallel port
-		return 0x0ffff;
+    case 0161060:
+        //TODO: DLBUF -- Programmable parallel port
+        return 0;
+    case 0161062:
+        //TODO: DLCSR -- Programmable parallel port
+        return 0x0ffff;
 
     default:
 #if !defined(PRODUCT)
-            DebugLogFormat(_T("GETPORT %06o @ %06o\n"), address, m_pCPU->GetInstructionPC());
+        DebugLogFormat(_T("GETPORT %06o @ %06o\n"), address, m_pCPU->GetInstructionPC());
 #endif
         m_pCPU->MemoryError();
         return 0;
@@ -695,7 +681,7 @@ WORD CMotherboard::GetPortView(WORD address) const
     //{
 
     //default:
-        return 0;
+    return 0;
     //}
 }
 
@@ -722,36 +708,36 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
 {
     switch (address)
     {
-	case 0161012:
-		//TODO: SNDÑ1R -- Sound control
-		break;
-	case 0161014:
-		//TODO: SNDÑ1R -- Sound control
-		break;
-	case 0161016:
-		//TODO: SNDÑSR -- Sound control
-		break;
+    case 0161012:
+        //TODO: SNDÑ1R -- Sound control
+        break;
+    case 0161014:
+        //TODO: SNDÑ1R -- Sound control
+        break;
+    case 0161016:
+        //TODO: SNDÑSR -- Sound control
+        break;
 
-	case 0161030:
-		//TODO: PPIA -- Parallel port
-		break;
-	case 0161032:
-		//TODO: PPIB -- Parallel port data
-		break;
-	case 0161034:
-		//TODO: PPIC -- System register
-		break;
-	case 0161036:
-		//TODO: PPIP -- Parallel port mode control
-		break;
+    case 0161030:
+        //TODO: PPIA -- Parallel port
+        break;
+    case 0161032:
+        //TODO: PPIB -- Parallel port data
+        break;
+    case 0161034:
+        //TODO: PPIC -- System register
+        break;
+    case 0161036:
+        //TODO: PPIP -- Parallel port mode control
+        break;
 
-	case 0161062:
-		//TODO: DLCSR -- Programmable Parallel port control
-		break;
+    case 0161062:
+        //TODO: DLCSR -- Programmable Parallel port control
+        break;
 
-	case 0161066:
-		//TODO: KBDBUF -- Keyboard buffer
-		break;
+    case 0161066:
+        //TODO: KBDBUF -- Keyboard buffer
+        break;
 
     default:
 //#if !defined(PRODUCT)
@@ -761,161 +747,6 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
         break;
     }
 }
-
-
-//////////////////////////////////////////////////////////////////////
-//
-// Emulator image format:
-//   32 bytes  - Header
-//   32 bytes  - Board status
-//   32 bytes  - CPU status
-//   64 bytes  - CPU memory/IO controller status
-//   32 Kbytes - ROM image
-//   64 Kbytes - RAM image
-
-//void CMotherboard::SaveToImage(BYTE* pImage)
-//{
-//    // Board data
-//    WORD* pwImage = (WORD*) (pImage + 32);
-//    *pwImage++ = m_timer;
-//    *pwImage++ = m_timerreload;
-//    *pwImage++ = m_timerflags;
-//    *pwImage++ = m_timerdivider;
-//    *pwImage++ = (WORD) m_chan0disabled;
-//
-//    // CPU status
-//    BYTE* pImageCPU = pImage + 64;
-//    m_pCPU->SaveToImage(pImageCPU);
-//    // PPU status
-//    BYTE* pImagePPU = pImageCPU + 32;
-//    m_pPPU->SaveToImage(pImagePPU);
-//    // CPU memory/IO controller status
-//    BYTE* pImageCpuMem = pImagePPU + 32;
-//    m_pFirstMemCtl->SaveToImage(pImageCpuMem);
-//    // PPU memory/IO controller status
-//    BYTE* pImagePpuMem = pImageCpuMem + 64;
-//    m_pSecondMemCtl->SaveToImage(pImagePpuMem);
-//
-//    // ROM
-//    BYTE* pImageRom = pImage + 256;
-//    memcpy(pImageRom, m_pROM, 32 * 1024);
-//    // RAM planes 0, 1, 2
-//    BYTE* pImageRam = pImageRom + 32 * 1024;
-//    memcpy(pImageRam, m_pRAM[0], 64 * 1024);
-//    pImageRam += 64 * 1024;
-//    memcpy(pImageRam, m_pRAM[1], 64 * 1024);
-//    pImageRam += 64 * 1024;
-//    memcpy(pImageRam, m_pRAM[2], 64 * 1024);
-//}
-//void CMotherboard::LoadFromImage(const BYTE* pImage)
-//{
-//    // Board data
-//    WORD* pwImage = (WORD*) (pImage + 32);
-//    m_timer = *pwImage++;
-//    m_timerreload = *pwImage++;
-//    m_timerflags = *pwImage++;
-//    m_timerdivider = *pwImage++;
-//    m_chan0disabled = (BYTE) *pwImage++;
-//
-//    // CPU status
-//    const BYTE* pImageCPU = pImage + 64;
-//    m_pCPU->LoadFromImage(pImageCPU);
-//    // PPU status
-//    const BYTE* pImagePPU = pImageCPU + 32;
-//    m_pPPU->LoadFromImage(pImagePPU);
-//    // CPU memory/IO controller status
-//    const BYTE* pImageCpuMem = pImagePPU + 32;
-//    m_pFirstMemCtl->LoadFromImage(pImageCpuMem);
-//    // PPU memory/IO controller status
-//    const BYTE* pImagePpuMem = pImageCpuMem + 64;
-//    m_pSecondMemCtl->LoadFromImage(pImagePpuMem);
-//
-//    // ROM
-//    const BYTE* pImageRom = pImage + 256;
-//    memcpy(m_pROM, pImageRom, 32 * 1024);
-//    // RAM planes 0, 1, 2
-//    const BYTE* pImageRam = pImageRom + 32 * 1024;
-//    memcpy(m_pRAM[0], pImageRam, 64 * 1024);
-//    pImageRam += 64 * 1024;
-//    memcpy(m_pRAM[1], pImageRam, 64 * 1024);
-//    pImageRam += 64 * 1024;
-//    memcpy(m_pRAM[2], pImageRam, 64 * 1024);
-//}
-
-//void CMotherboard::FloppyDebug(BYTE val)
-//{
-////#if !defined(PRODUCT)
-////    TCHAR buffer[512];
-////#endif
-///*
-//m_floppyaddr=0;
-//m_floppystate=FLOPPY_FSM_WAITFORLSB;
-//#define FLOPPY_FSM_WAITFORLSB	0
-//#define FLOPPY_FSM_WAITFORMSB	1
-//#define FLOPPY_FSM_WAITFORTERM1	2
-//#define FLOPPY_FSM_WAITFORTERM2	3
-//
-//*/
-//	switch(m_floppystate)
-//	{
-//		case FLOPPY_FSM_WAITFORLSB:
-//			if(val!=0xff)
-//			{
-//				m_floppyaddr=val;
-//				m_floppystate=FLOPPY_FSM_WAITFORMSB;
-//			}
-//			break;
-//		case FLOPPY_FSM_WAITFORMSB:
-//			if(val!=0xff)
-//			{
-//				m_floppyaddr|=val<<8;
-//				m_floppystate=FLOPPY_FSM_WAITFORTERM1;
-//			}
-//			else
-//			{
-//				m_floppystate=FLOPPY_FSM_WAITFORLSB;
-//			}
-//			break;
-//		case FLOPPY_FSM_WAITFORTERM1:
-//			if(val==0xff)
-//			{ //done
-//				WORD par;
-//				BYTE trk,sector,side;
-//
-//				par=m_pFirstMemCtl->GetWord(m_floppyaddr,0);
-//
-////#if !defined(PRODUCT)
-////				wsprintf(buffer,_T(">>>>FDD Cmd %d "),(par>>8)&0xff);
-////				DebugPrint(buffer);
-////#endif
-//                par=m_pFirstMemCtl->GetWord(m_floppyaddr+2,0);
-//				side=par&0x8000?1:0;
-////#if !defined(PRODUCT)
-////				wsprintf(buffer,_T("Side %d Drv %d, Type %d "),par&0x8000?1:0,(par>>8)&0x7f,par&0xff);
-////				DebugPrint(buffer);
-////#endif
-//				par=m_pFirstMemCtl->GetWord(m_floppyaddr+4,0);
-//				sector=(par>>8)&0xff;
-//				trk=par&0xff;
-////#if !defined(PRODUCT)
-////				wsprintf(buffer,_T("Sect %d, Trk %d "),(par>>8)&0xff,par&0xff);
-////				DebugPrint(buffer);
-////				PrintOctalValue(buffer,m_pFirstMemCtl->GetWord(m_floppyaddr+6,0));
-////				DebugPrint(_T("Addr "));
-////				DebugPrint(buffer);
-////#endif
-//				par=m_pFirstMemCtl->GetWord(m_floppyaddr+8,0);
-////#if !defined(PRODUCT)
-////				wsprintf(buffer,_T(" Block %d Len %d\n"),trk*20+side*10+sector-1,par);
-////				DebugPrint(buffer);
-////#endif
-//
-//				m_floppystate=FLOPPY_FSM_WAITFORLSB;
-//			}
-//			break;
-//
-//	}
-//}
 
 
 //////////////////////////////////////////////////////////////////////

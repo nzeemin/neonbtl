@@ -39,7 +39,7 @@ BOOL AssertFailedLine(LPCSTR lpszFileName, int nLine)
 
 void AlertWarning(LPCTSTR sMessage)
 {
-    ::MessageBox(NULL, sMessage, _T("BK Back to Life"), MB_OK | MB_ICONEXCLAMATION | MB_TOPMOST);
+    ::MessageBox(NULL, sMessage, _T("NEON Back to Life"), MB_OK | MB_ICONEXCLAMATION | MB_TOPMOST);
 }
 void AlertWarningFormat(LPCTSTR sFormat, ...)
 {
@@ -50,11 +50,11 @@ void AlertWarningFormat(LPCTSTR sFormat, ...)
     _vsntprintf_s(buffer, 512, 512 - 1, sFormat, ptr);
     va_end(ptr);
 
-    ::MessageBox(NULL, buffer, _T("BK Back to Life"), MB_OK | MB_ICONEXCLAMATION);
+    ::MessageBox(NULL, buffer, _T("NEON Back to Life"), MB_OK | MB_ICONEXCLAMATION);
 }
 BOOL AlertOkCancel(LPCTSTR sMessage)
 {
-    int result = ::MessageBox(NULL, sMessage, _T("BK Back to Life"), MB_OKCANCEL | MB_ICONQUESTION | MB_TOPMOST);
+    int result = ::MessageBox(NULL, sMessage, _T("NEON Back to Life"), MB_OKCANCEL | MB_ICONQUESTION | MB_TOPMOST);
     return (result == IDOK);
 }
 
