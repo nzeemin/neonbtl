@@ -58,6 +58,7 @@ protected:  // Processor state
 
 protected:  // Current instruction processing
     WORD        m_instruction;      ///< Curent instruction
+    WORD        m_instructionpc;    ///< Address of the current instruction
     int         m_regsrc;           ///< Source register number
     int         m_methsrc;          ///< Source address mode
     WORD        m_addrsrc;          ///< Source address
@@ -124,6 +125,7 @@ public:  // Register control
         if ((m_psw & 0600) != 0600) m_savepc = word;
     }
     void        SetCPC(WORD word) {m_savepc = word; }
+    WORD        GetInstructionPC() const { return m_instructionpc; }  // Address of the current instruction
 
 public:  // PSW bits control
     void        SetC(BOOL bFlag);

@@ -400,7 +400,7 @@ void DisasmView_OnUpdate()
 {
     CProcessor* pDisasmPU = g_pBoard->GetCPU();
     ASSERT(pDisasmPU != NULL);
-    m_wDisasmBaseAddr = pDisasmPU->GetPC();
+    m_wDisasmBaseAddr = pDisasmPU->GetPC() & ~1;
 }
 
 void DisasmView_SetBaseAddr(WORD base)
@@ -523,7 +523,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD base, WORD previ
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
     COLORREF colorText = GetSysColor(COLOR_WINDOWTEXT);
 
-    WORD proccurrent = pProc->GetPC();
+    WORD proccurrent = pProc->GetPC() & ~1;
     WORD current = base;
 
     // Draw current line background

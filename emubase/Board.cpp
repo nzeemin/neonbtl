@@ -364,7 +364,7 @@ BOOL CMotherboard::SystemFrame()
                 return FALSE;  // Breakpoint
 #if !defined(PRODUCT)
             if (m_okTraceCPU && m_pCPU->GetInternalTick() == 0)
-                TraceInstruction(m_pCPU, this, m_pCPU->GetPC());
+                TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
             m_pCPU->Execute();
 
@@ -647,15 +647,13 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, W
 		return ADDRTYPE_ROM;
 	}
 
-	// При подключенном блоке дисковода, его ПЗУ занимает адреса 160000-167776, при этом адреса 170000-177776 остаются под порты.
-    // Без подключенного дисковода, порты занимают адреса 177600-177776.
-    WORD portStartAddr = (m_Configuration & BK_COPT_FDD) ? 0170000 : 0177600;
-    if (address >= portStartAddr)  // Port
+    if (address >= 0160000 && address < 170000)  // Port
     {
         *pOffset = address;
         return ADDRTYPE_IO;
     }
 
+	//TODO: Логика диспетчера памяти
     *pOffset = address;
 	return ADDRTYPE_RAM;
 }
@@ -672,81 +670,17 @@ WORD CMotherboard::GetPortWord(WORD address)
 {
     switch (address)
     {
-    case 0177560:  // Serial port recieve status
-        return m_Port177560;
-    case 0177562:  // Serial port recieve data
-        return m_Port177562;
-    case 0177564:  // Serial port translate status
-        return m_Port177564;
-    case 0177566:  // Serial port interrupt vector
-        return 060;
-
-    case 0177700:  // Регистр режима (РР) ВМ1
-        return 0177740;
-    case 0177702:  // Регистр адреса прерывания (РАП) ВМ1
-        return 0177777;
-    case 0177704:  // Регистр ошибки (РОШ) ВМ1
-        return 0177440;
-
-    case 0177706:  // System Timer counter start value -- регистр установки таймера
-        return m_timerreload;
-    case 0177710:  // System Timer Counter -- регистр счетчика таймера
-        return m_timer;
-    case 0177712:  // System Timer Manage -- регистр управления таймера
-        return m_timerflags;
-
-    case 0177660:  // Keyboard status register
-        return m_Port177660;
-    case 0177662:  // Keyboard register
-        m_Port177660 &= ~0200;  // Reset "Ready" bit
-        return m_Port177662rd;
-
-    case 0177664:  // Scroll register
-        return m_Port177664;
-
-    case 0177714:  // Parallel port register: printer, joystick
-        return m_Port177714in;
-
-    case 0177716:  // System register
-        {
-            WORD value = m_Port177716;
-            m_Port177716 &= ~4;  // Reset bit 2
-            return value;
-        }
-
-    case 0177130:
-        if ((m_Configuration & BK_COPT_FDD) == 0)
-        {
-            m_pCPU->MemoryError();
-            return 0;
-        }
-        if (m_pFloppyCtl != NULL)
-        {
-            WORD state = m_pFloppyCtl->GetState();
-//#if !defined(PRODUCT)
-//            DebugLogFormat(_T("Floppy GETSTATE %06o\t\tCPU %06o\n"), state, m_pCPU->GetInstructionPC());
-//#endif
-            return state;
-        }
-        return 0;
-
-    case 0177132:
-        if ((m_Configuration & BK_COPT_FDD) == 0)
-        {
-            m_pCPU->MemoryError();
-            return 0;
-        }
-        if (m_pFloppyCtl != NULL)
-        {
-            WORD word = m_pFloppyCtl->GetData();
-//#if !defined(PRODUCT)
-//            DebugLogFormat(_T("Floppy READ\t\t%04x\tCPU %06o\n"), word, m_pCPU->GetInstructionPC());
-//#endif
-            return word;
-        }
-        return 0;
+	case 0161060:
+		//TODO: DLBUF -- Programmable parallel port
+		return 0;
+	case 0161062:
+		//TODO: DLCSR -- Programmable parallel port
+		return 0x0ffff;
 
     default:
+#if !defined(PRODUCT)
+            DebugLogFormat(_T("GETPORT %06o @ %06o\n"), address, m_pCPU->GetInstructionPC());
+#endif
         m_pCPU->MemoryError();
         return 0;
     }
@@ -757,50 +691,12 @@ WORD CMotherboard::GetPortWord(WORD address)
 // Read word from port for debugger
 WORD CMotherboard::GetPortView(WORD address) const
 {
-    switch (address)
-    {
-    case 0177560:  // Serial port recieve status
-        return m_Port177560;
-    case 0177562:  // Serial port recieve data
-        return m_Port177562;
-    case 0177564:  // Serial port translate status
-        return m_Port177564;
-    case 0177566:  // Serial port interrupt vector
-        return 060;
+    //switch (address)
+    //{
 
-    case 0177706:  // System Timer counter start value -- регистр установки таймера
-        return m_timerreload;
-    case 0177710:  // System Timer Counter -- регистр счетчика таймера
-        return m_timer;
-    case 0177712:  // System Timer Manage -- регистр управления таймера
-        return m_timerflags;
-
-    case 0177660:  // Keyboard status register
-        return m_Port177660;
-    case 0177662:  // Keyboard data register
-        return m_Port177662rd;
-
-    case 0177664:  // Scroll register
-        return m_Port177664;
-
-    case 0177714:  // Parallel port register
-        return m_Port177714in;
-
-    case 0177716:  // System register
-        return m_Port177716;
-
-    case 0177130:  // Floppy state
-        if (m_pFloppyCtl != NULL)
-            return m_pFloppyCtl->GetStateView();
+    //default:
         return 0;
-    case 0177132:  // Floppy data
-        if (m_pFloppyCtl != NULL)
-            return m_pFloppyCtl->GetDataView();
-        return 0;
-
-    default:
-        return 0;
-    }
+    //}
 }
 
 void CMotherboard::SetPortByte(WORD address, BYTE byte)
@@ -826,105 +722,41 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
 {
     switch (address)
     {
-    case 0177560:
-        m_Port177560 = word;
-        break;
-    case 0177562:
-        //TODO
-        break;
-    case 0177564:  // Serial port output status register
-//#if !defined(PRODUCT)
-//        DebugPrintFormat(_T("177564 write '%06o'\r\n"), word);
-//#endif
-        m_Port177564 = word;
-        break;
-    case 0177566:  // Serial port output data
-//#if !defined(PRODUCT)
-//        DebugPrintFormat(_T("177566 write '%c'\r\n"), (BYTE)word);
-//#endif
-        m_Port177566 = word;
-        m_Port177564 &= ~0200;
-        break;
+	case 0161012:
+		//TODO: SNDС1R -- Sound control
+		break;
+	case 0161014:
+		//TODO: SNDС1R -- Sound control
+		break;
+	case 0161016:
+		//TODO: SNDСSR -- Sound control
+		break;
 
-    case 0177700: case 0177702: case 0177704:  // Unknown something
-        break;
+	case 0161030:
+		//TODO: PPIA -- Parallel port
+		break;
+	case 0161032:
+		//TODO: PPIB -- Parallel port data
+		break;
+	case 0161034:
+		//TODO: PPIC -- System register
+		break;
+	case 0161036:
+		//TODO: PPIP -- Parallel port mode control
+		break;
 
-    case 0177706:  // System Timer reload value -- регистр установки таймера
-        SetTimerReload(word);
-        break;
-    case 0177710:  // System Timer Counter -- регистр реверсивного счетчика таймера
-        //Do nothing: the register is read-only
-        break;
-    case 0177712:  // System Timer Manage -- регистр управления таймера
-        SetTimerState(word);
-        break;
+	case 0161062:
+		//TODO: DLCSR -- Programmable Parallel port control
+		break;
 
-    case 0177714:  // Parallel port register: printer and Covox
-        m_Port177714out = word;
-        break;
-
-    case 0177716:  // System register - memory management, tape management
-        m_Port177716 |= 4;  // Set bit 2
-        if (word & 04000)
-        {
-            m_Port177716mem = word;
-//#if !defined(PRODUCT)
-//            DebugLogFormat(_T("177716mem %06o\t\t%06o\r\n"), word, m_pCPU->GetInstructionPC());
-//#endif
-        }
-        else
-        {
-            m_Port177716tap = word;
-        }
-        break;
-
-    case 0177660:  // Keyboard status register
-        //TODO
-        break;
-
-    case 0177662:  // Palette register
-        m_Port177662wr = word;
-        break;
-
-    case 0177664:  // Scroll register
-        m_Port177664 = word & 01377;
-        break;
-
-    case 0177130:  // Регистр управления КНГМД
-        if (m_pFloppyCtl != NULL)
-        {
-            if ((m_Configuration & BK_COPT_BK0011) == 0)
-            {
-                // Выбирать по адресам 120000-157777 в соответствии с битами 2-3 либо ПЗУ BASIC либо дополнительное ОЗУ
-                switch (word & 0x0c)
-                {
-                case 0x0c:
-                    m_MemoryMap |= (32 | 64);  // 16KB BASIC ROM memory mapped to 120000-157777
-                    m_MemoryMapOnOff |= (32 | 64);
-                    break;
-                case 0x08:
-                    m_MemoryMap &= ~(32 | 64);
-                    m_MemoryMapOnOff &= ~(32 | 64);  // Nothing mapped to 120000-157777
-                    break;
-                default:
-                    m_MemoryMap &= ~(32 | 64);  // 16KB extra memory mapped to 120000-157777
-                    m_MemoryMapOnOff |= (32 | 64);
-                    break;
-                }
-                word &= ~(0x0c);
-            }
-//#if !defined(PRODUCT)
-//            DebugLogFormat(_T("Floppy COMMAND %06o\t\tCPU %06o\r\n"), word, m_pCPU->GetInstructionPC());
-//#endif
-            m_pFloppyCtl->SetCommand(word);
-        }
-        break;
-    case 0177132:  // Регистр данных КНГМД
-        if (m_pFloppyCtl != NULL)
-            m_pFloppyCtl->WriteData(word);
-        break;
+	case 0161066:
+		//TODO: KBDBUF -- Keyboard buffer
+		break;
 
     default:
+//#if !defined(PRODUCT)
+//	    DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
+//#endif
         m_pCPU->MemoryError();
         break;
     }
