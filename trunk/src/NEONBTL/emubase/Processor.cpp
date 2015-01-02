@@ -554,7 +554,9 @@ void CProcessor::FetchInstruction()
 {
     // —читываем очередную инструкцию
     WORD pc = GetPC();
-    ASSERT((pc & 1) == 0); // it have to be word aligned
+    //ASSERT((pc & 1) == 0); // it have to be word aligned
+    m_instructionpc = pc;  // Store address of the current instruction
+    pc = pc & ~1;
 
     m_instruction = GetWordExec(pc);
     SetPC(GetPC() + 2);
