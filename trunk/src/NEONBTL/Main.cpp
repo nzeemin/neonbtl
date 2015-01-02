@@ -167,7 +167,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
 
     int conf = Settings_GetConfiguration();
-    if (conf == 0) conf = BK_CONF_BK0010_BASIC;
+    //if (conf == 0) //TODO
     if (!Emulator_InitConfiguration((BKConfiguration)conf))
         return FALSE;
 

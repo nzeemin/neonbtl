@@ -23,7 +23,7 @@ HWND g_hwndKeyboard = (HWND) INVALID_HANDLE_VALUE;  // Keyboard View window hand
 
 int m_nKeyboardBitmapLeft = 0;
 int m_nKeyboardBitmapTop = 0;
-BYTE m_nKeyboardKeyPressed = 0;  // UKNC scan-code for the key pressed, or 0
+BYTE m_nKeyboardKeyPressed = 0;  // NEON scan-code for the key pressed, or 0
 
 void KeyboardView_OnDraw(HDC hdc);
 BYTE KeyboardView_GetKeyByPoint(int x, int y);
@@ -35,7 +35,7 @@ void Keyboard_DrawKey(HDC hdc, BYTE keyscan);
 // Keyboard key mapping to bitmap
 const WORD m_arrKeyboardKeys[] =
 {
-    /*   x1,y1    w,h    UKNCscan  */
+    /*   x1,y1    w,h    NEONscan  */
     18,  15,  42, 27,    0010, // K1
     62,  15,  42, 27,    0011, // K2
     106, 15,  42, 27,    0012, // K3
@@ -275,7 +275,7 @@ void KeyboardView_OnDraw(HDC hdc)
     //}
 }
 
-// Returns: UKNC scan-code of key under the cursor position, or 0 if not found
+// Returns: NEON scan-code of key under the cursor position, or 0 if not found
 BYTE KeyboardView_GetKeyByPoint(int x, int y)
 {
     for (int i = 0; i < m_nKeyboardKeysCount; i++)

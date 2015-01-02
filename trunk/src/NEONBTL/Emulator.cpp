@@ -34,7 +34,7 @@ BOOL m_okEmulatorCovox = FALSE;
 
 long m_nFrameCount = 0;
 DWORD m_dwTickCount = 0;
-DWORD m_dwEmulatorUptime = 0;  // BK uptime, seconds, from turn on or reset, increments every 25 frames
+DWORD m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
 long m_nUptimeFrameCount = 0;
 
 BYTE* g_pEmulatorRam;  // RAM values - for change tracking
@@ -246,7 +246,7 @@ void Emulator_Stop()
     m_wEmulatorCPUBreakpoint = 0177777;
 
     // Reset title bar message
-    SetWindowText(g_hwnd, _T("BK Back to Life [stop]"));
+    SetWindowText(g_hwnd, _T("NEON Back to Life [stop]"));
     MainWindow_UpdateMenu();
     // Reset FPS indicator
     MainWindow_SetStatusbarText(StatusbarPartFPS, _T(""));
@@ -855,80 +855,80 @@ void CALLBACK Emulator_PrepareScreenColor512x384(const BYTE* pVideoBuffer, int o
 
 void Emulator_SaveImage(LPCTSTR sFilePath)
 {
-    // Create file
-    HANDLE hFile = CreateFile(sFilePath,
-            GENERIC_WRITE, FILE_SHARE_READ, NULL,
-            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        AlertWarning(_T("Failed to save image file."));
-        return;
-    }
+    //// Create file
+    //HANDLE hFile = CreateFile(sFilePath,
+    //        GENERIC_WRITE, FILE_SHARE_READ, NULL,
+    //        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    //if (hFile == INVALID_HANDLE_VALUE)
+    //{
+    //    AlertWarning(_T("Failed to save image file."));
+    //    return;
+    //}
 
-    // Allocate memory
-    BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  memset(pImage, 0, BKIMAGE_SIZE);
-    ::memset(pImage, 0, BKIMAGE_SIZE);
-    // Prepare header
-    DWORD* pHeader = (DWORD*) pImage;
-    *pHeader++ = BKIMAGE_HEADER1;
-    *pHeader++ = BKIMAGE_HEADER2;
-    *pHeader++ = BKIMAGE_VERSION;
-    *pHeader++ = BKIMAGE_SIZE;
-    // Store emulator state to the image
-    //g_pBoard->SaveToImage(pImage);
-    *(DWORD*)(pImage + 16) = m_dwEmulatorUptime;
+    //// Allocate memory
+    //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  memset(pImage, 0, BKIMAGE_SIZE);
+    //::memset(pImage, 0, BKIMAGE_SIZE);
+    //// Prepare header
+    //DWORD* pHeader = (DWORD*) pImage;
+    //*pHeader++ = BKIMAGE_HEADER1;
+    //*pHeader++ = BKIMAGE_HEADER2;
+    //*pHeader++ = BKIMAGE_VERSION;
+    //*pHeader++ = BKIMAGE_SIZE;
+    //// Store emulator state to the image
+    ////g_pBoard->SaveToImage(pImage);
+    //*(DWORD*)(pImage + 16) = m_dwEmulatorUptime;
 
-    // Save image to the file
-    DWORD dwBytesWritten = 0;
-    WriteFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesWritten, NULL);
-    //TODO: Check if dwBytesWritten != BKIMAGE_SIZE
+    //// Save image to the file
+    //DWORD dwBytesWritten = 0;
+    //WriteFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesWritten, NULL);
+    ////TODO: Check if dwBytesWritten != BKIMAGE_SIZE
 
-    // Free memory, close file
-    ::free(pImage);
-    CloseHandle(hFile);
+    //// Free memory, close file
+    //::free(pImage);
+    //CloseHandle(hFile);
 }
 
 void Emulator_LoadImage(LPCTSTR sFilePath)
 {
-    // Open file
-    HANDLE hFile = CreateFile(sFilePath,
-            GENERIC_READ, FILE_SHARE_READ, NULL,
-            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        AlertWarning(_T("Failed to load image file."));
-        return;
-    }
+    //// Open file
+    //HANDLE hFile = CreateFile(sFilePath,
+    //        GENERIC_READ, FILE_SHARE_READ, NULL,
+    //        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    //if (hFile == INVALID_HANDLE_VALUE)
+    //{
+    //    AlertWarning(_T("Failed to load image file."));
+    //    return;
+    //}
 
-    // Read header
-    DWORD bufHeader[BKIMAGE_HEADER_SIZE / sizeof(DWORD)];
-    DWORD dwBytesRead = 0;
-    ReadFile(hFile, bufHeader, BKIMAGE_HEADER_SIZE, &dwBytesRead, NULL);
-    //TODO: Check if dwBytesRead != BKIMAGE_HEADER_SIZE
+    //// Read header
+    //DWORD bufHeader[BKIMAGE_HEADER_SIZE / sizeof(DWORD)];
+    //DWORD dwBytesRead = 0;
+    //ReadFile(hFile, bufHeader, BKIMAGE_HEADER_SIZE, &dwBytesRead, NULL);
+    ////TODO: Check if dwBytesRead != BKIMAGE_HEADER_SIZE
 
-    //TODO: Check version and size
+    ////TODO: Check version and size
 
-    // Allocate memory
-    BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  ::memset(pImage, 0, BKIMAGE_SIZE);
+    //// Allocate memory
+    //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  ::memset(pImage, 0, BKIMAGE_SIZE);
 
-    // Read image
-    SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
-    dwBytesRead = 0;
-    ReadFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesRead, NULL);
-    //TODO: Check if dwBytesRead != BKIMAGE_SIZE
+    //// Read image
+    //SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+    //dwBytesRead = 0;
+    //ReadFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesRead, NULL);
+    ////TODO: Check if dwBytesRead != BKIMAGE_SIZE
 
-    // Restore emulator state from the image
-    //g_pBoard->LoadFromImage(pImage);
+    //// Restore emulator state from the image
+    ////g_pBoard->LoadFromImage(pImage);
 
-    m_dwEmulatorUptime = *(DWORD*)(pImage + 16);
+    //m_dwEmulatorUptime = *(DWORD*)(pImage + 16);
 
-    // Free memory, close file
-    ::free(pImage);
-    CloseHandle(hFile);
+    //// Free memory, close file
+    //::free(pImage);
+    //CloseHandle(hFile);
 
-    g_okEmulatorRunning = FALSE;
+    //g_okEmulatorRunning = FALSE;
 
-    MainWindow_UpdateAllViews();
+    //MainWindow_UpdateAllViews();
 }
 
 

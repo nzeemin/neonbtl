@@ -218,7 +218,7 @@ BOOL MainWindow_InitToolbar()
 BOOL MainWindow_InitStatusbar()
 {
     TCHAR buffer[100];
-    wsprintf(buffer, _T("BK Back to Life - version %s"), _T(NEONBTL_VERSION_STRING));
+    wsprintf(buffer, _T("NEON Back to Life - version %s"), _T(NEONBTL_VERSION_STRING));
     m_hwndStatusbar = CreateStatusWindow(
             WS_CHILD | WS_VISIBLE | SBT_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER,
             buffer,

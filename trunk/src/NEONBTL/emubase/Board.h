@@ -29,19 +29,6 @@ enum BKConfiguration
     BK_COPT_ROM_BASIC = 2,
     BK_COPT_ROM_FOCAL = 4,
     BK_COPT_FDD = 16,
-
-    // Configurations BK-0010(01)
-    BK_CONF_BK0010_BASIC =  // БК-0010(01) и BASIC-86
-        BK_COPT_BK0010 | BK_COPT_ROM_BASIC,
-    BK_CONF_BK0010_FOCAL =  // БК-0010(01) и Фокал + тесты
-        BK_COPT_BK0010 | BK_COPT_ROM_FOCAL,
-    BK_CONF_BK0010_FDD   =  // БК-0010(01) и блок КНГМД с 16 КБ ОЗУ
-        BK_COPT_BK0010 | BK_COPT_FDD,
-    // Configurations BK-0011M
-    BK_CONF_BK0011       =  // БК-0011М без блока КНГМД
-        BK_COPT_BK0011,
-    BK_CONF_BK0011_FDD   =  // БК-0011М и блок КНГМД
-        BK_COPT_BK0011 | BK_COPT_FDD,
 };
 
 
@@ -62,33 +49,9 @@ enum BKConfiguration
 #define FLOPPY_FSM_WAITFORTERM1	2
 #define FLOPPY_FSM_WAITFORTERM2	3
 
-// Emulator image constants
-#define BKIMAGE_HEADER_SIZE 256
-#define BKIMAGE_SIZE (BKIMAGE_HEADER_SIZE + (32 + 64 * 3) * 1024)
-#define BKIMAGE_HEADER1 0x30304B41  // "BK00"
-#define BKIMAGE_HEADER2 0x214C5442  // "BTL!"
-#define BKIMAGE_VERSION 0x00010000  // 1.0
-
 
 //////////////////////////////////////////////////////////////////////
-// BK special key codes
-
-#define BK_KEY_REPEAT       0201
-#define BK_KEY_LOWER        0273
-#define BK_KEY_UPPER        0274
-#define BK_KEY_BACKSHIFT    0275
-#define BK_KEY_AR2          0276
-#define BK_KEY_STOP         0277
-
-// События от джойстика - передавать в метод KeyboardEvent
-#define BK_KEY_JOYSTICK_BUTTON1 0210
-#define BK_KEY_JOYSTICK_BUTTON2 0211
-#define BK_KEY_JOYSTICK_BUTTON3 0212
-#define BK_KEY_JOYSTICK_BUTTON4 0213
-#define BK_KEY_JOYSTICK_RIGHT   0214
-#define BK_KEY_JOYSTICK_DOWN    0215
-#define BK_KEY_JOYSTICK_LEFT    0216
-#define BK_KEY_JOYSTICK_UP      0217
+// Special key codes
 
 // Состояния клавиатуры БК - возвращаются из метода GetKeyboardRegister
 #define KEYB_RUS		0x01
@@ -118,7 +81,7 @@ class CFloppyController;
 
 //////////////////////////////////////////////////////////////////////
 
-class CMotherboard  // BK computer
+class CMotherboard  // Souz-Neon computer
 {
 private:  // Devices
     CProcessor*     m_pCPU;  // CPU device
@@ -128,7 +91,7 @@ private:  // Memory
     BYTE        m_MemoryMap;      // Memory map, every bit defines how 8KB mapped: 0 - RAM, 1 - ROM
     BYTE        m_MemoryMapOnOff; // Memory map, every bit defines how 8KB: 0 - deny, 1 - OK
     BYTE*       m_pRAM;  // RAM, 8 * 16 = 128 KB
-    BYTE*       m_pROM;  // ROM, 4 * 16 = 64 KB
+    BYTE*       m_pROM;  // ROM, 2 * 8 = 16 KB
 public:  // Construct / destruct
     CMotherboard();
     ~CMotherboard();
@@ -224,7 +187,6 @@ private:  // Ports: implementation
     WORD        m_Port177660;       // Keyboard status register
     WORD        m_Port177662rd;     // Keyboard register
     WORD        m_Port177662wr;     // Palette register
-    WORD        m_Port177664;       // Scroll register
     WORD        m_Port177714in;     // Parallel port, input register
     WORD        m_Port177714out;    // Parallel port, output register
     WORD        m_Port177716;       // System register (read only)
