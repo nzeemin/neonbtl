@@ -1,0 +1,127 @@
+/*  This file is part of NEONBTL.
+    NEONBTL is free software: you can redistribute it and/or modify it under the terms
+of the GNU Lesser General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later version.
+    NEONBTL is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU Lesser General Public License for more details.
+    You should have received a copy of the GNU Lesser General Public License along with
+NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
+
+// Emubase.h  Header for use of all emubase classes
+//
+
+#pragma once
+
+#include "Board.h"
+#include "Processor.h"
+
+
+//////////////////////////////////////////////////////////////////////
+
+
+#define SOUNDSAMPLERATE  22050
+
+
+//////////////////////////////////////////////////////////////////////
+// Disassembler
+
+// Disassemble one instruction of KM1801VM2 processor
+//   pMemory - memory image (we read only words of the instruction)
+//   sInstr  - instruction mnemonics buffer - at least 8 characters
+//   sArg    - instruction arguments buffer - at least 32 characters
+//   Return value: number of words in the instruction
+int DisassembleInstruction(WORD* pMemory, WORD addr, TCHAR* sInstr, TCHAR* sArg);
+
+
+//////////////////////////////////////////////////////////////////////
+// CFloppy
+
+#define FLOPPY_FSM_IDLE			0
+
+#define FLOPPY_CMD_CORRECTION250		04
+#define FLOPPY_CMD_ENGINESTART			020
+#define FLOPPY_CMD_CORRECTION500		010
+#define FLOPPY_CMD_SIDEUP				040
+#define FLOPPY_CMD_DIR					0100
+#define FLOPPY_CMD_STEP					0200
+#define FLOPPY_CMD_SEARCHSYNC			0400
+#define FLOPPY_CMD_SKIPSYNC				01000
+//dir == 0 to center (towards trk0)
+//dir == 1 from center (towards trk80)
+
+#define FLOPPY_STATUS_TRACK0			01
+#define FLOPPY_STATUS_RDY				02
+#define FLOPPY_STATUS_WRITEPROTECT		04
+#define FLOPPY_STATUS_MOREDATA			0200
+#define FLOPPY_STATUS_CHECKSUMOK		040000
+#define FLOPPY_STATUS_INDEXMARK			0100000
+
+#define FLOPPY_RAWTRACKSIZE             6250
+#define FLOPPY_RAWMARKERSIZE            (FLOPPY_RAWTRACKSIZE / 2)
+#define FLOPPY_INDEXLENGTH              30
+
+struct CFloppyDrive
+{
+    FILE* fpFile;
+    BOOL okReadOnly;    // Write protection flag
+    WORD dataptr;       // Data offset within m_data - "head" position
+    BYTE data[FLOPPY_RAWTRACKSIZE];  // Raw track image for the current track
+    BYTE marker[FLOPPY_RAWMARKERSIZE];  // Marker positions
+    WORD datatrack;     // Track number of data in m_data array
+    WORD dataside;      // Disk side of data in m_data array
+
+public:
+    CFloppyDrive();
+    void Reset();
+};
+
+class CFloppyController
+{
+protected:
+    CFloppyDrive m_drivedata[4];
+    int  m_drive;       // Drive number: from 0 to 3; -1 if not selected
+    CFloppyDrive* m_pDrive;  // Current drive; NULL if not selected
+    WORD m_track;       // Track number: from 0 to 79
+    WORD m_side;        // Disk side: 0 or 1
+    WORD m_status;      // See FLOPPY_STATUS_XXX defines
+    WORD m_flags;       // See FLOPPY_CMD_XXX defines
+    WORD m_datareg;     // Read mode data register
+    WORD m_writereg;    // Write mode data register
+    BOOL m_writeflag;   // Write mode data register has data
+    BOOL m_writemarker; // Write marker in m_marker
+    WORD m_shiftreg;    // Write mode shift register
+    BOOL m_shiftflag;   // Write mode shift register has data
+    BOOL m_shiftmarker; // Write marker in m_marker
+    BOOL m_writing;     // TRUE = write mode, FALSE = read mode
+    BOOL m_searchsync;  // Read sub-mode: TRUE = search for sync, FALSE = just read
+    BOOL m_crccalculus; // TRUE = CRC is calculated now
+    BOOL m_trackchanged;  // TRUE = m_data was changed - need to save it into the file
+
+public:
+    CFloppyController();
+    ~CFloppyController();
+    void Reset();
+
+public:
+    BOOL AttachImage(int drive, LPCTSTR sFileName);
+    void DetachImage(int drive);
+    BOOL IsAttached(int drive) { return (m_drivedata[drive].fpFile != NULL); }
+    BOOL IsReadOnly(int drive) { return m_drivedata[drive].okReadOnly; } // return (m_status & FLOPPY_STATUS_WRITEPROTECT) != 0; }
+    BOOL IsEngineOn() { return (m_flags & FLOPPY_CMD_ENGINESTART) != 0; }
+    WORD GetData(void);         // Reading port 177132 - data
+    WORD GetState(void);        // Reading port 177130 - device status
+    WORD GetDataView() const { return m_datareg; }  // Get port 177132 value for debugger
+    WORD GetStateView() const { return m_status; }  // Get port 177130 value for debugger
+    void SetCommand(WORD cmd);  // Writing to port 177130 - commands
+    void WriteData(WORD Data);  // Writing to port 177132 - data
+    void Periodic();            // Rotate disk; call it each 64 us - 15625 times per second
+
+private:
+    void PrepareTrack();
+    void FlushChanges();  // If current track was changed - save it
+
+};
+
+
+//////////////////////////////////////////////////////////////////////
