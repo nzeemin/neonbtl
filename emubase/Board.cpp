@@ -17,6 +17,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 void TraceInstruction(CProcessor* pProc, CMotherboard* pBoard, WORD address);
 
+//NOTE: Const for now, variable in the future
+const DWORD NEON_RAM_SIZE_BYTES = 512 * 1024;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -37,7 +39,7 @@ CMotherboard::CMotherboard ()
     ::memset(m_UR, 0, sizeof(m_UR));
 
     // Allocate memory for RAM and ROM
-    m_pRAM = (BYTE*) ::malloc(512 * 1024);  //::memset(m_pRAM, 0, 512 * 1024);
+    m_pRAM = (BYTE*) ::malloc(NEON_RAM_SIZE_BYTES);  //::memset(m_pRAM, 0, 512 * 1024);
     m_pROM = (BYTE*) ::malloc(16 * 1024);  ::memset(m_pROM, 0, 16 * 1024);
 
     SetConfiguration(0);  // Default configuration
@@ -62,7 +64,7 @@ void CMotherboard::SetConfiguration(WORD conf)
     m_Configuration = conf;
 
     // Clean RAM/ROM
-    ::memset(m_pRAM, 0, 512 * 1024);
+    ::memset(m_pRAM, 0, NEON_RAM_SIZE_BYTES);
     ::memset(m_pROM, 0, 16 * 1024);
 
     //// Pre-fill RAM with "uninitialized" values
@@ -501,6 +503,8 @@ void CMotherboard::SetPrinterInPort(BYTE data)
 // Read word from memory for debugger
 WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pAddrType) const
 {
+	address &= ~1;
+
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
 
@@ -526,6 +530,8 @@ WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* 
 
 WORD CMotherboard::GetWord(WORD address, BOOL okHaltMode, BOOL okExec)
 {
+	address &= ~1;
+
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
 
@@ -594,6 +600,8 @@ BYTE CMotherboard::GetByte(WORD address, BOOL okHaltMode)
 
 void CMotherboard::SetWord(WORD address, BOOL okHaltMode, WORD word)
 {
+	address &= ~1;
+
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, FALSE, &offset);
 
@@ -672,7 +680,7 @@ const BYTE* CMotherboard::GetVideoBuffer()
 
 int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, DWORD* pOffset) const
 {
-    if (okHaltMode && address <= 040000)
+    if (okHaltMode && address < 040000)
     {
         *pOffset = address;
         return ADDRTYPE_ROM;
@@ -698,7 +706,14 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
         *pOffset = 0;
         return ADDRTYPE_DENY;
     }
-    *pOffset = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
+	DWORD longaddr = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
+	if (longaddr > NEON_RAM_SIZE_BYTES)
+	{
+        *pOffset = 0;
+        return ADDRTYPE_DENY;
+	}
+
+    *pOffset = longaddr;
     return ADDRTYPE_RAM;
 }
 
@@ -715,6 +730,9 @@ WORD CMotherboard::GetPortWord(WORD address)
     switch (address)
     {
     case 0161032:  // PPIB
+#if !defined(PRODUCT)
+        DebugLogFormat(_T("%06o\tGETPORT PPIB = %06o\n"), m_pCPU->GetInstructionPC(), address, m_PortPPIB);
+#endif
         return m_PortPPIB;
 
     case 0161060:
@@ -729,6 +747,22 @@ WORD CMotherboard::GetPortWord(WORD address)
         DebugLogFormat(_T("%06o\tGETPORT DLCSR\n"), m_pCPU->GetInstructionPC(), address);
 #endif
         return 0x0f;
+
+    case 0161200:
+    case 0161202:
+    case 0161204:
+    case 0161206:
+    case 0161210:
+    case 0161212:
+    case 0161214:
+    case 0161216:
+        {
+            int chunk = (address >> 1) & 7;
+#if !defined(PRODUCT)
+            DebugLogFormat(_T("%06o\tGETPORT HR%d = %06o\n"), m_pCPU->GetInstructionPC(), chunk, m_HR[chunk]);
+#endif
+            return m_HR[chunk];
+        }
 
     case 0161220:
     case 0161222:
@@ -748,7 +782,7 @@ WORD CMotherboard::GetPortWord(WORD address)
 
     default:
 #if !defined(PRODUCT)
-        DebugLogFormat(_T("%06o\tGETPORT (%06o)\n"), m_pCPU->GetInstructionPC(), address);
+        DebugLogFormat(_T("%06o\tGETPORT Unknown (%06o)\n"), m_pCPU->GetInstructionPC(), address);
 #endif
         m_pCPU->MemoryError();
         return 0;
@@ -794,7 +828,11 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
 #endif
     switch (address)
     {
-    case 0161012:
+    case 0161000:  // Unknown port
+    case 0161002:  // Unknown port
+		break;
+
+	case 0161012:
         //TODO: SNDÑ1R -- Sound control
         break;
     case 0161014:
@@ -803,6 +841,9 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161016:
         //TODO: SNDÑSR -- Sound control
         break;
+	case 0161026:
+		//TODO: SNLÑSR -- Sound control
+		break;
 
     case 0161030:
         //TODO: PPIA -- Parallel port
@@ -836,8 +877,11 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161212:
     case 0161214:
     case 0161216:
-        m_HR[address & 0x0f] = word;
-        break;
+		{
+			int chunk = (address >> 1) & 7;
+			m_HR[chunk] = word;
+			break;
+		}
 
     case 0161220:
     case 0161222:
@@ -849,14 +893,17 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161236:
         {
             int chunk = (address >> 1) & 7;
-            m_UR[address & 0x0f] = word;
+            m_UR[chunk] = word;
             break;
         }
 
+	case 0161412:  // Unknown port
+		break;
+
     default:
-//#if !defined(PRODUCT)
-//        DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
-//#endif
+#if !defined(PRODUCT)
+        DebugLogFormat(_T("SETPORT Unknown %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
+#endif
         m_pCPU->MemoryError();
         break;
     }
