@@ -232,7 +232,7 @@ int DisassembleInstruction(WORD* pMemory, WORD addr, TCHAR* strInstr, TCHAR* str
     }
 
     length = 1;
-    _sntprintf(strDst, 24, _T("%06o"), addr + ((short)(char)LOBYTE (instr) * 2) + 2);
+    _sntprintf(strDst, 24, _T("%06o"), (WORD)(addr + ((short)(char)LOBYTE (instr) * 2) + 2));
 
     // Branchs & interrupts
     switch (instr & ~(WORD)0377)
