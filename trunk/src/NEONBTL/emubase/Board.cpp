@@ -33,8 +33,11 @@ CMotherboard::CMotherboard ()
     m_SoundGenCallback = NULL;
     m_TeletypeCallback = NULL;
 
+    ::memset(m_HR, 0, sizeof(m_HR));
+    ::memset(m_UR, 0, sizeof(m_UR));
+
     // Allocate memory for RAM and ROM
-    m_pRAM = (BYTE*) ::malloc(128 * 1024);  //::memset(m_pRAM, 0, 128 * 1024);
+    m_pRAM = (BYTE*) ::malloc(512 * 1024);  //::memset(m_pRAM, 0, 512 * 1024);
     m_pROM = (BYTE*) ::malloc(16 * 1024);  ::memset(m_pROM, 0, 16 * 1024);
 
     SetConfiguration(0);  // Default configuration
@@ -56,14 +59,10 @@ CMotherboard::~CMotherboard ()
 
 void CMotherboard::SetConfiguration(WORD conf)
 {
-    //m_Configuration = conf;
-
-    //// Define memory map
-    //m_MemoryMap = 0xf0;  // By default, 000000-077777 is RAM, 100000-177777 is ROM
-    //m_MemoryMapOnOff = 0xff;  // By default, all 8K blocks are valid
+    m_Configuration = conf;
 
     // Clean RAM/ROM
-    ::memset(m_pRAM, 0, 128 * 1024);
+    ::memset(m_pRAM, 0, 512 * 1024);
     ::memset(m_pROM, 0, 16 * 1024);
 
     //// Pre-fill RAM with "uninitialized" values
@@ -98,10 +97,9 @@ void CMotherboard::Reset ()
     m_Port177560 = m_Port177562 = 0;
     m_Port177564 = 0200;
     m_Port177566 = 0;
-    m_Port177660 = 0100;
-    m_Port177662rd = 0;
-    m_Port177662wr = 047400;
-    m_Port177714in = m_Port177714out = 0;
+    m_PortKBDCSR = 0100;
+    m_PortKBDBUF = 0;
+    m_PortDLBUFin = m_PortDLBUFout = 0;
     m_Port177716 = ((m_Configuration & BK_COPT_BK0011) ? 0140000 : 0100000) | 0300;
     m_Port177716mem = 0000002;
     m_Port177716tap = 0200;
@@ -172,40 +170,40 @@ void CMotherboard::DetachFloppyImage(int slot)
 
 // Работа с памятью //////////////////////////////////////////////////
 
-WORD CMotherboard::GetRAMWord(WORD offset) const
+WORD CMotherboard::GetRAMWord(DWORD offset) const
 {
     return *((WORD*)(m_pRAM + offset));
 }
-WORD CMotherboard::GetRAMWord(BYTE chunk, WORD offset) const
+WORD CMotherboard::GetRAMWord(WORD hioffset, WORD offset) const
 {
-    DWORD dwOffset = (((DWORD)chunk & 7) << 14) + offset;
+    DWORD dwOffset = MAKELONG(offset, hioffset);
     return *((WORD*)(m_pRAM + dwOffset));
 }
-BYTE CMotherboard::GetRAMByte(WORD offset) const
+BYTE CMotherboard::GetRAMByte(DWORD offset) const
 {
     return m_pRAM[offset];
 }
-BYTE CMotherboard::GetRAMByte(BYTE chunk, WORD offset) const
+BYTE CMotherboard::GetRAMByte(WORD hioffset, WORD offset) const
 {
-    DWORD dwOffset = (((DWORD)chunk & 7) << 14) + offset;
+    DWORD dwOffset = MAKELONG(offset, hioffset);
     return m_pRAM[dwOffset];
 }
-void CMotherboard::SetRAMWord(WORD offset, WORD word)
+void CMotherboard::SetRAMWord(DWORD offset, WORD word)
 {
     *((WORD*)(m_pRAM + offset)) = word;
 }
-void CMotherboard::SetRAMWord(BYTE chunk, WORD offset, WORD word)
+void CMotherboard::SetRAMWord(WORD hioffset, WORD offset, WORD word)
 {
-    DWORD dwOffset = (((DWORD)chunk & 7) << 14) + offset;
+    DWORD dwOffset = MAKELONG(offset, hioffset);
     *((WORD*)(m_pRAM + dwOffset)) = word;
 }
-void CMotherboard::SetRAMByte(WORD offset, BYTE byte)
+void CMotherboard::SetRAMByte(DWORD offset, BYTE byte)
 {
     m_pRAM[offset] = byte;
 }
-void CMotherboard::SetRAMByte(BYTE chunk, WORD offset, BYTE byte)
+void CMotherboard::SetRAMByte(WORD hioffset, WORD offset, BYTE byte)
 {
-    DWORD dwOffset = (((DWORD)chunk & 7) << 14) + offset;
+    DWORD dwOffset = MAKELONG(offset, hioffset);
     m_pRAM[dwOffset] = byte;
 }
 
@@ -242,10 +240,10 @@ void CMotherboard::ResetDevices()
 
 void CMotherboard::Tick50()  // 50 Hz timer
 {
-    if ((m_Port177662wr & 040000) == 0)
-    {
-        m_pCPU->TickEVNT();
-    }
+    //if ((m_Port177662wr & 040000) == 0)
+    //{
+    //    m_pCPU->TickEVNT();
+    //}
 }
 
 void CMotherboard::ExecuteCPU()
@@ -468,11 +466,11 @@ void CMotherboard::KeyboardEvent(BYTE scancode, BOOL okPressed, BOOL okAr2)
     m_Port177716 &= ~0100;  // Set "Key pressed" flag in system register
     m_Port177716 |= 4;  // Set "ready" flag
 
-    if ((m_Port177660 & 0200) == 0)
+    if ((m_PortKBDCSR & 0200) == 0)
     {
-        m_Port177662rd = scancode & 0177;
-        m_Port177660 |= 0200;  // "Key ready" flag in keyboard state register
-        if ((m_Port177660 & 0100) == 0100)  // Keyboard interrupt enabled
+        m_PortKBDBUF = scancode & 0177;
+        m_PortKBDCSR |= 0200;  // "Key ready" flag in keyboard state register
+        if ((m_PortKBDCSR & 0100) == 0100)  // Keyboard interrupt enabled
         {
             m_pCPU->InterruptVIRQ(1, (okAr2 ? 0274 : 060));
         }
@@ -492,7 +490,7 @@ void CMotherboard::TapeInput(BOOL inputBit)
 
 void CMotherboard::SetPrinterInPort(BYTE data)
 {
-    m_Port177714in = data;
+    m_PortDLBUFin = data;
 }
 
 
@@ -502,18 +500,17 @@ void CMotherboard::SetPrinterInPort(BYTE data)
 // Read word from memory for debugger
 WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pAddrType) const
 {
-    WORD offset;
+    DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
 
     *pAddrType = addrtype;
 
-    switch (addrtype & ADDRTYPE_MASK)
+    switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        //return GetRAMWord(offset & 0177776);  //TODO: Use (addrtype & ADDRTYPE_RAMMASK) bits
-        return GetRAMWord(addrtype & ADDRTYPE_RAMMASK, offset & 0177776);
+        return GetRAMWord(offset);
     case ADDRTYPE_ROM:
-        return GetROMWord(offset);
+        return GetROMWord(LOWORD(offset));
     case ADDRTYPE_IO:
         return 0;  // I/O port, not memory
     case ADDRTYPE_DENY:
@@ -526,15 +523,15 @@ WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* 
 
 WORD CMotherboard::GetWord(WORD address, BOOL okHaltMode, BOOL okExec)
 {
-    WORD offset;
+    DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
 
-    switch (addrtype & ADDRTYPE_MASK)
+    switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        return GetRAMWord(addrtype & ADDRTYPE_RAMMASK, offset & 0177776);
+        return GetRAMWord(offset);
     case ADDRTYPE_ROM:
-        return GetROMWord(offset);
+        return GetROMWord(LOWORD(offset));
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == TRUE ?
         return GetPortWord(address);
@@ -549,15 +546,15 @@ WORD CMotherboard::GetWord(WORD address, BOOL okHaltMode, BOOL okExec)
 
 BYTE CMotherboard::GetByte(WORD address, BOOL okHaltMode)
 {
-    WORD offset;
+    DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, FALSE, &offset);
 
-    switch (addrtype & ADDRTYPE_MASK)
+    switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        return GetRAMByte(addrtype & ADDRTYPE_RAMMASK, offset);
+        return GetRAMByte(offset);
     case ADDRTYPE_ROM:
-        return GetROMByte(offset);
+        return GetROMByte(LOWORD(offset));
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == TRUE ?
         return GetPortByte(address);
@@ -572,14 +569,13 @@ BYTE CMotherboard::GetByte(WORD address, BOOL okHaltMode)
 
 void CMotherboard::SetWord(WORD address, BOOL okHaltMode, WORD word)
 {
-    WORD offset;
-
+    DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, FALSE, &offset);
 
-    switch (addrtype & ADDRTYPE_MASK)
+    switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        SetRAMWord(addrtype & ADDRTYPE_RAMMASK, offset & 0177776, word);
+        SetRAMWord(offset, word);
         return;
     case ADDRTYPE_ROM:  // Writing to ROM: exception
         m_pCPU->MemoryError();
@@ -597,13 +593,13 @@ void CMotherboard::SetWord(WORD address, BOOL okHaltMode, WORD word)
 
 void CMotherboard::SetByte(WORD address, BOOL okHaltMode, BYTE byte)
 {
-    WORD offset;
+    DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, FALSE, &offset);
 
-    switch (addrtype & ADDRTYPE_MASK)
+    switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        SetRAMByte(addrtype & ADDRTYPE_RAMMASK, offset, byte);
+        SetRAMByte(offset, byte);
         return;
     case ADDRTYPE_ROM:  // Writing to ROM: exception
         m_pCPU->MemoryError();
@@ -625,7 +621,7 @@ const BYTE* CMotherboard::GetVideoBuffer()
     return m_pRAM + 040000;  //STUB
 }
 
-int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, WORD* pOffset) const
+int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, DWORD* pOffset) const
 {
     if (okHaltMode && address <= 040000)
     {
@@ -639,8 +635,15 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, W
         return ADDRTYPE_IO;
     }
 
-    //TODO: Логика диспетчера памяти
-    *pOffset = address;
+    // Логика диспетчера памяти
+    int memregno = address >> 13;
+    WORD memreg = okHaltMode ? m_HR[memregno] : m_UR[memregno];
+    if (memreg & 8)  // Запрет доступа к ОЗУ
+    {
+        *pOffset = 0;
+        return ADDRTYPE_DENY;
+    }
+    *pOffset = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
     return ADDRTYPE_RAM;
 }
 
@@ -662,6 +665,16 @@ WORD CMotherboard::GetPortWord(WORD address)
     case 0161062:
         //TODO: DLCSR -- Programmable parallel port
         return 0x0ffff;
+
+    case 0161220:
+    case 0161222:
+    case 0161224:
+    case 0161226:
+    case 0161230:
+    case 0161232:
+    case 0161234:
+    case 0161236:
+        return m_UR[address & 0x0f];
 
     default:
 #if !defined(PRODUCT)
@@ -731,6 +744,9 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
         //TODO: PPIP -- Parallel port mode control
         break;
 
+    case 0161060:
+        //TODO: DLBUF -- Programmable Parallel port buffer
+        break;
     case 0161062:
         //TODO: DLCSR -- Programmable Parallel port control
         break;
@@ -739,10 +755,32 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
         //TODO: KBDBUF -- Keyboard buffer
         break;
 
+    case 0161200:
+    case 0161202:
+    case 0161204:
+    case 0161206:
+    case 0161210:
+    case 0161212:
+    case 0161214:
+    case 0161216:
+        m_HR[address & 0x0f] = word;
+        break;
+
+    case 0161220:
+    case 0161222:
+    case 0161224:
+    case 0161226:
+    case 0161230:
+    case 0161232:
+    case 0161234:
+    case 0161236:
+        m_UR[address & 0x0f] = word;
+        break;
+
     default:
-//#if !defined(PRODUCT)
-//	    DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
-//#endif
+#if !defined(PRODUCT)
+        DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
+#endif
         m_pCPU->MemoryError();
         break;
     }
@@ -750,16 +788,6 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
 
 
 //////////////////////////////////////////////////////////////////////
-
-WORD CMotherboard::GetKeyboardRegister(void)
-{
-    WORD res = 0;
-
-    WORD mem000042 = GetRAMWord(000042);
-    res |= (mem000042 & 0100000) == 0 ? KEYB_LAT : KEYB_RUS;
-
-    return res;
-}
 
 void CMotherboard::DoSound(void)
 {
