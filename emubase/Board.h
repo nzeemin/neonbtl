@@ -26,8 +26,6 @@ enum BKConfiguration
     // Configuration options
     BK_COPT_BK0010 = 0,
     BK_COPT_BK0011 = 1,
-    BK_COPT_ROM_BASIC = 2,
-    BK_COPT_ROM_FOCAL = 4,
     BK_COPT_FDD = 16,
 };
 
@@ -40,8 +38,6 @@ enum BKConfiguration
 #define ADDRTYPE_ROM    32  // ROM
 #define ADDRTYPE_IO     64  // I/O port
 #define ADDRTYPE_DENY  128  // Access denied
-#define ADDRTYPE_MASK  224  // RAM type mask
-#define ADDRTYPE_RAMMASK 7  // RAM chunk number mask
 
 //floppy debug
 #define FLOPPY_FSM_WAITFORLSB	0
@@ -52,12 +48,6 @@ enum BKConfiguration
 
 //////////////////////////////////////////////////////////////////////
 // Special key codes
-
-// Состояния клавиатуры БК - возвращаются из метода GetKeyboardRegister
-#define KEYB_RUS		0x01
-#define KEYB_LAT		0x02
-#define KEYB_LOWERREG	0x10
-
 
 // Tape emulator callback used to read a tape recorded data.
 // Input:
@@ -88,24 +78,24 @@ private:  // Devices
     CFloppyController*  m_pFloppyCtl;  // FDD control
 private:  // Memory
     WORD        m_Configuration;  // See BK_COPT_Xxx flag constants
-    BYTE        m_MemoryMap;      // Memory map, every bit defines how 8KB mapped: 0 - RAM, 1 - ROM
-    BYTE        m_MemoryMapOnOff; // Memory map, every bit defines how 8KB: 0 - deny, 1 - OK
-    BYTE*       m_pRAM;  // RAM, 8 * 16 = 128 KB
-    BYTE*       m_pROM;  // ROM, 2 * 8 = 16 KB
+    BYTE*       m_pRAM;  // RAM, 512 KB
+    BYTE*       m_pROM;  // ROM, 16 KB
+    WORD        m_HR[8];
+    WORD        m_UR[8];
 public:  // Construct / destruct
     CMotherboard();
     ~CMotherboard();
 public:  // Getting devices
     CProcessor*     GetCPU() { return m_pCPU; }
 public:  // Memory access  //TODO: Make it private
-    WORD        GetRAMWord(WORD offset) const;
-    WORD        GetRAMWord(BYTE chunk, WORD offset) const;
-    BYTE        GetRAMByte(WORD offset) const;
-    BYTE        GetRAMByte(BYTE chunk, WORD offset) const;
-    void        SetRAMWord(WORD offset, WORD word);
-    void        SetRAMWord(BYTE chunk, WORD offset, WORD word);
-    void        SetRAMByte(WORD offset, BYTE byte);
-    void        SetRAMByte(BYTE chunk, WORD offset, BYTE byte);
+    WORD        GetRAMWord(DWORD offset) const;
+    WORD        GetRAMWord(WORD hioffset, WORD offset) const;
+    BYTE        GetRAMByte(DWORD offset) const;
+    BYTE        GetRAMByte(WORD hioffset, WORD offset) const;
+    void        SetRAMWord(DWORD offset, WORD word);
+    void        SetRAMWord(WORD hioffset, WORD offset, WORD word);
+    void        SetRAMByte(DWORD offset, BYTE byte);
+    void        SetRAMByte(WORD hioffset, WORD offset, BYTE byte);
     WORD        GetROMWord(WORD offset) const;
     BYTE        GetROMByte(WORD offset) const;
 public:  // Debug
@@ -127,7 +117,7 @@ public:
     BOOL        SystemFrame();  // Do one frame -- use for normal run
     void        KeyboardEvent(BYTE scancode, BOOL okPressed, BOOL okAr2);  // Key pressed or released
     WORD        GetKeyboardRegister(void);
-    WORD        GetPrinterOutPort() const { return m_Port177714out; }
+    WORD        GetPrinterOutPort() const { return m_PortDLBUFout; }
     void        SetPrinterInPort(BYTE data);
     BOOL        IsTapeMotorOn() const { return (m_Port177716tap & 0200) == 0; }
 public:  // Floppy
@@ -159,8 +149,6 @@ public:  // Memory
     WORD GetPortView(WORD address) const;
     // Read SEL register
     WORD GetSelRegister() const { return 0; }
-    // Get palette number 0..15 (BK0011 only)
-    BYTE GetPalette() const { return (m_Port177662wr >> 8) & 0x0f; }
     // Get video buffer address
     const BYTE* GetVideoBuffer();
 private:
@@ -170,7 +158,7 @@ private:
     //   okHaltMode - processor mode (USER/HALT)
     //   okExec - TRUE: read instruction for execution; FALSE: read memory
     //   pOffset - result - offset in memory plane
-    int TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, WORD* pOffset) const;
+    int TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, DWORD* pOffset) const;
 private:  // Access to I/O ports
     WORD        GetPortWord(WORD address);
     void        SetPortWord(WORD address, WORD word);
@@ -184,11 +172,10 @@ private:  // Ports: implementation
     WORD        m_Port177562;       // Serial port input data register
     WORD        m_Port177564;       // Serial port output state register
     WORD        m_Port177566;       // Serial port output data register
-    WORD        m_Port177660;       // Keyboard status register
-    WORD        m_Port177662rd;     // Keyboard register
-    WORD        m_Port177662wr;     // Palette register
-    WORD        m_Port177714in;     // Parallel port, input register
-    WORD        m_Port177714out;    // Parallel port, output register
+    WORD        m_PortKBDCSR;       // Keyboard status register
+    WORD        m_PortKBDBUF;       // Keyboard register
+    WORD        m_PortDLBUFin;      // Parallel port, input register
+    WORD        m_PortDLBUFout;     // Parallel port, output register
     WORD        m_Port177716;       // System register (read only)
     WORD        m_Port177716mem;    // System register (memory)
     WORD        m_Port177716tap;    // System register (tape)

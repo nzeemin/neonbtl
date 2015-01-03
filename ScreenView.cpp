@@ -318,10 +318,9 @@ void ScreenView_ScanKeyboard()
 
         BOOL okShift = ((keys[VK_SHIFT] & 128) != 0);
         BOOL okCtrl = ((keys[VK_CONTROL] & 128) != 0);
-        WORD bkregister = g_pBoard->GetKeyboardRegister();
 
-        // Выбираем таблицу маппинга в зависимости от флага РУС/ЛАТ в БК
-        const BYTE* pTable = ((bkregister & KEYB_LAT) == 0) ? arrPcscan2BkscanRus : arrPcscan2BkscanLat;
+        // Выбираем таблицу маппинга в зависимости от флага РУС/ЛАТ
+        const BYTE* pTable = arrPcscan2BkscanLat;
 
         // Check every key for state change
         for (int scan = 0; scan < 256; scan++)

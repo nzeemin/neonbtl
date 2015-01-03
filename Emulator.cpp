@@ -655,12 +655,7 @@ void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)
 
 const DWORD * Emulator_GetPalette(int screenMode)
 {
-    if ((screenMode & 1) == 0)
-        return (const DWORD *)ScreenView_BWPalette;
-    if ((g_nEmulatorConfiguration & BK_COPT_BK0011) == 0)
-        return (const DWORD *)ScreenView_ColorPalette;
-    else
-        return (const DWORD *)ScreenView_ColorPalettes[g_pBoard->GetPalette()];
+    return (const DWORD *)ScreenView_BWPalette;
 }
 
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
