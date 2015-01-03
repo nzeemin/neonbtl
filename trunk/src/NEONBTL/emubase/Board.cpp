@@ -94,13 +94,14 @@ void CMotherboard::Reset ()
     m_pCPU->SetACLOPin(TRUE);
 
     // Reset ports
+    m_PortPPIB = 0;
     m_Port177560 = m_Port177562 = 0;
     m_Port177564 = 0200;
     m_Port177566 = 0;
     m_PortKBDCSR = 0100;
     m_PortKBDBUF = 0;
     m_PortDLBUFin = m_PortDLBUFout = 0;
-    m_Port177716 = ((m_Configuration & BK_COPT_BK0011) ? 0140000 : 0100000) | 0300;
+    m_Port177716 = 0300;
     m_Port177716mem = 0000002;
     m_Port177716tap = 0200;
 
@@ -513,6 +514,8 @@ WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* 
         return GetROMWord(LOWORD(offset));
     case ADDRTYPE_IO:
         return 0;  // I/O port, not memory
+    case ADDRTYPE_EMUL:
+        return GetRAMWord(offset & 07777);  // I/O port emulation
     case ADDRTYPE_DENY:
         return 0;  // This memory is inaccessible for reading
     }
@@ -535,6 +538,17 @@ WORD CMotherboard::GetWord(WORD address, BOOL okHaltMode, BOOL okExec)
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == TRUE ?
         return GetPortWord(address);
+    case ADDRTYPE_EMUL:
+        //m_pCPU->SetHALTPin(TRUE);
+        if ((m_PortPPIB & 1) == 0)
+        {
+            m_PortPPIB |= 1; m_HR[0] = address;
+        }
+        else if ((m_PortPPIB & 2) == 0)
+        {
+            m_PortPPIB |= 2; m_HR[1] = address;
+        }
+        return GetRAMWord(offset & 07777);
     case ADDRTYPE_DENY:
         m_pCPU->MemoryError();
         return 0;
@@ -558,6 +572,17 @@ BYTE CMotherboard::GetByte(WORD address, BOOL okHaltMode)
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == TRUE ?
         return GetPortByte(address);
+    case ADDRTYPE_EMUL:
+        //m_pCPU->SetHALTPin(TRUE);
+        if ((m_PortPPIB & 1) == 0)
+        {
+            m_PortPPIB |= 1; m_HR[0] = address;
+        }
+        else if ((m_PortPPIB & 2) == 0)
+        {
+            m_PortPPIB |= 2; m_HR[1] = address;
+        }
+        return GetRAMByte(offset & 07777);
     case ADDRTYPE_DENY:
         m_pCPU->MemoryError();
         return 0;
@@ -583,6 +608,18 @@ void CMotherboard::SetWord(WORD address, BOOL okHaltMode, WORD word)
     case ADDRTYPE_IO:
         SetPortWord(address, word);
         return;
+    case ADDRTYPE_EMUL:
+        SetRAMWord(offset & 07777, word);
+        //m_pCPU->SetHALTPin(TRUE);
+        if ((m_PortPPIB & 1) == 0)
+        {
+            m_PortPPIB |= 1; m_HR[0] = address;
+        }
+        else if ((m_PortPPIB & 2) == 0)
+        {
+            m_PortPPIB |= 2; m_HR[1] = address;
+        }
+        return;
     case ADDRTYPE_DENY:
         m_pCPU->MemoryError();
         return;
@@ -607,6 +644,18 @@ void CMotherboard::SetByte(WORD address, BOOL okHaltMode, BYTE byte)
     case ADDRTYPE_IO:
         SetPortByte(address, byte);
         return;
+    case ADDRTYPE_EMUL:
+        SetRAMByte(offset & 07777, byte);
+        //m_pCPU->SetHALTPin(TRUE);
+        if ((m_PortPPIB & 1) == 0)
+        {
+            m_PortPPIB |= 1; m_HR[0] = address;
+        }
+        else if ((m_PortPPIB & 2) == 0)
+        {
+            m_PortPPIB |= 2; m_HR[1] = address;
+        }
+        return;
     case ADDRTYPE_DENY:
         m_pCPU->MemoryError();
         return;
@@ -629,10 +678,16 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
         return ADDRTYPE_ROM;
     }
 
-    if (address >= 0160000 && address < 170000)  // Port
+    if (address >= 0160000)
     {
+        if (address < 170000)  // Port
+        {
+            *pOffset = address;
+            return ADDRTYPE_IO;
+        }
+
         *pOffset = address;
-        return ADDRTYPE_IO;
+        return ADDRTYPE_EMUL;
     }
 
     // Логика диспетчера памяти
@@ -659,12 +714,21 @@ WORD CMotherboard::GetPortWord(WORD address)
 {
     switch (address)
     {
+    case 0161032:  // PPIB
+        return m_PortPPIB;
+
     case 0161060:
+#if !defined(PRODUCT)
+        DebugLogFormat(_T("%06o\tGETPORT DLBUF\n"), m_pCPU->GetInstructionPC(), address);
+#endif
         //TODO: DLBUF -- Programmable parallel port
         return 0;
     case 0161062:
         //TODO: DLCSR -- Programmable parallel port
-        return 0x0ffff;
+#if !defined(PRODUCT)
+        DebugLogFormat(_T("%06o\tGETPORT DLCSR\n"), m_pCPU->GetInstructionPC(), address);
+#endif
+        return 0x0f;
 
     case 0161220:
     case 0161222:
@@ -674,11 +738,17 @@ WORD CMotherboard::GetPortWord(WORD address)
     case 0161232:
     case 0161234:
     case 0161236:
-        return m_UR[address & 0x0f];
+        {
+            int chunk = (address >> 1) & 7;
+#if !defined(PRODUCT)
+            DebugLogFormat(_T("%06o\tGETPORT UR%d = %06o\n"), m_pCPU->GetInstructionPC(), chunk, m_UR[chunk]);
+#endif
+            return m_UR[chunk];
+        }
 
     default:
 #if !defined(PRODUCT)
-        DebugLogFormat(_T("GETPORT %06o @ %06o\n"), address, m_pCPU->GetInstructionPC());
+        DebugLogFormat(_T("%06o\tGETPORT (%06o)\n"), m_pCPU->GetInstructionPC(), address);
 #endif
         m_pCPU->MemoryError();
         return 0;
@@ -719,6 +789,9 @@ void CMotherboard::SetPortByte(WORD address, BYTE byte)
 //void DebugPrintFormat(LPCTSTR pszFormat, ...);  //DEBUG
 void CMotherboard::SetPortWord(WORD address, WORD word)
 {
+#if !defined(PRODUCT)
+    DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o)\n"), m_pCPU->GetInstructionPC(), word, address);
+#endif
     switch (address)
     {
     case 0161012:
@@ -774,13 +847,16 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161232:
     case 0161234:
     case 0161236:
-        m_UR[address & 0x0f] = word;
-        break;
+        {
+            int chunk = (address >> 1) & 7;
+            m_UR[address & 0x0f] = word;
+            break;
+        }
 
     default:
-#if !defined(PRODUCT)
-        DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
-#endif
+//#if !defined(PRODUCT)
+//        DebugLogFormat(_T("SETPORT %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
+//#endif
         m_pCPU->MemoryError();
         break;
     }

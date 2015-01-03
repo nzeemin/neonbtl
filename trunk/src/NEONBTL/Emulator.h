@@ -49,8 +49,6 @@ int  Emulator_SystemFrame();
 void Emulator_ProcessJoystick();
 DWORD Emulator_GetUptime();  // BK uptime, in seconds
 
-void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
-const DWORD * Emulator_GetPalette(int screenMode);
 void Emulator_PrepareScreenRGB32(void* pBits, int screenMode);
 
 // Update cached values after Run or Step

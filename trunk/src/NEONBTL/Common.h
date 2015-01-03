@@ -68,7 +68,7 @@ void DebugLogFormat(LPCTSTR pszFormat, ...);
 // Processor register names
 const TCHAR* REGISTER_NAME[];
 
-const int NEON_SCREEN_WIDTH = 512;
+const int NEON_SCREEN_WIDTH  = 416;
 const int NEON_SCREEN_HEIGHT = 288;
 
 
