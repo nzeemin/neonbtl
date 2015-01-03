@@ -35,8 +35,9 @@ enum BKConfiguration
 
 // TranslateAddress result code
 #define ADDRTYPE_RAM     0  // RAM
-#define ADDRTYPE_ROM    32  // ROM
-#define ADDRTYPE_IO     64  // I/O port
+#define ADDRTYPE_ROM     1  // ROM
+#define ADDRTYPE_IO      4  // I/O port
+#define ADDRTYPE_EMUL    8  // I/O port emulation
 #define ADDRTYPE_DENY  128  // Access denied
 
 //floppy debug
@@ -168,6 +169,7 @@ public:  // Saving/loading emulator status
     //void        SaveToImage(BYTE* pImage);
     //void        LoadFromImage(const BYTE* pImage);
 private:  // Ports: implementation
+    WORD        m_PortPPIB;
     WORD        m_Port177560;       // Serial port input state register
     WORD        m_Port177562;       // Serial port input data register
     WORD        m_Port177564;       // Serial port output state register

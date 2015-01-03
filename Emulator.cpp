@@ -56,74 +56,11 @@ enum
 } m_EmulatorTapeMode = TAPEMODE_STOPPED;
 int m_EmulatorTapeCount = 0;
 
-//Прототип функции преобразования экрана
-// Input:
-//   pVideoBuffer   Исходные данные, биты экрана БК
-//   okSmallScreen  Признак "малого" экрана
-//   pPalette       Палитра
-//   scroll         Текущее значение скроллинга
-//   pImageBits     Результат, 32-битный цвет, размер для каждой функции свой
-typedef void (CALLBACK* PREPARE_SCREEN_CALLBACK)(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits);
-
-void CALLBACK Emulator_PrepareScreenBW512x256(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits);
-void CALLBACK Emulator_PrepareScreenColor512x256(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits);
-void CALLBACK Emulator_PrepareScreenBW512x384(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits);
-void CALLBACK Emulator_PrepareScreenColor512x384(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits);
-
-struct ScreenModeStruct
-{
-    int width;
-    int height;
-    PREPARE_SCREEN_CALLBACK callback;
-}
-static ScreenModeReference[] =
-{
-    { 512, 256, Emulator_PrepareScreenBW512x256 },
-    { 512, 256, Emulator_PrepareScreenColor512x256 },
-    { 512, 384, Emulator_PrepareScreenBW512x384 },
-    { 512, 384, Emulator_PrepareScreenColor512x384 },
-};
-
 //////////////////////////////////////////////////////////////////////
 
 
 const LPCTSTR FILENAME_ROM0 = _T("rom0.rr1");
 const LPCTSTR FILENAME_ROM1 = _T("rom1.rr1");
-
-
-//////////////////////////////////////////////////////////////////////
-// Colors
-
-const DWORD ScreenView_BWPalette[4] =
-{
-    0x000000, 0xFFFFFF, 0x000000, 0xFFFFFF
-};
-
-const DWORD ScreenView_ColorPalette[4] =
-{
-    0x000000, 0x0000FF, 0x00FF00, 0xFF0000
-};
-
-const DWORD ScreenView_ColorPalettes[16][4] =
-{
-    //                                     Palette#     01           10          11
-    0x000000, 0x0000FF, 0x00FF00, 0xFF0000,  // 00    синий   |   зеленый  |  красный
-    0x000000, 0xFFFF00, 0xFF00FF, 0xFF0000,  // 01   желтый   |  сиреневый |  красный
-    0x000000, 0x00FFFF, 0x0000FF, 0xFF00FF,  // 02   голубой  |    синий   | сиреневый
-    0x000000, 0x00FF00, 0x00FFFF, 0xFFFF00,  // 03   зеленый  |   голубой  |  желтый
-    0x000000, 0xFF00FF, 0x00FFFF, 0xFFFFFF,  // 04  сиреневый |   голубой  |   белый
-    0x000000, 0xFFFFFF, 0xFFFFFF, 0xFFFFFF,  // 05    белый   |    белый   |   белый
-    0x000000, 0x7F0000, 0x7F0000, 0xFF0000,  // 06  темн-красн| красн-корич|  красный
-    0x000000, 0x00FF7F, 0x00FF7F, 0xFFFF00,  // 07  салатовый | светл-зелен|  желтый
-    0x000000, 0xFF00FF, 0x7F00FF, 0x7F007F,  // 08  фиолетовый| фиол-синий | сиреневый
-    0x000000, 0x00FF7F, 0x7F00FF, 0x7F0000,  // 09 светл-зелен| фиол-синий |красн-корич
-    0x000000, 0x00FF7F, 0x7F007F, 0x7F0000,  // 10  салатовый | фиолетовый |темн-красный
-    0x000000, 0x00FFFF, 0xFFFF00, 0xFF0000,  // 11   голубой  |   желтый   |  красный
-    0x000000, 0xFF0000, 0x00FF00, 0x00FFFF,  // 12   красный  |   зеленый  |  голубой
-    0x000000, 0x00FFFF, 0xFFFF00, 0xFFFFFF,  // 13   голубой  |   желтый   |   белый
-    0x000000, 0xFFFF00, 0x00FF00, 0xFFFFFF,  // 14   желтый   |   зеленый  |   белый
-    0x000000, 0x00FFFF, 0x00FF00, 0xFFFFFF,  // 15   голубой  |   зеленый  |   белый
-};
 
 
 //////////////////////////////////////////////////////////////////////
@@ -644,198 +581,49 @@ WORD Emulator_GetChangeRamStatus(WORD address)
     return *((WORD*)(g_pEmulatorChangedRam + address));
 }
 
-void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)
-{
-    if (scrmode < 0 || scrmode >= sizeof(ScreenModeReference) / sizeof(ScreenModeStruct))
-        return;
-    ScreenModeStruct* pinfo = ScreenModeReference + scrmode;
-    *pwid = pinfo->width;
-    *phei = pinfo->height;
-}
-
-const DWORD * Emulator_GetPalette(int screenMode)
-{
-    return (const DWORD *)ScreenView_BWPalette;
-}
-
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 {
     if (pImageBits == NULL) return;
 
-    // Get scroll value
-    WORD scroll = g_pBoard->GetPortView(0177664);
-    BOOL okSmallScreen = ((scroll & 01000) == 0);
-    scroll &= 0377;
-    scroll = (scroll >= 0330) ? scroll - 0330 : 050 + scroll;
+	WORD vdptaslo = g_pBoard->GetRAMWord(000010);  // VDPTAS
+	WORD vdptashi = g_pBoard->GetRAMWord(000012);  // VDPTAS
+	WORD vdptaplo = g_pBoard->GetRAMWord(000004);  // VDPTAP
+	WORD vdptaphi = g_pBoard->GetRAMWord(000004);  // VDPTAP
 
-    const DWORD * pPalette = Emulator_GetPalette(screenMode);
+	int tascount = (vdptashi >> 10) & 037;
+	DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)vdptashi & 017) << 18);
+	for (int line = 0; line < tascount; line++)
+	{
+		DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * line);
 
-    const BYTE* pVideoBuffer = g_pBoard->GetVideoBuffer();
-    ASSERT(pVideoBuffer != NULL);
+		WORD linelo = g_pBoard->GetRAMWord(tasaddr);
+		WORD linehi = g_pBoard->GetRAMWord(tasaddr + 2);
 
-    // Render to bitmap
-    PREPARE_SCREEN_CALLBACK callback = ScreenModeReference[screenMode].callback;
-    callback(pVideoBuffer, okSmallScreen, pPalette, scroll, pImageBits);
+		int linecount = (linehi >> 10) & 037;
+		DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)linehi & 017) << 18);
+		for (int otr = 0; otr < linecount; otr++)
+		{
+			WORD otrlo = g_pBoard->GetRAMWord(lineaddr);
+			WORD otrhi = g_pBoard->GetRAMWord(lineaddr + 2);
+
+			int otrcount = (otrhi >> 10) & 037;
+			DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
+			for (int i = 0; i < otrcount; i++)
+			{
+				WORD bitslo = g_pBoard->GetRAMWord(otraddr);
+				WORD bitshi = g_pBoard->GetRAMWord(otraddr + 2);
+				*plinebits = MAKELONG(bitslo, bitshi);
+
+				otraddr += 4;
+			}
+
+			lineaddr += 4;
+		}
+
+		tasaddr += 4;
+	}
+
 }
-
-void CALLBACK Emulator_PrepareScreenBW512x256(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits)
-{
-    int linesToShow = okSmallScreen ? 64 : 256;
-    for (int y = 0; y < linesToShow; y++)
-    {
-        int yy = (y + scroll) & 0377;
-        const WORD* pVideo = (WORD*)(pVideoBuffer + yy * 0100);
-        DWORD* pBits = (DWORD*)pImageBits + (255 - y) * 512;
-        for (int x = 0; x < 512 / 16; x++)
-        {
-            WORD src = *pVideo;
-
-            for (int bit = 0; bit < 16; bit++)
-            {
-                DWORD color = (src & 1) ? 0x0ffffff : 0;
-                *pBits = color;
-                pBits++;
-                src = src >> 1;
-            }
-
-            pVideo++;
-        }
-    }
-    if (okSmallScreen)
-    {
-        memset((DWORD*)pImageBits, 0, (256 - 64) * 512 * sizeof(DWORD));
-    }
-}
-
-void CALLBACK Emulator_PrepareScreenColor512x256(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits)
-{
-    int linesToShow = okSmallScreen ? 64 : 256;
-    for (int y = 0; y < linesToShow; y++)
-    {
-        int yy = (y + scroll) & 0377;
-        const WORD* pVideo = (WORD*)(pVideoBuffer + yy * 0100);
-        DWORD* pBits = (DWORD*)pImageBits + (255 - y) * 512;
-        for (int x = 0; x < 512 / 16; x++)
-        {
-            WORD src = *pVideo;
-
-            for (int bit = 0; bit < 16; bit += 2)
-            {
-                DWORD color = pPalette[src & 3];
-                *pBits = color;
-                pBits++;
-                *pBits = color;
-                pBits++;
-                src = src >> 2;
-            }
-
-            pVideo++;
-        }
-    }
-    if (okSmallScreen)
-    {
-        memset((DWORD*)pImageBits, 0, (256 - 64) * 512 * sizeof(DWORD));
-    }
-}
-
-void CALLBACK Emulator_PrepareScreenBW512x384(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits)
-{
-    int linesToShow = okSmallScreen ? 64 : 256;
-    int bky = 0;
-    for (int y = 0; y < 384; y++)
-    {
-        DWORD* pBits = (DWORD*)pImageBits + (383 - y) * 512;
-        if (y % 3 == 1)
-            continue;  // Skip, fill later
-
-        int yy = (bky + scroll) & 0377;
-        const WORD* pVideo = (WORD*)(pVideoBuffer + yy * 0100);
-        for (int x = 0; x < 512 / 16; x++)
-        {
-            WORD src = *pVideo;
-
-            for (int bit = 0; bit < 16; bit++)
-            {
-                DWORD color = (src & 1) ? 0x0ffffff : 0;
-                *pBits = color;
-                pBits++;
-                src = src >> 1;
-            }
-
-            pVideo++;
-        }
-
-        if (y % 3 == 2)  // Fill skipped line
-        {
-            BYTE* pBits2 = (BYTE*)((DWORD*)pImageBits + (383 - y + 0) * 512);
-            BYTE* pBits1 = (BYTE*)((DWORD*)pImageBits + (383 - y + 1) * 512);
-            BYTE* pBits0 = (BYTE*)((DWORD*)pImageBits + (383 - y + 2) * 512);
-            for (int x = 0; x < 512 * 4; x++)
-            {
-                *pBits1 = (BYTE)((((WORD) * pBits0) + ((WORD) * pBits2)) / 2);
-                pBits2++;  pBits1++;  pBits0++;
-            }
-        }
-
-        bky++;
-        if (bky >= linesToShow) break;
-    }
-    if (okSmallScreen)
-    {
-        memset((DWORD*)pImageBits, 0, (384 - 86) * 512 * sizeof(DWORD));  //TODO
-    }
-}
-
-void CALLBACK Emulator_PrepareScreenColor512x384(const BYTE* pVideoBuffer, int okSmallScreen, const DWORD* pPalette, int scroll, void* pImageBits)
-{
-    int linesToShow = okSmallScreen ? 64 : 256;
-    int bky = 0;
-    for (int y = 0; y < 384; y++)
-    {
-        DWORD* pBits = (DWORD*)pImageBits + (383 - y) * 512;
-        if (y % 3 == 1)
-            continue;  // Skip, fill later
-
-        int yy = (bky + scroll) & 0377;
-        const WORD* pVideo = (WORD*)(pVideoBuffer + yy * 0100);
-        for (int x = 0; x < 512 / 16; x++)
-        {
-            WORD src = *pVideo;
-
-            for (int bit = 0; bit < 16; bit += 2)
-            {
-                DWORD color = pPalette[src & 3];
-                *pBits = color;
-                pBits++;
-                *pBits = color;
-                pBits++;
-                src = src >> 2;
-            }
-
-            pVideo++;
-        }
-
-        if (y % 3 == 2)  // Fill skipped line
-        {
-            BYTE* pBits2 = (BYTE*)((DWORD*)pImageBits + (383 - y + 0) * 512);
-            BYTE* pBits1 = (BYTE*)((DWORD*)pImageBits + (383 - y + 1) * 512);
-            BYTE* pBits0 = (BYTE*)((DWORD*)pImageBits + (383 - y + 2) * 512);
-            for (int x = 0; x < 512 * 4; x++)
-            {
-                *pBits1 = (BYTE)((((WORD) * pBits0) + ((WORD) * pBits2)) / 2);
-                pBits2++;  pBits1++;  pBits0++;
-            }
-        }
-
-        bky++;
-        if (bky >= linesToShow) break;
-    }
-    if (okSmallScreen)
-    {
-        memset((DWORD*)pImageBits, 0, (384 - 86) * 512 * sizeof(DWORD));  //TODO
-    }
-}
-
 
 //////////////////////////////////////////////////////////////////////
 //

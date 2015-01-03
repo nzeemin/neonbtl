@@ -188,9 +188,10 @@ void ScreenView_SetScreenMode(int newMode)
     m_ScreenMode = newMode;
 
     // Ask Emulator module for screen width and height
-    int cxWidth, cyHeight;
-    Emulator_GetScreenSize(newMode, &cxWidth, &cyHeight);
-    m_cyScreenHeight = cyHeight;
+    int cxWidth = NEON_SCREEN_WIDTH;
+	int cyHeight = NEON_SCREEN_HEIGHT;
+
+	m_cyScreenHeight = cyHeight;
     ScreenView_CreateDisplay();
 
     RECT rc;  ::GetWindowRect(g_hwndScreen, &rc);
@@ -379,21 +380,21 @@ void ScreenView_KeyEvent(BYTE keyscan, BOOL pressed)
 
 BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)
 {
-    ASSERT(sFileName != NULL);
-    ASSERT(m_bits != NULL);
+    //ASSERT(sFileName != NULL);
+    //ASSERT(m_bits != NULL);
 
-    DWORD* pBits = (DWORD*) ::malloc(NEON_SCREEN_WIDTH * NEON_SCREEN_HEIGHT * 4);
-    const DWORD* colors = Emulator_GetPalette(m_ScreenMode);
-    Emulator_PrepareScreenRGB32(pBits, m_ScreenMode);
+    //DWORD* pBits = (DWORD*) ::malloc(NEON_SCREEN_WIDTH * NEON_SCREEN_HEIGHT * 4);
+    //const DWORD* colors = Emulator_GetPalette(m_ScreenMode);
+    //Emulator_PrepareScreenRGB32(pBits, m_ScreenMode);
 
-    LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
+    //LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
     BOOL result = FALSE;
-    if (sFileNameExt != NULL && _tcsicmp(sFileNameExt, _T(".png")) == 0)
-        result = PngFile_SaveScreenshot(pBits, colors, sFileName);
-    else
-        result = BmpFile_SaveScreenshot(pBits, colors, sFileName);
+    //if (sFileNameExt != NULL && _tcsicmp(sFileNameExt, _T(".png")) == 0)
+    //    result = PngFile_SaveScreenshot(pBits, colors, sFileName);
+    //else
+    //    result = BmpFile_SaveScreenshot(pBits, colors, sFileName);
 
-    ::free(pBits);
+    //::free(pBits);
 
     return result;
 }
