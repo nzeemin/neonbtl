@@ -688,7 +688,7 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
 
     if (address >= 0160000)
     {
-        if (address < 170000)  // Port
+        if (address < 0170000)  // Port
         {
             *pOffset = address;
             return ADDRTYPE_IO;
@@ -794,12 +794,37 @@ WORD CMotherboard::GetPortWord(WORD address)
 // Read word from port for debugger
 WORD CMotherboard::GetPortView(WORD address) const
 {
-    //switch (address)
-    //{
+    switch (address)
+    {
+    case 0161200:
+    case 0161202:
+    case 0161204:
+    case 0161206:
+    case 0161210:
+    case 0161212:
+    case 0161214:
+    case 0161216:
+        {
+            int chunk = (address >> 1) & 7;
+            return m_HR[chunk];
+        }
 
-    //default:
-    return 0;
-    //}
+    case 0161220:
+    case 0161222:
+    case 0161224:
+    case 0161226:
+    case 0161230:
+    case 0161232:
+    case 0161234:
+    case 0161236:
+        {
+            int chunk = (address >> 1) & 7;
+            return m_UR[chunk];
+        }
+
+	default:
+		return 0;
+    }
 }
 
 void CMotherboard::SetPortByte(WORD address, BYTE byte)
