@@ -598,29 +598,33 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 
 		WORD linelo = g_pBoard->GetRAMWord(tasaddr);
 		WORD linehi = g_pBoard->GetRAMWord(tasaddr + 2);
+		tasaddr += 4;
 		if (linelo == 0 && linehi == 0)
 		{
 			::memset(plinebits, 0, NEON_SCREEN_WIDTH * 4);
-			tasaddr += 4;
 			continue;
 		}
 
 		DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)(linehi & 017)) << 18);
-		for (int otr = 0; otr < 2/*linecount*/; otr++)  // ÷икл по видеоотрезкам строки
+		int x = 0;
+		while (true)  // ÷икл по видеоотрезкам строки, до полного заполнени€ строки
 		{
 			WORD otrlo = g_pBoard->GetRAMWord(lineaddr);
 			WORD otrhi = g_pBoard->GetRAMWord(lineaddr + 2);
+			lineaddr += 4;
 			int otrcount = (otrhi >> 10) & 037;  // ƒлина отрезка в 32-разр€дных словах
 			if (otrcount == 0) otrcount = 32;
 			DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
 			if (otraddr == 0)
 			{
-				::memset(plinebits, 0, otrcount * 4);
-				plinebits += otrcount;
-				lineaddr += 4;
+				::memset(plinebits, 0, otrcount * 4 * 2);
+				x += otrcount * 2;
+				if (x >= 832) break;
+				plinebits += otrcount * 2;
 				continue;
 			}
-			WORD otrvn = (otrhi >> 6) & 03;
+			WORD otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
+			WORD otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определ€ют инф.плотность
 			for (int i = 0; i < otrcount; i++)  // ÷икл по 32-разр€дным словам отрезка
 			{
 				WORD bitslo = g_pBoard->GetRAMWord(otraddr);
@@ -628,24 +632,32 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 
 				for (int i = 0; i < 16; i++)
 				{
-					*plinebits = (bitslo & 1) ? 0x00ffffff : 0;
-					plinebits++;
+					DWORD color = (bitslo & 1) ? 0x00ffffff : 0x00444444;
+					*plinebits = color;  plinebits++;
+					x++;
+					if (x >= 832) break;
+					*plinebits = color;  plinebits++;
+					x++;
+					if (x >= 832) break;
 					bitslo = bitslo >> 1;
 				}
 				for (int i = 0; i < 16; i++)
 				{
-					*plinebits = (bitshi & 1) ? 0x00ffffff : 0;
-					plinebits++;
-					bitslo = bitshi >> 1;
+					DWORD color = (bitshi & 1) ? 0x00ffffff : 0x00444444;
+					*plinebits = color;  plinebits++;
+					x++;
+					if (x >= 832) break;
+					*plinebits = color;  plinebits++;
+					x++;
+					if (x >= 832) break;
+					bitshi = bitshi >> 1;
 				}
+				if (x >= 832) break;
 
 				otraddr += 4;
 			}
-
-			lineaddr += 4;
+			if (x >= 832) break;
 		}
-
-		tasaddr += 4;
 	}
 }
 
