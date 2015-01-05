@@ -175,7 +175,7 @@ void CMotherboard::DetachFloppyImage(int slot)
 
 WORD CMotherboard::GetRAMWord(DWORD offset) const
 {
-	//ASSERT(offset < NEON_RAM_SIZE_BYTES);
+    //ASSERT(offset < NEON_RAM_SIZE_BYTES);
     return *((WORD*)(m_pRAM + offset));
 }
 WORD CMotherboard::GetRAMWord(WORD hioffset, WORD offset) const
@@ -504,7 +504,7 @@ void CMotherboard::SetPrinterInPort(BYTE data)
 // Read word from memory for debugger
 WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pAddrType) const
 {
-	address &= ~1;
+    address &= ~1;
 
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
@@ -531,7 +531,7 @@ WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* 
 
 WORD CMotherboard::GetWord(WORD address, BOOL okHaltMode, BOOL okExec)
 {
-	address &= ~1;
+    address &= ~1;
 
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
@@ -601,7 +601,7 @@ BYTE CMotherboard::GetByte(WORD address, BOOL okHaltMode)
 
 void CMotherboard::SetWord(WORD address, BOOL okHaltMode, WORD word)
 {
-	address &= ~1;
+    address &= ~1;
 
     DWORD offset;
     int addrtype = TranslateAddress(address, okHaltMode, FALSE, &offset);
@@ -707,12 +707,12 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
         *pOffset = 0;
         return ADDRTYPE_DENY;
     }
-	DWORD longaddr = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
-	if (longaddr >= NEON_RAM_SIZE_BYTES)
-	{
+    DWORD longaddr = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
+    if (longaddr >= NEON_RAM_SIZE_BYTES)
+    {
         *pOffset = 0;
         return ADDRTYPE_DENY;
-	}
+    }
 
     *pOffset = longaddr;
     return ADDRTYPE_RAM;
@@ -823,8 +823,8 @@ WORD CMotherboard::GetPortView(WORD address) const
             return m_UR[chunk];
         }
 
-	default:
-		return 0;
+    default:
+        return 0;
     }
 }
 
@@ -856,9 +856,9 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     {
     case 0161000:  // Unknown port
     case 0161002:  // Unknown port
-		break;
+        break;
 
-	case 0161012:
+    case 0161012:
         //TODO: SNDÑ1R -- Sound control
         break;
     case 0161014:
@@ -867,9 +867,9 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161016:
         //TODO: SNDÑSR -- Sound control
         break;
-	case 0161026:
-		//TODO: SNLÑSR -- Sound control
-		break;
+    case 0161026:
+        //TODO: SNLÑSR -- Sound control
+        break;
 
     case 0161030:
         //TODO: PPIA -- Parallel port
@@ -903,11 +903,11 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
     case 0161212:
     case 0161214:
     case 0161216:
-		{
-			int chunk = (address >> 1) & 7;
-			m_HR[chunk] = word;
-			break;
-		}
+        {
+            int chunk = (address >> 1) & 7;
+            m_HR[chunk] = word;
+            break;
+        }
 
     case 0161220:
     case 0161222:
@@ -923,8 +923,8 @@ void CMotherboard::SetPortWord(WORD address, WORD word)
             break;
         }
 
-	case 0161412:  // Unknown port
-		break;
+    case 0161412:  // Unknown port
+        break;
 
     default:
 #if !defined(PRODUCT)
