@@ -617,10 +617,12 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 			DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
 			if (otraddr == 0)
 			{
-				::memset(plinebits, 0, otrcount * 4 * 2);
-				x += otrcount * 2;
+				int otrlen = otrcount * 16 * 2;
+				if (832 - x - otrlen < 0) otrlen = 832 - x;
+				::memset(plinebits, 0, otrlen * 4);
+				plinebits += otrlen;
+				x += otrlen;
 				if (x >= 832) break;
-				plinebits += otrcount * 2;
 				continue;
 			}
 			WORD otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
@@ -629,28 +631,18 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 			{
 				WORD bitslo = g_pBoard->GetRAMWord(otraddr);
 				WORD bitshi = g_pBoard->GetRAMWord(otraddr + 2);
+				DWORD bits = MAKELONG(bitslo, bitshi);
 
-				for (int i = 0; i < 16; i++)
+				for (int i = 0; i < 32; i++)
 				{
-					DWORD color = (bitslo & 1) ? 0x00ffffff : 0x00444444;
+					DWORD color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
 					*plinebits = color;  plinebits++;
 					x++;
 					if (x >= 832) break;
 					*plinebits = color;  plinebits++;
 					x++;
 					if (x >= 832) break;
-					bitslo = bitslo >> 1;
-				}
-				for (int i = 0; i < 16; i++)
-				{
-					DWORD color = (bitshi & 1) ? 0x00ffffff : 0x00444444;
-					*plinebits = color;  plinebits++;
-					x++;
-					if (x >= 832) break;
-					*plinebits = color;  plinebits++;
-					x++;
-					if (x >= 832) break;
-					bitshi = bitshi >> 1;
+					bits = bits >> 1;
 				}
 				if (x >= 832) break;
 
