@@ -175,6 +175,7 @@ void CMotherboard::DetachFloppyImage(int slot)
 
 WORD CMotherboard::GetRAMWord(DWORD offset) const
 {
+	//ASSERT(offset < NEON_RAM_SIZE_BYTES);
     return *((WORD*)(m_pRAM + offset));
 }
 WORD CMotherboard::GetRAMWord(WORD hioffset, WORD offset) const
@@ -707,7 +708,7 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
         return ADDRTYPE_DENY;
     }
 	DWORD longaddr = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
-	if (longaddr > NEON_RAM_SIZE_BYTES)
+	if (longaddr >= NEON_RAM_SIZE_BYTES)
 	{
         *pOffset = 0;
         return ADDRTYPE_DENY;

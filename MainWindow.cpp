@@ -471,7 +471,7 @@ void MainWindow_AdjustWindowLayout()
     }
     if (Settings_GetDebug())  // Debug views shown -- keyboard/tape snapped to top
     {
-        cxScreen = (416 + 832) / 2;
+        cxScreen = 690;
         cyScreen = NEON_SCREEN_HEIGHT;
 
         int yKeyboard = yScreen + cyScreen;
