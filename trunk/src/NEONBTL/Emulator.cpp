@@ -585,34 +585,59 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 {
     if (pImageBits == NULL) return;
 
-	WORD vdptaslo = g_pBoard->GetRAMWord(000010);  // VDPTAS
-	WORD vdptashi = g_pBoard->GetRAMWord(000012);  // VDPTAS
-	WORD vdptaplo = g_pBoard->GetRAMWord(000004);  // VDPTAP
-	WORD vdptaphi = g_pBoard->GetRAMWord(000004);  // VDPTAP
+	WORD vdptaslo = g_pBoard->GetRAMWord(0170010);  // VDPTAS
+	WORD vdptashi = g_pBoard->GetRAMWord(0170012);  // VDPTAS
+	WORD vdptaplo = g_pBoard->GetRAMWord(0170004);  // VDPTAP
+	WORD vdptaphi = g_pBoard->GetRAMWord(0170006);  // VDPTAP
 
-	int tascount = (vdptashi >> 10) & 037;
-	DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)vdptashi & 017) << 18);
-	for (int line = 0; line < tascount; line++)
+	DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)(vdptashi & 017)) << 18);
+	//tasaddr += 4 * 16;  //DEBUG: Skip first lines
+	for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам
 	{
-		DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * line);
+		DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
 
 		WORD linelo = g_pBoard->GetRAMWord(tasaddr);
 		WORD linehi = g_pBoard->GetRAMWord(tasaddr + 2);
+		if (linelo == 0 && linehi == 0)
+		{
+			::memset(plinebits, 0, NEON_SCREEN_WIDTH * 4);
+			tasaddr += 4;
+			continue;
+		}
 
-		int linecount = (linehi >> 10) & 037;
-		DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)linehi & 017) << 18);
-		for (int otr = 0; otr < linecount; otr++)
+		DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)(linehi & 017)) << 18);
+		for (int otr = 0; otr < 2/*linecount*/; otr++)  // Цикл по видеоотрезкам строки
 		{
 			WORD otrlo = g_pBoard->GetRAMWord(lineaddr);
 			WORD otrhi = g_pBoard->GetRAMWord(lineaddr + 2);
-
-			int otrcount = (otrhi >> 10) & 037;
+			int otrcount = (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
+			if (otrcount == 0) otrcount = 32;
 			DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
-			for (int i = 0; i < otrcount; i++)
+			if (otraddr == 0)
+			{
+				::memset(plinebits, 0, otrcount * 4);
+				plinebits += otrcount;
+				lineaddr += 4;
+				continue;
+			}
+			WORD otrvn = (otrhi >> 6) & 03;
+			for (int i = 0; i < otrcount; i++)  // Цикл по 32-разрядным словам отрезка
 			{
 				WORD bitslo = g_pBoard->GetRAMWord(otraddr);
 				WORD bitshi = g_pBoard->GetRAMWord(otraddr + 2);
-				*plinebits = MAKELONG(bitslo, bitshi);
+
+				for (int i = 0; i < 16; i++)
+				{
+					*plinebits = (bitslo & 1) ? 0x00ffffff : 0;
+					plinebits++;
+					bitslo = bitslo >> 1;
+				}
+				for (int i = 0; i < 16; i++)
+				{
+					*plinebits = (bitshi & 1) ? 0x00ffffff : 0;
+					plinebits++;
+					bitslo = bitshi >> 1;
+				}
 
 				otraddr += 4;
 			}
@@ -622,7 +647,6 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 
 		tasaddr += 4;
 	}
-
 }
 
 //////////////////////////////////////////////////////////////////////
