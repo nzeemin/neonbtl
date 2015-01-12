@@ -17,9 +17,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 void TraceInstruction(CProcessor* pProc, CMotherboard* pBoard, WORD address);
 
-//NOTE: Const for now, variable in the future
-const DWORD NEON_RAM_SIZE_BYTES = 512 * 1024;
-
 //////////////////////////////////////////////////////////////////////
 
 CMotherboard::CMotherboard ()
@@ -38,8 +35,9 @@ CMotherboard::CMotherboard ()
     ::memset(m_HR, 0, sizeof(m_HR));
     ::memset(m_UR, 0, sizeof(m_UR));
 
-    // Allocate memory for RAM and ROM
-    m_pRAM = (BYTE*) ::malloc(NEON_RAM_SIZE_BYTES);  //::memset(m_pRAM, 0, 512 * 1024);
+    // Allocate memory for ROM
+	m_nRamSizeBytes = 0;
+	m_pRAM = NULL;  // RAM allocation in SetConfiguration() method
     m_pROM = (BYTE*) ::malloc(16 * 1024);  ::memset(m_pROM, 0, 16 * 1024);
 
     SetConfiguration(0);  // Default configuration
@@ -63,8 +61,15 @@ void CMotherboard::SetConfiguration(WORD conf)
 {
     m_Configuration = conf;
 
-    // Clean RAM/ROM
-    ::memset(m_pRAM, 0, NEON_RAM_SIZE_BYTES);
+    // Allocate RAM; clean RAM/ROM
+	if (m_pRAM != NULL)
+		::free(m_pRAM);
+	DWORD nRamSizeKbytes = conf & NEON_COPT_RAMSIZE_MASK;
+	if (nRamSizeKbytes == 0)
+		nRamSizeKbytes = 512;
+	m_nRamSizeBytes = nRamSizeKbytes * 1024;
+    m_pRAM = (BYTE*) ::malloc(m_nRamSizeBytes);
+    ::memset(m_pRAM, 0, m_nRamSizeBytes);
     ::memset(m_pROM, 0, 16 * 1024);
 
     //// Pre-fill RAM with "uninitialized" values
@@ -80,11 +85,11 @@ void CMotherboard::SetConfiguration(WORD conf)
     //        val = ~val;
     //}
 
-    if (m_pFloppyCtl == NULL && (conf & BK_COPT_FDD) != 0)
+    if (m_pFloppyCtl == NULL && (conf & NEON_COPT_FDD) != 0)
     {
         m_pFloppyCtl = new CFloppyController();
     }
-    if (m_pFloppyCtl != NULL && (conf & BK_COPT_FDD) == 0)
+    if (m_pFloppyCtl != NULL && (conf & NEON_COPT_FDD) == 0)
     {
         delete m_pFloppyCtl;  m_pFloppyCtl = NULL;
     }
@@ -126,14 +131,14 @@ void CMotherboard::LoadROM(int bank, const BYTE* pBuffer)
     ::memcpy(m_pROM + 8192 * bank, pBuffer, 8192);
 }
 
-void CMotherboard::LoadRAM(int startbank, const BYTE* pBuffer, int length)
-{
-    ASSERT(pBuffer != NULL);
-    ASSERT(startbank >= 0 && startbank < 15);
-    int address = 8192 * startbank;
-    ASSERT(address + length <= 128 * 1024);
-    ::memcpy(m_pRAM + address, pBuffer, length);
-}
+//void CMotherboard::LoadRAM(int startbank, const BYTE* pBuffer, int length)
+//{
+//    ASSERT(pBuffer != NULL);
+//    ASSERT(startbank >= 0 && startbank < 15);
+//    int address = 8192 * startbank;
+//    ASSERT(address + length <= 128 * 1024);
+//    ::memcpy(m_pRAM + address, pBuffer, length);
+//}
 
 
 // Floppy ////////////////////////////////////////////////////////////
@@ -175,40 +180,20 @@ void CMotherboard::DetachFloppyImage(int slot)
 
 WORD CMotherboard::GetRAMWord(DWORD offset) const
 {
-    //ASSERT(offset < NEON_RAM_SIZE_BYTES);
+    ASSERT(offset < m_nRamSizeBytes);
     return *((WORD*)(m_pRAM + offset));
-}
-WORD CMotherboard::GetRAMWord(WORD hioffset, WORD offset) const
-{
-    DWORD dwOffset = MAKELONG(offset, hioffset);
-    return *((WORD*)(m_pRAM + dwOffset));
 }
 BYTE CMotherboard::GetRAMByte(DWORD offset) const
 {
     return m_pRAM[offset];
 }
-BYTE CMotherboard::GetRAMByte(WORD hioffset, WORD offset) const
-{
-    DWORD dwOffset = MAKELONG(offset, hioffset);
-    return m_pRAM[dwOffset];
-}
 void CMotherboard::SetRAMWord(DWORD offset, WORD word)
 {
     *((WORD*)(m_pRAM + offset)) = word;
 }
-void CMotherboard::SetRAMWord(WORD hioffset, WORD offset, WORD word)
-{
-    DWORD dwOffset = MAKELONG(offset, hioffset);
-    *((WORD*)(m_pRAM + dwOffset)) = word;
-}
 void CMotherboard::SetRAMByte(DWORD offset, BYTE byte)
 {
     m_pRAM[offset] = byte;
-}
-void CMotherboard::SetRAMByte(WORD hioffset, WORD offset, BYTE byte)
-{
-    DWORD dwOffset = MAKELONG(offset, hioffset);
-    m_pRAM[dwOffset] = byte;
 }
 
 WORD CMotherboard::GetROMWord(WORD offset) const
@@ -329,8 +314,7 @@ void CMotherboard::DebugTicks()
 Каждый фрейм равен 1/25 секунды = 40 мс = 20000 тиков, 1 тик = 2 мкс.
 12 МГц = 1 / 12000000 = 0.83(3) мкс
 В каждый фрейм происходит:
-* 120000 тиков ЦП - 6 раз за тик (БК-0010, 12МГц / 4 = 3 МГц, 3.3(3) мкс), либо
-* 160000 тиков ЦП - 8 раз за тик (БК-0011, 12МГц / 3 = 4 МГц, 2.5 мкс)
+* 320000 тиков ЦП - 16 раз за тик (8 МГц)
 * программируемый таймер - на каждый 128-й тик процессора; 42.6(6) мкс либо 32 мкс
 * 2 тика IRQ2 50 Гц, в 0-й и 10000-й тик фрейма
 * 625 тиков FDD - каждый 32-й тик (300 RPM = 5 оборотов в секунду)
@@ -338,10 +322,10 @@ void CMotherboard::DebugTicks()
 */
 BOOL CMotherboard::SystemFrame()
 {
-    int frameProcTicks = (m_Configuration & BK_COPT_BK0011) ? 8 : 6;
+    const int frameProcTicks = 16;
     const int audioticks = 20286 / (SOUNDSAMPLERATE / 25);
     const int teletypeTicks = 20000 / (9600 / 25);
-    int floppyTicks = (m_Configuration & BK_COPT_BK0011) ? 38 : 44;
+    int floppyTicks = 32;
     int teletypeTxCount = 0;
 
     int frameTapeTicks = 0, tapeSamplesPerFrame = 0, tapeReadError = 0;
@@ -378,7 +362,7 @@ BOOL CMotherboard::SystemFrame()
             Tick50();  // 1/50 timer event
         }
 
-        if ((m_Configuration & BK_COPT_FDD) && (frameticks % floppyTicks == 0))  // FDD tick
+        if ((m_Configuration & NEON_COPT_FDD) && (frameticks % floppyTicks == 0))  // FDD tick
         {
             if (m_pFloppyCtl != NULL)
                 m_pFloppyCtl->Periodic();
@@ -502,6 +486,12 @@ void CMotherboard::SetPrinterInPort(BYTE data)
 // Motherboard: memory management
 
 // Read word from memory for debugger
+WORD CMotherboard::GetRAMWordView(DWORD address) const
+{
+    if (address >= m_nRamSizeBytes)
+		return 0;
+    return *((WORD*)(m_pRAM + address));
+}
 WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pAddrType) const
 {
     address &= ~1;
@@ -673,12 +663,6 @@ void CMotherboard::SetByte(WORD address, BOOL okHaltMode, BYTE byte)
     ASSERT(FALSE);  // If we are here - then addrtype has invalid value
 }
 
-// Calculates video buffer start address, for screen drawing procedure
-const BYTE* CMotherboard::GetVideoBuffer()
-{
-    return m_pRAM + 040000;  //STUB
-}
-
 int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, DWORD* pOffset) const
 {
     if (okHaltMode && address < 040000)
@@ -708,13 +692,14 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
         return ADDRTYPE_DENY;
     }
     DWORD longaddr = ((DWORD)(address & 017777)) + (((DWORD)(memreg & 037760)) << 8);
-    if (longaddr >= NEON_RAM_SIZE_BYTES)
+    if (longaddr >= m_nRamSizeBytes)
     {
         *pOffset = 0;
         return ADDRTYPE_DENY;
     }
 
     *pOffset = longaddr;
+	//ASSERT(longaddr < m_nRamSizeBytes);
     return ADDRTYPE_RAM;
 }
 

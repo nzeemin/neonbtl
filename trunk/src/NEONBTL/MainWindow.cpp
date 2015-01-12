@@ -63,7 +63,7 @@ void MainWindow_DoEmulatorSound();
 void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
 void MainWindow_DoEmulatorFloppy(int slot);
-void MainWindow_DoEmulatorConf(BKConfiguration configuration);
+void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
 void MainWindow_DoFileScreenshot();
 void MainWindow_DoFileScreenshotSaveAs();
 void MainWindow_DoFileLoadBin();
@@ -962,7 +962,7 @@ void MainWindow_DoFileSettings()
     ShowSettingsDialog();
 }
 
-void MainWindow_DoEmulatorConf(BKConfiguration configuration)
+void MainWindow_DoEmulatorConf(NeonConfiguration configuration)
 {
     // Check if configuration changed
     if (g_nEmulatorConfiguration == configuration)
@@ -991,7 +991,7 @@ void MainWindow_DoEmulatorFloppy(int slot)
     }
     else
     {
-        if ((g_nEmulatorConfiguration & BK_COPT_FDD) == 0)
+        if ((g_nEmulatorConfiguration & NEON_COPT_FDD) == 0)
         {
             AlertWarning(_T("Current configuration has no floppy controller."));
             return;
