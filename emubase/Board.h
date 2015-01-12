@@ -21,12 +21,12 @@ class CProcessor;
 //////////////////////////////////////////////////////////////////////
 
 // Machine configurations
-enum BKConfiguration
+enum NeonConfiguration
 {
     // Configuration options
-    BK_COPT_BK0010 = 0,
-    BK_COPT_BK0011 = 1,
-    BK_COPT_FDD = 16,
+    NEON_COPT_FDD = 16,
+
+	NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,
 };
 
 
@@ -78,11 +78,12 @@ private:  // Devices
     CProcessor*     m_pCPU;  // CPU device
     CFloppyController*  m_pFloppyCtl;  // FDD control
 private:  // Memory
-    WORD        m_Configuration;  // See BK_COPT_Xxx flag constants
-    BYTE*       m_pRAM;  // RAM, 512 KB
+    WORD        m_Configuration;  // See NEON_COPT_Xxx flag constants
+    BYTE*       m_pRAM;  // RAM, 512..4096 KB
     BYTE*       m_pROM;  // ROM, 16 KB
     WORD        m_HR[8];
     WORD        m_UR[8];
+    DWORD       m_nRamSizeBytes;  // Actual RAM size
 public:  // Construct / destruct
     CMotherboard();
     ~CMotherboard();
@@ -90,13 +91,9 @@ public:  // Getting devices
     CProcessor*     GetCPU() { return m_pCPU; }
 public:  // Memory access  //TODO: Make it private
     WORD        GetRAMWord(DWORD offset) const;
-    WORD        GetRAMWord(WORD hioffset, WORD offset) const;
     BYTE        GetRAMByte(DWORD offset) const;
-    BYTE        GetRAMByte(WORD hioffset, WORD offset) const;
     void        SetRAMWord(DWORD offset, WORD word);
-    void        SetRAMWord(WORD hioffset, WORD offset, WORD word);
     void        SetRAMByte(DWORD offset, BYTE byte);
-    void        SetRAMByte(WORD hioffset, WORD offset, BYTE byte);
     WORD        GetROMWord(WORD offset) const;
     BYTE        GetROMByte(WORD offset) const;
 public:  // Debug
@@ -145,13 +142,12 @@ public:  // Memory
     // Write byte
     void SetByte(WORD address, BOOL okHaltMode, BYTE byte);
     // Read word from memory for debugger
+    WORD GetRAMWordView(DWORD address) const;
     WORD GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pValid) const;
     // Read word from port for debugger
     WORD GetPortView(WORD address) const;
     // Read SEL register
     WORD GetSelRegister() const { return 0; }
-    // Get video buffer address
-    const BYTE* GetVideoBuffer();
 private:
     void        TapeInput(BOOL inputBit);  // Tape input bit received
 private:

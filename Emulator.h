@@ -20,7 +20,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 
 extern CMotherboard* g_pBoard;
-extern BKConfiguration g_nEmulatorConfiguration;  // Current configuration
+extern NeonConfiguration g_nEmulatorConfiguration;  // Current configuration
 extern BOOL g_okEmulatorRunning;
 
 extern BYTE* g_pEmulatorRam;  // RAM values - for change tracking
@@ -35,7 +35,7 @@ extern WORD g_wEmulatorPrevPpuPC;  // Previous PC value
 
 
 BOOL Emulator_Init();
-BOOL Emulator_InitConfiguration(BKConfiguration configuration);
+BOOL Emulator_InitConfiguration(NeonConfiguration configuration);
 void Emulator_Done();
 void Emulator_SetCPUBreakpoint(WORD address);
 void Emulator_SetPPUBreakpoint(WORD address);

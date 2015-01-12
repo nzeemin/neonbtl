@@ -168,7 +168,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     int conf = Settings_GetConfiguration();
     //if (conf == 0) //TODO
-    if (!Emulator_InitConfiguration((BKConfiguration)conf))
+    if (!Emulator_InitConfiguration((NeonConfiguration)conf))
         return FALSE;
 
     Emulator_SetSound(Settings_GetSound());
