@@ -26,7 +26,7 @@ enum NeonConfiguration
     // Configuration options
     NEON_COPT_FDD = 16,
 
-	NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,
+    NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,
 };
 
 

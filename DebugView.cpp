@@ -259,7 +259,7 @@ void DebugView_DoDraw(HDC hdc)
     // Draw stack for the current processor
     DebugView_DrawMemoryForRegister(hdc, 6, pDebugPU, 30 + 35 * cxChar, 2 + 0 * cyLine);
 
-	DebugView_DrawHRandUR(hdc, g_pBoard, 30 + 57 * cxChar, 2 + 0 * cyLine);
+    DebugView_DrawHRandUR(hdc, g_pBoard, 30 + 57 * cxChar, 2 + 0 * cyLine);
     //DebugView_DrawPorts(hdc, g_pBoard, 30 + 57 * cxChar, 2 + 0 * cyLine);
 
     SetTextColor(hdc, colorOld);
@@ -392,16 +392,16 @@ void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, 
 void DebugView_DrawHRandUR(HDC hdc, const CMotherboard* pBoard, int x, int y)
 {
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-	TCHAR buffer[24];
+    TCHAR buffer[24];
 
-	for (int i = 0; i < 8; i++)
-	{
-	    WORD hr = pBoard->GetPortView(0161200 + i * 2);
-	    WORD ur = pBoard->GetPortView(0161220 + i * 2);
-		const TCHAR format[] = _T("HR%d %06o UR%d %06o");
+    for (int i = 0; i < 8; i++)
+    {
+        WORD hr = pBoard->GetPortView(0161200 + i * 2);
+        WORD ur = pBoard->GetPortView(0161220 + i * 2);
+        const TCHAR format[] = _T("HR%d %06o UR%d %06o");
         _sntprintf(buffer, 24, format, i, hr, i, ur);
-	    TextOut(hdc, x, y + cyLine * (7 - i), buffer, (int)_tcslen(buffer));
-	}
+        TextOut(hdc, x, y + cyLine * (7 - i), buffer, (int)_tcslen(buffer));
+    }
 }
 
 void DebugView_DrawPorts(HDC hdc, const CMotherboard* pBoard, int x, int y)

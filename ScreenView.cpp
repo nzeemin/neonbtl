@@ -189,9 +189,9 @@ void ScreenView_SetScreenMode(int newMode)
 
     // Ask Emulator module for screen width and height
     int cxWidth = NEON_SCREEN_WIDTH;
-	int cyHeight = NEON_SCREEN_HEIGHT;
+    int cyHeight = NEON_SCREEN_HEIGHT;
 
-	m_cyScreenHeight = cyHeight;
+    m_cyScreenHeight = cyHeight;
     ScreenView_CreateDisplay();
 
     RECT rc;  ::GetWindowRect(g_hwndScreen, &rc);

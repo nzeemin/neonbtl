@@ -729,21 +729,21 @@ bool MainWindow_DoCommand(int commandId)
     case ID_VIEW_TAPE:
         MainWindow_DoViewTape();
         break;
-    //case ID_VIEW_RGBSCREEN:
-    //    MainWindow_DoViewScreenColor();
-    //    break;
-    //case ID_VIEW_SCREENMODE0:
-    //    MainWindow_DoViewScreenMode(0);
-    //    break;
-    //case ID_VIEW_SCREENMODE1:
-    //    MainWindow_DoViewScreenMode(1);
-    //    break;
-    //case ID_VIEW_SCREENMODE2:
-    //    MainWindow_DoViewScreenMode(2);
-    //    break;
-    //case ID_VIEW_SCREENMODE3:
-    //    MainWindow_DoViewScreenMode(3);
-    //    break;
+        //case ID_VIEW_RGBSCREEN:
+        //    MainWindow_DoViewScreenColor();
+        //    break;
+        //case ID_VIEW_SCREENMODE0:
+        //    MainWindow_DoViewScreenMode(0);
+        //    break;
+        //case ID_VIEW_SCREENMODE1:
+        //    MainWindow_DoViewScreenMode(1);
+        //    break;
+        //case ID_VIEW_SCREENMODE2:
+        //    MainWindow_DoViewScreenMode(2);
+        //    break;
+        //case ID_VIEW_SCREENMODE3:
+        //    MainWindow_DoViewScreenMode(3);
+        //    break;
     case ID_EMULATOR_RUN:
         MainWindow_DoEmulatorRun();
         break;

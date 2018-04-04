@@ -36,8 +36,8 @@ CMotherboard::CMotherboard ()
     ::memset(m_UR, 0, sizeof(m_UR));
 
     // Allocate memory for ROM
-	m_nRamSizeBytes = 0;
-	m_pRAM = NULL;  // RAM allocation in SetConfiguration() method
+    m_nRamSizeBytes = 0;
+    m_pRAM = NULL;  // RAM allocation in SetConfiguration() method
     m_pROM = (BYTE*) ::malloc(16 * 1024);  ::memset(m_pROM, 0, 16 * 1024);
 
     SetConfiguration(0);  // Default configuration
@@ -62,12 +62,12 @@ void CMotherboard::SetConfiguration(WORD conf)
     m_Configuration = conf;
 
     // Allocate RAM; clean RAM/ROM
-	if (m_pRAM != NULL)
-		::free(m_pRAM);
-	DWORD nRamSizeKbytes = conf & NEON_COPT_RAMSIZE_MASK;
-	if (nRamSizeKbytes == 0)
-		nRamSizeKbytes = 512;
-	m_nRamSizeBytes = nRamSizeKbytes * 1024;
+    if (m_pRAM != NULL)
+        ::free(m_pRAM);
+    DWORD nRamSizeKbytes = conf & NEON_COPT_RAMSIZE_MASK;
+    if (nRamSizeKbytes == 0)
+        nRamSizeKbytes = 512;
+    m_nRamSizeBytes = nRamSizeKbytes * 1024;
     m_pRAM = (BYTE*) ::malloc(m_nRamSizeBytes);
     ::memset(m_pRAM, 0, m_nRamSizeBytes);
     ::memset(m_pROM, 0, 16 * 1024);
@@ -489,7 +489,7 @@ void CMotherboard::SetPrinterInPort(BYTE data)
 WORD CMotherboard::GetRAMWordView(DWORD address) const
 {
     if (address >= m_nRamSizeBytes)
-		return 0;
+        return 0;
     return *((WORD*)(m_pRAM + address));
 }
 WORD CMotherboard::GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pAddrType) const
@@ -699,7 +699,7 @@ int CMotherboard::TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, D
     }
 
     *pOffset = longaddr;
-	//ASSERT(longaddr < m_nRamSizeBytes);
+    //ASSERT(longaddr < m_nRamSizeBytes);
     return ADDRTYPE_RAM;
 }
 

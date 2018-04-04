@@ -151,7 +151,7 @@ BOOL Emulator_InitConfiguration(NeonConfiguration configuration)
         AlertWarning(_T("Failed to load ROM1 file."));
         return FALSE;
     }
-	g_pBoard->LoadROM(1, buffer);
+    g_pBoard->LoadROM(1, buffer);
 
     g_nEmulatorConfiguration = configuration;
 
@@ -306,7 +306,7 @@ int Emulator_SystemFrame()
                 if (m_EmulatorTapeCount <= 0)
                 {
                     WORD pc = g_pBoard->GetCPU()->GetPC();
-					//
+                    //
                 }
             }
             break;
@@ -379,74 +379,74 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 {
     if (pImageBits == NULL) return;
 
-	const CMotherboard* pBoard = g_pBoard;
+    const CMotherboard* pBoard = g_pBoard;
 
-	WORD vdptaslo = pBoard->GetRAMWordView(0170010);  // VDPTAS
-	WORD vdptashi = pBoard->GetRAMWordView(0170012);  // VDPTAS
-	WORD vdptaplo = pBoard->GetRAMWordView(0170004);  // VDPTAP
-	WORD vdptaphi = pBoard->GetRAMWordView(0170006);  // VDPTAP
+    WORD vdptaslo = pBoard->GetRAMWordView(0170010);  // VDPTAS
+    WORD vdptashi = pBoard->GetRAMWordView(0170012);  // VDPTAS
+    WORD vdptaplo = pBoard->GetRAMWordView(0170004);  // VDPTAP
+    WORD vdptaphi = pBoard->GetRAMWordView(0170006);  // VDPTAP
 
-	DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)(vdptashi & 017)) << 18);
-	//tasaddr += 4 * 16;  //DEBUG: Skip first lines
-	for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // ÷икл по строкам
-	{
-		DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
+    DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)(vdptashi & 017)) << 18);
+    //tasaddr += 4 * 16;  //DEBUG: Skip first lines
+    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // ÷икл по строкам
+    {
+        DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
 
-		WORD linelo = pBoard->GetRAMWordView(tasaddr);
-		WORD linehi = pBoard->GetRAMWordView(tasaddr + 2);
-		tasaddr += 4;
-		if (linelo == 0 && linehi == 0)
-		{
-			::memset(plinebits, 0, NEON_SCREEN_WIDTH * 4);
-			continue;
-		}
+        WORD linelo = pBoard->GetRAMWordView(tasaddr);
+        WORD linehi = pBoard->GetRAMWordView(tasaddr + 2);
+        tasaddr += 4;
+        if (linelo == 0 && linehi == 0)
+        {
+            ::memset(plinebits, 0, NEON_SCREEN_WIDTH * 4);
+            continue;
+        }
 
-		DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)(linehi & 017)) << 18);
-		int x = 0;
-		while (true)  // ÷икл по видеоотрезкам строки, до полного заполнени€ строки
-		{
-			WORD otrlo = pBoard->GetRAMWordView(lineaddr);
-			WORD otrhi = pBoard->GetRAMWordView(lineaddr + 2);
-			lineaddr += 4;
-			int otrcount = (otrhi >> 10) & 037;  // ƒлина отрезка в 32-разр€дных словах
-			if (otrcount == 0) otrcount = 32;
-			DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
-			if (otraddr == 0)
-			{
-				int otrlen = otrcount * 16 * 2;
-				if (832 - x - otrlen < 0) otrlen = 832 - x;
-				::memset(plinebits, 0, otrlen * 4);
-				plinebits += otrlen;
-				x += otrlen;
-				if (x >= 832) break;
-				continue;
-			}
-			WORD otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
-			WORD otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определ€ют инф.плотность
-			for (int i = 0; i < otrcount; i++)  // ÷икл по 32-разр€дным словам отрезка
-			{
-				WORD bitslo = pBoard->GetRAMWordView(otraddr);
-				WORD bitshi = pBoard->GetRAMWordView(otraddr + 2);
-				DWORD bits = MAKELONG(bitslo, bitshi);
+        DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)(linehi & 017)) << 18);
+        int x = 0;
+        while (true)  // ÷икл по видеоотрезкам строки, до полного заполнени€ строки
+        {
+            WORD otrlo = pBoard->GetRAMWordView(lineaddr);
+            WORD otrhi = pBoard->GetRAMWordView(lineaddr + 2);
+            lineaddr += 4;
+            int otrcount = (otrhi >> 10) & 037;  // ƒлина отрезка в 32-разр€дных словах
+            if (otrcount == 0) otrcount = 32;
+            DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
+            if (otraddr == 0)
+            {
+                int otrlen = otrcount * 16 * 2;
+                if (832 - x - otrlen < 0) otrlen = 832 - x;
+                ::memset(plinebits, 0, otrlen * 4);
+                plinebits += otrlen;
+                x += otrlen;
+                if (x >= 832) break;
+                continue;
+            }
+            WORD otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
+            WORD otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определ€ют инф.плотность
+            for (int i = 0; i < otrcount; i++)  // ÷икл по 32-разр€дным словам отрезка
+            {
+                WORD bitslo = pBoard->GetRAMWordView(otraddr);
+                WORD bitshi = pBoard->GetRAMWordView(otraddr + 2);
+                DWORD bits = MAKELONG(bitslo, bitshi);
 
-				for (int i = 0; i < 32; i++)
-				{
-					DWORD color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
-					*plinebits = color;  plinebits++;
-					x++;
-					if (x >= 832) break;
-					*plinebits = color;  plinebits++;
-					x++;
-					if (x >= 832) break;
-					bits = bits >> 1;
-				}
-				if (x >= 832) break;
+                for (int i = 0; i < 32; i++)
+                {
+                    DWORD color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
+                    *plinebits = color;  plinebits++;
+                    x++;
+                    if (x >= 832) break;
+                    *plinebits = color;  plinebits++;
+                    x++;
+                    if (x >= 832) break;
+                    bits = bits >> 1;
+                }
+                if (x >= 832) break;
 
-				otraddr += 4;
-			}
-			if (x >= 832) break;
-		}
-	}
+                otraddr += 4;
+            }
+            if (x >= 832) break;
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////
