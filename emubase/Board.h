@@ -55,7 +55,7 @@ enum NeonConfiguration
 //   samples    Number of samples to play.
 // Output:
 //   result     Bit to put in tape input port.
-typedef BOOL (CALLBACK* TAPEREADCALLBACK)(unsigned int samples);
+typedef bool (CALLBACK* TAPEREADCALLBACK)(unsigned int samples);
 
 // Tape emulator callback used to write a data to tape.
 // Input:
@@ -75,118 +75,118 @@ class CFloppyController;
 class CMotherboard  // Souz-Neon computer
 {
 private:  // Devices
-    CProcessor*     m_pCPU;  // CPU device
-    CFloppyController*  m_pFloppyCtl;  // FDD control
+    CProcessor* m_pCPU;  // CPU device
+    CFloppyController* m_pFloppyCtl;  // FDD control
 private:  // Memory
-    WORD        m_Configuration;  // See NEON_COPT_Xxx flag constants
-    BYTE*       m_pRAM;  // RAM, 512..4096 KB
-    BYTE*       m_pROM;  // ROM, 16 KB
-    WORD        m_HR[8];
-    WORD        m_UR[8];
-    DWORD       m_nRamSizeBytes;  // Actual RAM size
+    uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
+    uint8_t*    m_pRAM;  // RAM, 512..4096 KB
+    uint8_t*    m_pROM;  // ROM, 16 KB
+    uint16_t    m_HR[8];
+    uint16_t    m_UR[8];
+    uint32_t    m_nRamSizeBytes;  // Actual RAM size
 public:  // Construct / destruct
     CMotherboard();
     ~CMotherboard();
 public:  // Getting devices
-    CProcessor*     GetCPU() { return m_pCPU; }
+    CProcessor* GetCPU() { return m_pCPU; }
 public:  // Memory access  //TODO: Make it private
-    WORD        GetRAMWord(DWORD offset) const;
-    BYTE        GetRAMByte(DWORD offset) const;
-    void        SetRAMWord(DWORD offset, WORD word);
-    void        SetRAMByte(DWORD offset, BYTE byte);
-    WORD        GetROMWord(WORD offset) const;
-    BYTE        GetROMByte(WORD offset) const;
+    uint16_t    GetRAMWord(uint32_t offset) const;
+    uint8_t     GetRAMByte(uint32_t offset) const;
+    void        SetRAMWord(uint32_t offset, uint16_t word);
+    void        SetRAMByte(uint32_t offset, uint8_t byte);
+    uint16_t    GetROMWord(uint16_t offset) const;
+    uint8_t     GetROMByte(uint16_t offset) const;
 public:  // Debug
     void        DebugTicks();  // One Debug PPU tick -- use for debug step or debug breakpoint
-    void        SetCPUBreakpoint(WORD bp) { m_CPUbp = bp; } // Set CPU breakpoint
-    BOOL        GetTrace() const { return m_okTraceCPU; }
-    void        SetTrace(BOOL okTraceCPU) { m_okTraceCPU = okTraceCPU; }
+    void        SetCPUBreakpoint(uint16_t bp) { m_CPUbp = bp; } // Set CPU breakpoint
+    bool        GetTrace() const { return m_okTraceCPU; }
+    void        SetTrace(bool okTraceCPU) { m_okTraceCPU = okTraceCPU; }
 public:  // System control
-    void        SetConfiguration(WORD conf);
+    void        SetConfiguration(uint16_t conf);
     void        Reset();  // Reset computer
-    void        LoadROM(int bank, const BYTE* pBuffer);  // Load 8 KB ROM image from the biffer
-    void        LoadRAM(int startbank, const BYTE* pBuffer, int length);  // Load data into the RAM
+    void        LoadROM(int bank, const uint8_t* pBuffer);  // Load 8 KB ROM image from the biffer
+    void        LoadRAM(int startbank, const uint8_t* pBuffer, int length);  // Load data into the RAM
     void        Tick50();           // Tick 50 Hz - goes to CPU EVNT line
     void		TimerTick();		// Timer Tick, 31250 Hz, 32uS -- dividers are within timer routine
     void        DCLO_Signal() { }  ///< DCLO signal
     void        ResetDevices();     // INIT signal
 public:
     void        ExecuteCPU();  // Execute one CPU instruction
-    BOOL        SystemFrame();  // Do one frame -- use for normal run
-    void        KeyboardEvent(BYTE scancode, BOOL okPressed, BOOL okAr2);  // Key pressed or released
-    WORD        GetKeyboardRegister(void);
-    WORD        GetPrinterOutPort() const { return m_PortDLBUFout; }
-    void        SetPrinterInPort(BYTE data);
-    BOOL        IsTapeMotorOn() const { return (m_Port177716tap & 0200) == 0; }
+    bool        SystemFrame();  // Do one frame -- use for normal run
+    void        KeyboardEvent(uint8_t scancode, bool okPressed, bool okAr2);  // Key pressed or released
+    uint16_t    GetKeyboardRegister(void);
+    uint16_t    GetPrinterOutPort() const { return m_PortDLBUFout; }
+    void        SetPrinterInPort(uint8_t data);
+    bool        IsTapeMotorOn() const { return (m_Port177716tap & 0200) == 0; }
 public:  // Floppy
-    BOOL        AttachFloppyImage(int slot, LPCTSTR sFileName);
+    bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
-    BOOL        IsFloppyImageAttached(int slot);
-    BOOL        IsFloppyReadOnly(int slot);
+    bool        IsFloppyImageAttached(int slot);
+    bool        IsFloppyReadOnly(int slot);
 public:  // Callbacks
-    void		SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate);
+    void        SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate);
     void        SetTapeWriteCallback(TAPEWRITECALLBACK callback, int sampleRate);
-    void		SetSoundGenCallback(SOUNDGENCALLBACK callback);
-    void		SetTeletypeCallback(TELETYPECALLBACK callback);
+    void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
+    void        SetTeletypeCallback(TELETYPECALLBACK callback);
 public:  // Memory
     // Read command for execution
-    WORD GetWordExec(WORD address, BOOL okHaltMode) { return GetWord(address, okHaltMode, TRUE); }
+    uint16_t GetWordExec(uint16_t address, bool okHaltMode) { return GetWord(address, okHaltMode, true); }
     // Read word from memory
-    WORD GetWord(WORD address, BOOL okHaltMode) { return GetWord(address, okHaltMode, FALSE); }
+    uint16_t GetWord(uint16_t address, bool okHaltMode) { return GetWord(address, okHaltMode, false); }
     // Read word
-    WORD GetWord(WORD address, BOOL okHaltMode, BOOL okExec);
+    uint16_t GetWord(uint16_t address, bool okHaltMode, bool okExec);
     // Write word
-    void SetWord(WORD address, BOOL okHaltMode, WORD word);
+    void SetWord(uint16_t address, bool okHaltMode, uint16_t word);
     // Read byte
-    BYTE GetByte(WORD address, BOOL okHaltMode);
+    uint8_t GetByte(uint16_t address, bool okHaltMode);
     // Write byte
-    void SetByte(WORD address, BOOL okHaltMode, BYTE byte);
+    void SetByte(uint16_t address, bool okHaltMode, uint8_t byte);
     // Read word from memory for debugger
-    WORD GetRAMWordView(DWORD address) const;
-    WORD GetWordView(WORD address, BOOL okHaltMode, BOOL okExec, int* pValid) const;
+    uint16_t GetRAMWordView(uint32_t address) const;
+    uint16_t GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pValid) const;
     // Read word from port for debugger
-    WORD GetPortView(WORD address) const;
+    uint16_t GetPortView(uint16_t address) const;
     // Read SEL register
-    WORD GetSelRegister() const { return 0; }
+    uint16_t GetSelRegister() const { return 0; }
 private:
-    void        TapeInput(BOOL inputBit);  // Tape input bit received
+    void        TapeInput(bool inputBit);  // Tape input bit received
 private:
     // Determite memory type for given address - see ADDRTYPE_Xxx constants
     //   okHaltMode - processor mode (USER/HALT)
-    //   okExec - TRUE: read instruction for execution; FALSE: read memory
+    //   okExec - true: read instruction for execution; false: read memory
     //   pOffset - result - offset in memory plane
-    int TranslateAddress(WORD address, BOOL okHaltMode, BOOL okExec, DWORD* pOffset) const;
+    int TranslateAddress(uint16_t address, bool okHaltMode, bool okExec, uint32_t* pOffset) const;
 private:  // Access to I/O ports
-    WORD        GetPortWord(WORD address);
-    void        SetPortWord(WORD address, WORD word);
-    BYTE        GetPortByte(WORD address);
-    void        SetPortByte(WORD address, BYTE byte);
+    uint16_t    GetPortWord(uint16_t address);
+    void        SetPortWord(uint16_t address, uint16_t word);
+    uint8_t     GetPortByte(uint16_t address);
+    void        SetPortByte(uint16_t address, uint8_t byte);
 public:  // Saving/loading emulator status
-    //void        SaveToImage(BYTE* pImage);
-    //void        LoadFromImage(const BYTE* pImage);
+    //void        SaveToImage(uint8_t* pImage);
+    //void        LoadFromImage(const uint8_t* pImage);
 private:  // Ports: implementation
-    WORD        m_PortPPIB;
-    WORD        m_Port177560;       // Serial port input state register
-    WORD        m_Port177562;       // Serial port input data register
-    WORD        m_Port177564;       // Serial port output state register
-    WORD        m_Port177566;       // Serial port output data register
-    WORD        m_PortKBDCSR;       // Keyboard status register
-    WORD        m_PortKBDBUF;       // Keyboard register
-    WORD        m_PortDLBUFin;      // Parallel port, input register
-    WORD        m_PortDLBUFout;     // Parallel port, output register
-    WORD        m_Port177716;       // System register (read only)
-    WORD        m_Port177716mem;    // System register (memory)
-    WORD        m_Port177716tap;    // System register (tape)
+    uint16_t    m_PortPPIB;
+    uint16_t    m_Port177560;       // Serial port input state register
+    uint16_t    m_Port177562;       // Serial port input data register
+    uint16_t    m_Port177564;       // Serial port output state register
+    uint16_t    m_Port177566;       // Serial port output data register
+    uint16_t    m_PortKBDCSR;       // Keyboard status register
+    uint16_t    m_PortKBDBUF;       // Keyboard register
+    uint16_t    m_PortDLBUFin;      // Parallel port, input register
+    uint16_t    m_PortDLBUFout;     // Parallel port, output register
+    uint16_t    m_Port177716;       // System register (read only)
+    uint16_t    m_Port177716mem;    // System register (memory)
+    uint16_t    m_Port177716tap;    // System register (tape)
 private:  // Timer implementation
-    WORD		m_timer;
-    WORD		m_timerreload;
-    WORD		m_timerflags;
-    WORD		m_timerdivider;
-    void		SetTimerReload(WORD val);	//sets timer reload value
-    void		SetTimerState(WORD val);	//sets timer state
+    uint16_t    m_timer;
+    uint16_t    m_timerreload;
+    uint16_t    m_timerflags;
+    uint16_t    m_timerdivider;
+    void		SetTimerReload(uint16_t val);	//sets timer reload value
+    void		SetTimerState(uint16_t val);	//sets timer state
 private:
-    WORD        m_CPUbp;  // CPU breakpoint address
-    BOOL        m_okTraceCPU;
+    uint16_t    m_CPUbp;  // CPU breakpoint address
+    bool        m_okTraceCPU;
 private:
     TAPEREADCALLBACK m_TapeReadCallback;
     TAPEWRITECALLBACK m_TapeWriteCallback;
