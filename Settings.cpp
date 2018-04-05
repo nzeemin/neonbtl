@@ -20,20 +20,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 const TCHAR m_Settings_IniAppName[] = _T("NEONBTL");
 TCHAR m_Settings_IniPath[MAX_PATH];
 
-BOOL m_Settings_Toolbar = TRUE;
-BOOL m_Settings_Debug = FALSE;
-BOOL m_Settings_Debug_Valid = FALSE;
-BOOL m_Settings_RealSpeed = FALSE;
-BOOL m_Settings_RealSpeed_Valid = FALSE;
-BOOL m_Settings_Sound = FALSE;
-BOOL m_Settings_Sound_Valid = FALSE;
-WORD m_Settings_SoundVolume = 0x7fff;
-BOOL m_Settings_SoundVolume_Valid = FALSE;
-BOOL m_Settings_Keyboard = TRUE;
-BOOL m_Settings_Keyboard_Valid = FALSE;
-BOOL m_Settings_Tape = FALSE;
-BOOL m_Settings_Tape_Valid = FALSE;
-
 
 //////////////////////////////////////////////////////////////////////
 
@@ -81,7 +67,7 @@ BOOL Settings_LoadDwordValue(LPCTSTR sName, DWORD* dwValue)
     if (!Settings_LoadStringValue(sName, buffer, 12))
         return FALSE;
 
-    int result = swscanf(buffer, _T("%lu"), dwValue);
+    int result = _stscanf(buffer, _T("%lu"), dwValue);
     if (result == 0)
         return FALSE;
 
@@ -90,7 +76,7 @@ BOOL Settings_LoadDwordValue(LPCTSTR sName, DWORD* dwValue)
 
 BOOL Settings_SaveBinaryValue(LPCTSTR sName, const void * pData, int size)
 {
-    TCHAR* buffer = (TCHAR*) ::malloc((size * 2 + 1) * sizeof(TCHAR));
+    TCHAR* buffer = (TCHAR*) ::calloc(size * 2 + 1, sizeof(TCHAR));
     const BYTE* p = (const BYTE*) pData;
     TCHAR* buf = buffer;
     for (int i = 0; i < size; i++)
@@ -111,7 +97,7 @@ BOOL Settings_SaveBinaryValue(LPCTSTR sName, const void * pData, int size)
 BOOL Settings_LoadBinaryValue(LPCTSTR sName, void * pData, int size)
 {
     size_t buffersize = (size * 2 + 1) * sizeof(TCHAR);
-    TCHAR* buffer = (TCHAR*) ::malloc(buffersize);
+    TCHAR* buffer = (TCHAR*) ::calloc(buffersize, 1);
     if (!Settings_LoadStringValue(sName, buffer, buffersize))
     {
         free(buffer);
@@ -126,9 +112,9 @@ BOOL Settings_LoadBinaryValue(LPCTSTR sName, void * pData, int size)
 
         TCHAR ch = *buf;
         if (ch >= _T('0') && ch <= _T('9'))
-            v = ch - _T('0');
+            v = (BYTE)(ch - _T('0'));
         else if (ch >= _T('A') && ch <= _T('F'))
-            v = ch - _T('A') + 10;
+            v = (BYTE)(ch - _T('A') + 10);
         else  // Not hex
         {
             free(buffer);
@@ -140,9 +126,9 @@ BOOL Settings_LoadBinaryValue(LPCTSTR sName, void * pData, int size)
 
         ch = *buf;
         if (ch >= _T('0') && ch <= _T('9'))
-            v |= ch - _T('0');
+            v |= (BYTE)(ch - _T('0'));
         else if (ch >= _T('A') && ch <= _T('F'))
-            v |= ch - _T('A') + 10;
+            v |= (BYTE)(ch - _T('A') + 10);
         else  // Not hex
         {
             free(buffer);
@@ -215,181 +201,67 @@ int Settings_GetConfiguration()
 
 void Settings_GetFloppyFilePath(int slot, LPTSTR buffer)
 {
-    TCHAR bufValueName[] = _T("Floppy0");
-    bufValueName[6] = slot + _T('0');
+    TCHAR bufValueName[8];
+    lstrcpy(bufValueName, _T("Floppy0"));
+    bufValueName[6] = _T('0') + (TCHAR)slot;
     Settings_LoadStringValue(bufValueName, buffer, MAX_PATH);
 }
 void Settings_SetFloppyFilePath(int slot, LPCTSTR sFilePath)
 {
-    TCHAR bufValueName[] = _T("Floppy0");
-    bufValueName[6] = slot + _T('0');
+    TCHAR bufValueName[8];
+    lstrcpy(bufValueName, _T("Floppy0"));
+    bufValueName[6] = _T('0') + (TCHAR)slot;
     Settings_SaveStringValue(bufValueName, sFilePath);
 }
 
 void Settings_GetCartridgeFilePath(int slot, LPTSTR buffer)
 {
-    TCHAR bufValueName[] = _T("Cartridge0");
-    bufValueName[9] = slot + _T('0');
+    TCHAR bufValueName[11];
+    lstrcpy(bufValueName, _T("Cartridge0"));
+    bufValueName[9] = _T('0') + (TCHAR)slot;
     Settings_LoadStringValue(bufValueName, buffer, MAX_PATH);
 }
 void Settings_SetCartridgeFilePath(int slot, LPCTSTR sFilePath)
 {
-    TCHAR bufValueName[] = _T("Cartridge0");
-    bufValueName[9] = slot + _T('0');
+    TCHAR bufValueName[11];
+    lstrcpy(bufValueName, _T("Cartridge0"));
+    bufValueName[9] = _T('0') + (TCHAR)slot;
     Settings_SaveStringValue(bufValueName, sFilePath);
 }
 
-void Settings_SetScreenViewMode(int mode)
-{
-    Settings_SaveDwordValue(_T("ScreenViewMode"), (DWORD) mode);
-}
-int Settings_GetScreenViewMode()
-{
-    DWORD dwValue = 0;
-    Settings_LoadDwordValue(_T("ScreenViewMode"), &dwValue);
-    return (int) dwValue;
-}
+SETTINGS_GETSET_DWORD(ScreenViewMode, _T("ScreenViewMode"), int, 1);
 
-void Settings_SetScreenHeightMode(int mode)
-{
-    Settings_SaveDwordValue(_T("ScreenHeightMode"), (DWORD) mode);
-}
-int Settings_GetScreenHeightMode()
-{
-    DWORD dwValue = 0;
-    Settings_LoadDwordValue(_T("ScreenHeightMode"), &dwValue);
-    return (int) dwValue;
-}
+SETTINGS_GETSET_DWORD(ScreenHeightMode, _T("ScreenHeightMode"), int, 0);
 
-void Settings_SetToolbar(BOOL flag)
-{
-    Settings_SaveDwordValue(_T("Toolbar"), (DWORD) flag);
-}
-BOOL Settings_GetToolbar()
-{
-    DWORD dwValue = (DWORD) TRUE;
-    Settings_LoadDwordValue(_T("Toolbar"), &dwValue);
-    return (BOOL) dwValue;
-}
+SETTINGS_GETSET_DWORD(Toolbar, _T("Toolbar"), BOOL, TRUE);
 
-void Settings_SetDebug(BOOL flag)
+SETTINGS_GETSET_DWORD(Debug, _T("Debug"), BOOL, FALSE);
+
+void Settings_GetDebugFontName(LPTSTR buffer)
 {
-    m_Settings_Debug = flag;
-    m_Settings_Debug_Valid = TRUE;
-    Settings_SaveDwordValue(_T("Debug"), (DWORD) flag);
-}
-BOOL Settings_GetDebug()
-{
-    if (!m_Settings_Debug_Valid)
+    if (!Settings_LoadStringValue(_T("DebugFontName"), buffer, 32))
     {
-        DWORD dwValue = (DWORD) FALSE;
-        Settings_LoadDwordValue(_T("Debug"), &dwValue);
-        m_Settings_Debug = (BOOL) dwValue;
-        m_Settings_Debug_Valid = TRUE;
+        _tcscpy(buffer, _T("Lucida Console"));
     }
-    return m_Settings_Debug;
+}
+void Settings_SetDebugFontName(LPCTSTR sFontName)
+{
+    Settings_SaveStringValue(_T("DebugFontName"), sFontName);
 }
 
-void Settings_SetAutostart(BOOL flag)
-{
-    Settings_SaveDwordValue(_T("Autostart"), (DWORD) flag);
-}
-BOOL Settings_GetAutostart()
-{
-    DWORD dwValue = (DWORD) FALSE;
-    Settings_LoadDwordValue(_T("Autostart"), &dwValue);
-    return (BOOL) dwValue;
-}
+SETTINGS_GETSET_DWORD(DebugMemoryAddress, _T("DebugMemoryAddress"), WORD, 3);
+SETTINGS_GETSET_DWORD(DebugMemoryByte, _T("DebugMemoryByte"), BOOL, FALSE);
 
-void Settings_SetRealSpeed(BOOL flag)
-{
-    m_Settings_RealSpeed = flag;
-    m_Settings_RealSpeed_Valid = TRUE;
-    Settings_SaveDwordValue(_T("RealSpeed"), (DWORD) flag);
-}
-BOOL Settings_GetRealSpeed()
-{
-    if (!m_Settings_RealSpeed_Valid)
-    {
-        DWORD dwValue = (DWORD) FALSE;
-        Settings_LoadDwordValue(_T("RealSpeed"), &dwValue);
-        m_Settings_RealSpeed = (BOOL) dwValue;
-        m_Settings_RealSpeed_Valid = TRUE;
-    }
-    return m_Settings_RealSpeed;
-}
+SETTINGS_GETSET_DWORD(Autostart, _T("Autostart"), BOOL, FALSE);
 
-void Settings_SetSound(BOOL flag)
-{
-    m_Settings_Sound = flag;
-    m_Settings_Sound_Valid = TRUE;
-    Settings_SaveDwordValue(_T("Sound"), (DWORD) flag);
-}
-BOOL Settings_GetSound()
-{
-    if (!m_Settings_Sound_Valid)
-    {
-        DWORD dwValue = (DWORD) FALSE;
-        Settings_LoadDwordValue(_T("Sound"), &dwValue);
-        m_Settings_Sound = (BOOL) dwValue;
-        m_Settings_Sound_Valid = TRUE;
-    }
-    return m_Settings_Sound;
-}
+SETTINGS_GETSET_DWORD(RealSpeed, _T("RealSpeed"), WORD, 1);
 
-void Settings_SetSoundVolume(WORD value)
-{
-    m_Settings_SoundVolume = value;
-    m_Settings_SoundVolume_Valid = TRUE;
-    Settings_SaveDwordValue(_T("SoundVolume"), (DWORD) value);
-}
-WORD Settings_GetSoundVolume()
-{
-    if (!m_Settings_SoundVolume_Valid)
-    {
-        DWORD dwValue = (DWORD) 0x7fff;
-        Settings_LoadDwordValue(_T("SoundVolume"), &dwValue);
-        m_Settings_SoundVolume = (WORD)dwValue;
-        m_Settings_SoundVolume_Valid = TRUE;
-    }
-    return m_Settings_SoundVolume;
-}
+SETTINGS_GETSET_DWORD(Sound, _T("Sound"), BOOL, FALSE);
+SETTINGS_GETSET_DWORD(SoundVolume, _T("SoundVolume"), WORD, 0x3fff);
 
-void Settings_SetKeyboard(BOOL flag)
-{
-    m_Settings_Keyboard = flag;
-    m_Settings_Keyboard_Valid = TRUE;
-    Settings_SaveDwordValue(_T("Keyboard"), (DWORD) flag);
-}
-BOOL Settings_GetKeyboard()
-{
-    if (!m_Settings_Keyboard_Valid)
-    {
-        DWORD dwValue = (DWORD) TRUE;
-        Settings_LoadDwordValue(_T("Keyboard"), &dwValue);
-        m_Settings_Keyboard = (BOOL) dwValue;
-        m_Settings_Keyboard_Valid = TRUE;
-    }
-    return m_Settings_Keyboard;
-}
+SETTINGS_GETSET_DWORD(Keyboard, _T("Keyboard"), BOOL, TRUE);
 
-void Settings_SetTape(BOOL flag)
-{
-    m_Settings_Tape = flag;
-    m_Settings_Tape_Valid = TRUE;
-    Settings_SaveDwordValue(_T("Tape"), (DWORD) flag);
-}
-BOOL Settings_GetTape()
-{
-    if (!m_Settings_Tape_Valid)
-    {
-        DWORD dwValue = (DWORD) FALSE;
-        Settings_LoadDwordValue(_T("Tape"), &dwValue);
-        m_Settings_Tape = (BOOL) dwValue;
-        m_Settings_Tape_Valid = TRUE;
-    }
-    return m_Settings_Tape;
-}
+SETTINGS_GETSET_DWORD(Tape, _T("Tape"), BOOL, FALSE);
 
 
 //////////////////////////////////////////////////////////////////////

@@ -8,7 +8,7 @@ See the GNU Lesser General Public License for more details.
     You should have received a copy of the GNU Lesser General Public License along with
 NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
-// NEONBTL.cpp : Defines the entry point for the application.
+// Main.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
@@ -37,6 +37,7 @@ long m_nMainLastFrameTicks = 0;
 
 BOOL InitInstance(HINSTANCE, int);
 void DoneInstance();
+void ParseCommandLine();
 
 
 //////////////////////////////////////////////////////////////////////
@@ -78,7 +79,7 @@ int APIENTRY _tWinMain(
 
     // Main message loop
     MSG msg;
-    while (true)
+    for (;;)
     {
         ::QueryPerformanceCounter(&nFrameStartTime);
 
@@ -110,7 +111,7 @@ int APIENTRY _tWinMain(
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
         }
-#if 1
+
         if (g_okEmulatorRunning /*&& Settings_GetRealSpeed()*/)
         {
             // Slow down to 25 frames per second
@@ -126,7 +127,10 @@ int APIENTRY _tWinMain(
                 ::Sleep((DWORD) nTimeToSleep / 2);
             }
         }
-#endif
+
+        //// Time bomb for perfomance analysis
+        //if (Emulator_GetUptime() >= 300)  // 5 minutes
+        //    ::PostQuitMessage(0);
     }
 endprog:
 
@@ -151,7 +155,7 @@ endprog:
 //        In this function, we save the instance handle in a global variable and
 //        create and display the main program window.
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
 {
     INITCOMMONCONTROLSEX ics;  ics.dwSize = sizeof(ics);
     ics.dwICC = ICC_WIN95_CLASSES;
@@ -161,8 +165,9 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     DebugLogClear();
 #endif
     Settings_Init();
-    //Joystick_Init();
-    //Joystick_SelectJoystick(Settings_GetJoystick());
+
+    ParseCommandLine();  // Override settings by command-line option if needed
+
     if (!Emulator_Init())
         return FALSE;
 
@@ -186,8 +191,12 @@ void DoneInstance()
 
     Emulator_Done();
 
-    //Joystick_Done();
     Settings_Done();
+}
+
+void ParseCommandLine()
+{
+    //TODO
 }
 
 

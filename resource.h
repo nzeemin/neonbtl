@@ -3,14 +3,14 @@
 // Used by NEONBTL.rc
 //
 #define IDC_MYICON                      2
-#define IDD_NEONBTL_DIALOG                102
+#define IDD_NEONBTL_DIALOG              102
 #define IDS_APP_TITLE                   103
 #define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
-#define IDI_NEONBTL                       107
+#define IDI_NEONBTL                     107
 #define IDI_SMALL                       108
-#define IDC_NEONBTL                       109
+#define IDC_NEONBTL                     109
 #define IDR_MAINFRAME                   128
 #define IDD_INPUTBOX                    129
 #define IDI_DISKETTE                    138
@@ -32,6 +32,7 @@
 #define IDC_BUTTONBROWSE                1004
 #define IDC_EDITFILE                    1005
 #define IDC_VOLUME                      1006
+#define IDC_DEBUGFONT                   1030
 #define ID_VIEW                         32771
 #define ID_VIEW_MEMORY                  32772
 #define ID_EMULATOR                     32773
@@ -48,36 +49,31 @@
 #define ID_FILE_SCREENSHOT              32784
 #define ID_EMULATOR_CARTRIDGE1          32785
 #define ID_EMULATOR_CARTRIDGE2          32786
-#define ID_EMULATOR_AUTOSTART           32800
+#define ID_VIEW_KEYBOARD                32787
+#define ID_VIEW_TOOLBAR                 32789
+#define ID_EMULATOR_AUTOSTART           32793
+#define ID_EMULATOR_SPEED25             32798
+#define ID_EMULATOR_SPEED50             32799
+#define ID_EMULATOR_SPEEDMAX            32800
 #define ID_EMULATOR_REALSPEED           32801
-#define ID_VIEW_KEYBOARD                32802
+#define ID_EMULATOR_SPEED200            32802
 #define ID_VIEW_TAPE                    32803
-#define ID_VIEW_TOOLBAR                 32804
 #define ID_EMULATOR_SOUND               32805
 #define ID_FILE_CREATEDISK              32806
-#define ID_EMULATOR_CONFNEON0010BASIC     32807
 #define ID_EMULATOR_CONF                32808
 #define ID_VIEW_MEMORYMAP               32810
 #define ID_FILE_LOADBIN                 32811
-#define ID_CONF_NEON0010MONIT             32812
-#define ID_CONF_NEON0010BASIC             32813
-#define ID_CONF_NEON0010FOCAL             32814
-#define ID_CONF_NEON0010FDD               32815
-#define ID_CONF_NEON0011                  32816
-#define ID_CONF_NEON0011FDD               32817
-#define ID_EMULATOR_JOYSTICKNUMPAD      32820
-#define ID_EMULATOR_JOYSTICK1           32821
-#define ID_EMULATOR_JOYSTICK2           32822
-#define ID_EMULATOR_COVOX               32823
-#define ID_DEBUG_TELETYPE               32824
 #define ID_DEBUG_STEPOVER               32825
 #define ID_VIEW_RGBSCREEN               32826
 #define ID_VIEW_SCREENMODE0             32827
 #define ID_VIEW_SCREENMODE1             32828
 #define ID_VIEW_SCREENMODE2             32829
 #define ID_VIEW_SCREENMODE3             32830
-#define ID_FILE_SETTINGS                32831
-#define ID_FILE_SAVESCREENSHOTAS        32832
+#define ID_VIEW_SCREENMODE4             32831
+#define ID_FILE_SETTINGS                32832
+#define ID_FILE_SAVESCREENSHOTAS        32833
+#define ID_DEBUG_MEMORY_WORDBYTE        32870
+#define ID_DEBUG_MEMORY_GOTO            32871
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -86,8 +82,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        151
-#define _APS_NEXT_COMMAND_VALUE         32833
-#define _APS_NEXT_CONTROL_VALUE         1007
+#define _APS_NEXT_COMMAND_VALUE         32880
+#define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

@@ -11,6 +11,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 // Common.cpp
 
 #include "stdafx.h"
+#include "Main.h"
 #include "Views.h"
 
 //////////////////////////////////////////////////////////////////////
@@ -39,7 +40,7 @@ BOOL AssertFailedLine(LPCSTR lpszFileName, int nLine)
 
 void AlertWarning(LPCTSTR sMessage)
 {
-    ::MessageBox(NULL, sMessage, _T("NEON Back to Life"), MB_OK | MB_ICONEXCLAMATION | MB_TOPMOST);
+    ::MessageBox(NULL, sMessage, g_szTitle, MB_OK | MB_ICONEXCLAMATION | MB_TOPMOST);
 }
 void AlertWarningFormat(LPCTSTR sFormat, ...)
 {
@@ -50,11 +51,11 @@ void AlertWarningFormat(LPCTSTR sFormat, ...)
     _vsntprintf_s(buffer, 512, 512 - 1, sFormat, ptr);
     va_end(ptr);
 
-    ::MessageBox(NULL, buffer, _T("NEON Back to Life"), MB_OK | MB_ICONEXCLAMATION);
+    ::MessageBox(NULL, buffer, g_szTitle, MB_OK | MB_ICONEXCLAMATION);
 }
 BOOL AlertOkCancel(LPCTSTR sMessage)
 {
-    int result = ::MessageBox(NULL, sMessage, _T("NEON Back to Life"), MB_OKCANCEL | MB_ICONQUESTION | MB_TOPMOST);
+    int result = ::MessageBox(NULL, sMessage, g_szTitle, MB_OKCANCEL | MB_ICONQUESTION | MB_TOPMOST);
     return (result == IDOK);
 }
 
@@ -93,10 +94,19 @@ void DebugLogCreateFile()
 {
     if (Common_LogFile == NULL)
     {
-        Common_LogFile = CreateFile(TRACELOG_FILE_NAME,
+        Common_LogFile = ::CreateFile(TRACELOG_FILE_NAME,
                 GENERIC_WRITE, FILE_SHARE_READ, NULL,
                 CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     }
+}
+
+void DebugLogCloseFile()
+{
+    if (Common_LogFile == NULL)
+        return;
+
+    ::CloseHandle(Common_LogFile);
+    Common_LogFile = NULL;
 }
 
 void DebugLogClear()
@@ -128,8 +138,6 @@ void DebugLog(LPCTSTR message)
 
     //dwLength = lstrlen(TRACELOG_NEWLINE) * sizeof(TCHAR);
     //WriteFile(Common_LogFile, TRACELOG_NEWLINE, dwLength, &dwBytesWritten, NULL);
-
-    //TODO
 }
 
 void DebugLogFormat(LPCTSTR pszFormat, ...)
@@ -157,23 +165,31 @@ const TCHAR* REGISTER_NAME[] = { _T("R0"), _T("R1"), _T("R2"), _T("R3"), _T("R4"
 HFONT CreateMonospacedFont()
 {
     HFONT font = NULL;
-    font = CreateFont(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-            RUSSIAN_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-            FIXED_PITCH,
-            _T("Lucida Console"));
-    if (font == NULL)
-    {
-        font = CreateFont(12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                RUSSIAN_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
-                FIXED_PITCH,
-                _T("Courier"));
-    }
-    if (font == NULL)
-        return NULL;
+    LOGFONT logfont;  memset(&logfont, 0, sizeof(logfont));
+    logfont.lfHeight = 12;
+    logfont.lfWeight = FW_NORMAL;
+    logfont.lfCharSet = DEFAULT_CHARSET;
+    logfont.lfOutPrecision = OUT_DEFAULT_PRECIS;
+    logfont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    logfont.lfQuality = DEFAULT_QUALITY;
+    logfont.lfPitchAndFamily = FIXED_PITCH;
 
-    return font;
+    Settings_GetDebugFontName(logfont.lfFaceName);
+    font = CreateFontIndirect(&logfont);
+    if (font != NULL)
+        return font;
+
+    _tcscpy_s(logfont.lfFaceName, 32, _T("Lucida Console"));
+    font = CreateFontIndirect(&logfont);
+    if (font != NULL)
+        return font;
+
+    _tcscpy_s(logfont.lfFaceName, 32, _T("Courier"));
+    font = CreateFontIndirect(&logfont);
+    if (font != NULL)
+        return font;
+
+    return NULL;
 }
 
 HFONT CreateDialogFont()
@@ -247,7 +263,7 @@ BOOL ParseOctalValue(LPCTSTR text, WORD* pValue)
         if (ch < _T('0') || ch > _T('7')) return FALSE;
         value = (value << 3);
         TCHAR digit = ch - _T('0');
-        value = value + digit;
+        value += digit;
     }
     *pValue = value;
     return TRUE;

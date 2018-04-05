@@ -20,6 +20,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
+COLORREF COLOR_COMMANDFOCUS = RGB(255, 242, 157);
 
 HWND g_hwndConsole = (HWND) INVALID_HANDLE_VALUE;  // Console View window handle
 WNDPROC m_wndprocConsoleToolWindow = NULL;  // Old window proc address of the ToolWindow
@@ -29,13 +30,14 @@ HWND m_hwndConsoleEdit = (HWND) INVALID_HANDLE_VALUE;  // Console line - edit co
 HWND m_hwndConsolePrompt = (HWND) INVALID_HANDLE_VALUE;  // Console prompt - static control
 HFONT m_hfontConsole = NULL;
 WNDPROC m_wndprocConsoleEdit = NULL;  // Old window proc address of the console prompt
+HBRUSH m_hbrConsoleFocused = NULL;
 
 CProcessor* ConsoleView_GetCurrentProcessor();
 void ClearConsole();
 void PrintConsolePrompt();
 void PrintRegister(LPCTSTR strName, WORD value);
 void PrintMemoryDump(CProcessor* pProc, WORD address, int lines);
-void SaveMemoryDump(CProcessor* pProc);
+BOOL SaveMemoryDump(CProcessor* pProc);
 void DoConsoleCommand();
 void ConsoleView_AdjustWindowLayout();
 LRESULT CALLBACK ConsoleEditWndProc(HWND, UINT, WPARAM, LPARAM);
@@ -70,7 +72,7 @@ void ConsoleView_RegisterClass()
 }
 
 // Create Console View as child of Main Window
-void CreateConsoleView(HWND hwndParent, int x, int y, int width, int height)
+void ConsoleView_Create(HWND hwndParent, int x, int y, int width, int height)
 {
     ASSERT(hwndParent != NULL);
 
@@ -148,20 +150,30 @@ LRESULT CALLBACK ConsoleViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     {
     case WM_DESTROY:
         g_hwndConsole = (HWND) INVALID_HANDLE_VALUE;  // We are closed! Bye-bye!..
-        return CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
+        break;
     case WM_CTLCOLORSTATIC:
-        if (((HWND)lParam) != m_hwndConsoleLog)
-            return CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
-        SetBkColor((HDC)wParam, ::GetSysColor(COLOR_WINDOW));
-        return (LRESULT) ::GetSysColorBrush(COLOR_WINDOW);
+        if (((HWND)lParam) == m_hwndConsoleLog)
+        {
+            SetBkColor((HDC)wParam, ::GetSysColor(COLOR_WINDOW));
+            return (LRESULT) ::GetSysColorBrush(COLOR_WINDOW);
+        }
+        break;
+    case WM_CTLCOLOREDIT:
+        if (((HWND)lParam) == m_hwndConsoleEdit && ::GetFocus() == m_hwndConsoleEdit)
+        {
+            if (m_hbrConsoleFocused == NULL)
+                m_hbrConsoleFocused = ::CreateSolidBrush(COLOR_COMMANDFOCUS);
+            SetBkColor((HDC)wParam, COLOR_COMMANDFOCUS);
+            return (LRESULT)m_hbrConsoleFocused;
+        }
+        return CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
     case WM_SIZE:
         lResult = CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
         ConsoleView_AdjustWindowLayout();
         return lResult;
-    default:
-        return CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
     }
-    //return (LRESULT)FALSE;
+
+    return CallWindowProc(m_wndprocConsoleToolWindow, hWnd, message, wParam, lParam);
 }
 
 LRESULT CALLBACK ConsoleEditWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -174,11 +186,20 @@ LRESULT CALLBACK ConsoleEditWndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             DoConsoleCommand();
             return 0;
         }
-        else
-            return CallWindowProc(m_wndprocConsoleEdit, hWnd, message, wParam, lParam);
-    default:
-        return CallWindowProc(m_wndprocConsoleEdit, hWnd, message, wParam, lParam);
+        if (wParam == VK_ESCAPE)
+        {
+            TCHAR command[32];
+            GetWindowText(m_hwndConsoleEdit, command, 32);
+            if (*command == 0)  // If command is empty
+                SetFocus(g_hwndScreen);
+            else
+                SendMessage(m_hwndConsoleEdit, WM_SETTEXT, 0, (LPARAM)_T(""));  // Clear command
+            return 0;
+        }
+        break;
     }
+
+    return CallWindowProc(m_wndprocConsoleEdit, hWnd, message, wParam, lParam);
 }
 
 void ConsoleView_Activate()
@@ -191,6 +212,18 @@ void ConsoleView_Activate()
 CProcessor* ConsoleView_GetCurrentProcessor()
 {
     return g_pBoard->GetCPU();
+}
+
+void ConsoleView_PrintFormat(LPCTSTR pszFormat, ...)
+{
+    TCHAR buffer[512];
+
+    va_list ptr;
+    va_start(ptr, pszFormat);
+    _vsntprintf_s(buffer, 512, 512 - 1, pszFormat, ptr);
+    va_end(ptr);
+
+    ConsoleView_Print(buffer);
 }
 
 void ConsoleView_Print(LPCTSTR message)
@@ -239,7 +272,7 @@ void PrintRegister(LPCTSTR strName, WORD value)
     ConsoleView_Print(buffer);
 }
 
-void SaveMemoryDump(CProcessor *pProc)
+BOOL SaveMemoryDump(CProcessor *pProc)
 {
     BYTE buf[65536];
     for (int i = 0; i < 65536; i++)
@@ -247,18 +280,19 @@ void SaveMemoryDump(CProcessor *pProc)
         buf[i] = g_pBoard->GetByte(i, 1);
     }
 
-    // Create file
-    HANDLE file;
-    file = CreateFile(_T("memdump.bin"),
+    const TCHAR fname[] = _T("memdump.bin");
+    HANDLE file = ::CreateFile(fname,
             GENERIC_WRITE, FILE_SHARE_READ, NULL,
             OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-    //SetFilePointer(Common_LogFile, 0, NULL, FILE_END);
-
     DWORD dwLength = 65536;
     DWORD dwBytesWritten = 0;
-    WriteFile(file, buf, dwLength, &dwBytesWritten, NULL);
-    CloseHandle(file);
+    ::WriteFile(file, buf, dwLength, &dwBytesWritten, NULL);
+    ::CloseHandle(file);
+    if (dwBytesWritten != dwLength)
+        return false;
+
+    return true;
 }
 
 // Print memory dump
@@ -393,7 +427,7 @@ void ConsoleView_ShowHelp()
             _T("  rN XXXXXX  Set register N to value XXXXXX; N=0..7,ps\r\n")
             _T("  s          Step Into; executes one instruction\r\n")
             _T("  so         Step Over; executes and stops after the current instruction\r\n")
-            _T("  u          Save memory dump to file memdumpXPU.bin\r\n"));
+            _T("  u          Save memory dump to file memdump.bin\r\n"));
 }
 
 void DoConsoleCommand()
@@ -488,8 +522,8 @@ void DoConsoleCommand()
         if (command[1] == 0)  // "s" - Step Into, execute one instruction
         {
             PrintDisassemble(pProc, pProc->GetPC(), TRUE, FALSE);
-            //pProc->Execute();
 
+            //pProc->Execute();
             g_pBoard->DebugTicks();
 
             okUpdateAllViews = TRUE;

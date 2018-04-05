@@ -79,17 +79,17 @@ void MainWindow_RegisterClass()
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style			= CS_HREDRAW | CS_VREDRAW;
+    wcex.style		= CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc	= MainWindow_WndProc;
-    wcex.cbClsExtra		= 0;
-    wcex.cbWndExtra		= 0;
-    wcex.hInstance		= g_hInst;
-    wcex.hIcon			= LoadIcon(g_hInst, MAKEINTRESOURCE(IDI_NEONBTL));
-    wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
+    wcex.cbClsExtra	= 0;
+    wcex.cbWndExtra	= 0;
+    wcex.hInstance	= g_hInst;
+    wcex.hIcon		= LoadIcon(g_hInst, MAKEINTRESOURCE(IDI_NEONBTL));
+    wcex.hCursor	= LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground	= (HBRUSH)(COLOR_BTNFACE + 1);
     wcex.lpszMenuName	= MAKEINTRESOURCE(IDC_NEONBTL);
     wcex.lpszClassName	= g_szWindowClass;
-    wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.hIconSm	= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
     RegisterClassEx(&wcex);
 
@@ -127,10 +127,11 @@ BOOL CreateMainWindow()
     ScreenView_Init();
 
     // Create screen window as a child of the main window
-    CreateScreenView(g_hwnd, 4, 4, 576);
+    ScreenView_Create(g_hwnd, 4, 4, 576);
 
     MainWindow_RestoreSettings();
 
+    MainWindow_ShowHideToolbar();
     MainWindow_ShowHideKeyboard();
     MainWindow_ShowHideTape();
     MainWindow_ShowHideDebug();
@@ -242,9 +243,9 @@ void MainWindow_RestoreSettings()
     // Reattach floppy images
     for (int slot = 0; slot < 4; slot++)
     {
-        buf[0] = '\0';
+        buf[0] = _T('\0');
         Settings_GetFloppyFilePath(slot, buf);
-        if (lstrlen(buf) > 0)
+        if (buf[0] != _T('\0'))
         {
             if (! g_pBoard->AttachFloppyImage(slot, buf))
                 Settings_SetFloppyFilePath(slot, NULL);
@@ -299,15 +300,12 @@ LRESULT CALLBACK MainWindow_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
     switch (message)
     {
     case WM_ACTIVATE:
-        if (Settings_GetDebug())
-            ConsoleView_Activate();
-        else
-            SetFocus(g_hwndScreen);
+        SetFocus(g_hwndScreen);
         break;
     case WM_COMMAND:
         {
             int wmId    = LOWORD(wParam);
-            int wmEvent = HIWORD(wParam);
+            //int wmEvent = HIWORD(wParam);
             bool okProcessed = MainWindow_DoCommand(wmId);
             if (!okProcessed)
                 return DefWindowProc(hWnd, message, wParam, lParam);
@@ -323,7 +321,7 @@ LRESULT CALLBACK MainWindow_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
         break;
     case WM_NOTIFY:
         {
-            int idCtrl = (int) wParam;
+            //int idCtrl = (int) wParam;
             HWND hwndFrom = ((LPNMHDR) lParam)->hwndFrom;
             UINT code = ((LPNMHDR) lParam)->code;
             if (code == TTN_SHOW)
@@ -536,9 +534,6 @@ void MainWindow_ShowHideDebug()
             DestroyWindow(g_hwndMemory);
 
         MainWindow_AdjustWindowSize();
-        MainWindow_AdjustWindowLayout();
-
-        SetFocus(g_hwndScreen);
     }
     else  // Debug Views ON
     {
@@ -554,26 +549,28 @@ void MainWindow_ShowHideDebug()
         int cyConsoleHeight = rc.bottom - cyStatus - yConsoleTop - 4;
         int xDebugLeft = (rcScreen.right - rcScreen.left) + 8;
         int cxDebugWidth = rc.right - xDebugLeft - 4;
-        int cyDebugHeight = 200;
+        int cyDebugHeight = 214;
         int yDisasmTop = 4 + cyDebugHeight + 4;
-        int cyDisasmHeight = 328;
+        int cyDisasmHeight = 306;
         int yMemoryTop = cyDebugHeight + 4 + cyDisasmHeight + 8;
         int cyMemoryHeight = rc.bottom - cyStatus - yMemoryTop - 4;
 
         // Create debug views
         if (g_hwndConsole == INVALID_HANDLE_VALUE)
-            CreateConsoleView(g_hwnd, 4, yConsoleTop, cxConsoleWidth, cyConsoleHeight);
+            ConsoleView_Create(g_hwnd, 4, yConsoleTop, cxConsoleWidth, cyConsoleHeight);
         if (g_hwndDebug == INVALID_HANDLE_VALUE)
-            CreateDebugView(g_hwnd, xDebugLeft, 4, cxDebugWidth, cyDebugHeight);
+            DebugView_Create(g_hwnd, xDebugLeft, 4, cxDebugWidth, cyDebugHeight);
         if (g_hwndDisasm == INVALID_HANDLE_VALUE)
-            CreateDisasmView(g_hwnd, xDebugLeft, yDisasmTop, cxDebugWidth, cyDisasmHeight);
+            DisasmView_Create(g_hwnd, xDebugLeft, yDisasmTop, cxDebugWidth, cyDisasmHeight);
         if (g_hwndMemory == INVALID_HANDLE_VALUE)
-            CreateMemoryView(g_hwnd, xDebugLeft, yMemoryTop, cxDebugWidth, cyMemoryHeight);
-
-        MainWindow_AdjustWindowLayout();
+            MemoryView_Create(g_hwnd, xDebugLeft, yMemoryTop, cxDebugWidth, cyMemoryHeight);
     }
 
+    MainWindow_AdjustWindowLayout();
+
     MainWindow_UpdateMenu();
+
+    SetFocus(g_hwndScreen);
 }
 
 void MainWindow_ShowHideToolbar()
@@ -602,10 +599,10 @@ void MainWindow_ShowHideKeyboard()
         RECT rcScreen;  GetWindowRect(g_hwndScreen, &rcScreen);
         int yKeyboardTop = rcScreen.bottom - rcScreen.top + 8;
         int cxKeyboardWidth = rcScreen.right - rcScreen.left;
-        int cyKeyboardHeight = 230;
+        int cyKeyboardHeight = 220;
 
         if (g_hwndKeyboard == INVALID_HANDLE_VALUE)
-            CreateKeyboardView(g_hwnd, 4, yKeyboardTop, cxKeyboardWidth, cyKeyboardHeight);
+            KeyboardView_Create(g_hwnd, 4, yKeyboardTop, cxKeyboardWidth, cyKeyboardHeight);
     }
 
     MainWindow_AdjustWindowSize();
@@ -638,7 +635,7 @@ void MainWindow_ShowHideTape()
         int cyTapeHeight = 64;
 
         if (g_hwndTape == INVALID_HANDLE_VALUE)
-            CreateTapeView(g_hwnd, 4, yTapeTop, cxTapeWidth, cyTapeHeight);
+            TapeView_Create(g_hwnd, 4, yTapeTop, cxTapeWidth, cyTapeHeight);
     }
 
     MainWindow_AdjustWindowSize();
@@ -757,6 +754,12 @@ bool MainWindow_DoCommand(int commandId)
     case ID_DEBUG_STEPOVER:
         if (!g_okEmulatorRunning && Settings_GetDebug())
             ConsoleView_StepOver();
+        break;
+    case ID_DEBUG_MEMORY_WORDBYTE:
+        MemoryView_SwitchWordByte();
+        break;
+    case ID_DEBUG_MEMORY_GOTO:
+        MemoryView_SelectAddress();
         break;
     case ID_EMULATOR_RESET:
         MainWindow_DoEmulatorReset();
@@ -888,21 +891,11 @@ void MainWindow_DoEmulatorSound()
 
 void MainWindow_DoFileLoadState()
 {
-    // File Open dialog
     TCHAR bufFileName[MAX_PATH];
-    *bufFileName = 0;
-    OPENFILENAME ofn;
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = g_hwnd;
-    ofn.hInstance = g_hInst;
-    ofn.lpstrTitle = _T("Open state image to load");
-    ofn.lpstrFilter = _T("BK state images (*.bkst)\0*.bkst\0All Files (*.*)\0*.*\0\0");
-    ofn.Flags = OFN_FILEMUSTEXIST;
-    ofn.lpstrFile = bufFileName;
-    ofn.nMaxFile = sizeof(bufFileName) / sizeof(TCHAR);
-
-    BOOL okResult = GetOpenFileName(&ofn);
+    BOOL okResult = ShowOpenDialog(g_hwnd,
+            _T("Open state image to load"),
+            _T("NEONBTL state images (*.neon)\0*.neon\0All Files (*.*)\0*.*\0\0"),
+            bufFileName);
     if (! okResult) return;
 
     Emulator_LoadImage(bufFileName);
@@ -913,8 +906,8 @@ void MainWindow_DoFileSaveState()
     TCHAR bufFileName[MAX_PATH];
     BOOL okResult = ShowSaveDialog(g_hwnd,
             _T("Save state image as"),
-            _T("BK state images (*.bkst)\0*.bkst\0All Files (*.*)\0*.*\0\0"),
-            _T("bkst"),
+            _T("NEONBTL state images (*.neon)\0*.neon\0All Files (*.*)\0*.*\0\0"),
+            _T("neon"),
             bufFileName);
     if (! okResult) return;
 
