@@ -42,7 +42,7 @@ BOOL DebugView_OnKeyDown(WPARAM vkey, LPARAM lParam);
 void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WORD* arrR, BOOL* arrRChanged, WORD oldPsw);
 void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, int x, int y, WORD oldValue);
 void DebugView_DrawHRandUR(HDC hdc, const CMotherboard* pBoard, int x, int y);
-void DebugView_DrawPorts(HDC hdc, const CMotherboard* pBoard, int x, int y);
+void DebugView_DrawPorts(HDC hdc, int x, int y);
 void DebugView_UpdateWindowText();
 
 
@@ -428,7 +428,7 @@ void DebugView_DrawHRandUR(HDC hdc, const CMotherboard* pBoard, int x, int y)
     }
 }
 
-void DebugView_DrawPorts(HDC hdc, const CMotherboard* pBoard, int x, int y)
+void DebugView_DrawPorts(HDC hdc, int x, int y)
 {
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
 

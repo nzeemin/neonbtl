@@ -274,10 +274,11 @@ void PrintRegister(LPCTSTR strName, WORD value)
 
 BOOL SaveMemoryDump(CProcessor *pProc)
 {
-    BYTE buf[65536];
+    BOOL okHaltMode = pProc->IsHaltMode();
+    uint8_t buf[65536];
     for (int i = 0; i < 65536; i++)
     {
-        buf[i] = g_pBoard->GetByte(i, 1);
+        buf[i] = g_pBoard->GetByte(i, okHaltMode);
     }
 
     const TCHAR fname[] = _T("memdump.bin");

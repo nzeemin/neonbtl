@@ -25,7 +25,7 @@ CMotherboard::CMotherboard ()
     m_pCPU = new CProcessor(this);
     m_pFloppyCtl = NULL;
 
-    m_okTraceCPU = false;
+    m_dwTrace = 0;
     m_TapeReadCallback = NULL;
     m_TapeWriteCallback = NULL;
     m_nTapeSampleRate = 0;
@@ -344,7 +344,7 @@ bool CMotherboard::SystemFrame()
             if (m_pCPU->GetPC() == m_CPUbp)
                 return false;  // Breakpoint
 #if !defined(PRODUCT)
-            if (m_okTraceCPU && m_pCPU->GetInternalTick() == 0)
+            if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
                 TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
             m_pCPU->Execute();
@@ -375,7 +375,7 @@ bool CMotherboard::SystemFrame()
         {
             int tapeSamples = 0;
             const int readsTotal = 20000 / frameTapeTicks;
-            while (true)
+            for (;;)
             {
                 tapeSamples++;
                 tapeReadError += readsTotal;
@@ -774,7 +774,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return 0;
     }
 
-    return 0;
+    //return 0;
 }
 
 // Read word from port for debugger

@@ -46,6 +46,10 @@ enum NeonConfiguration
 #define FLOPPY_FSM_WAITFORTERM1	2
 #define FLOPPY_FSM_WAITFORTERM2	3
 
+// Trace flags
+#define TRACE_NONE         0  // Turn off all tracing
+#define TRACE_FLOPPY    0100  // Trace floppies
+#define TRACE_ALL    0177777  // Trace all
 
 //////////////////////////////////////////////////////////////////////
 // Special key codes
@@ -72,11 +76,20 @@ class CFloppyController;
 
 //////////////////////////////////////////////////////////////////////
 
-class CMotherboard  // Souz-Neon computer
+// Souz-Neon computer
+class CMotherboard
 {
+public:  // Construct / destruct
+    CMotherboard();
+    ~CMotherboard();
+
 private:  // Devices
     CProcessor* m_pCPU;  // CPU device
     CFloppyController* m_pFloppyCtl;  // FDD control
+
+public:  // Getting devices
+    CProcessor* GetCPU() { return m_pCPU; }
+
 private:  // Memory
     uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
     uint8_t*    m_pRAM;  // RAM, 512..4096 KB
@@ -84,32 +97,30 @@ private:  // Memory
     uint16_t    m_HR[8];
     uint16_t    m_UR[8];
     uint32_t    m_nRamSizeBytes;  // Actual RAM size
-public:  // Construct / destruct
-    CMotherboard();
-    ~CMotherboard();
-public:  // Getting devices
-    CProcessor* GetCPU() { return m_pCPU; }
-public:  // Memory access  //TODO: Make it private
+
+public:  // Memory access
     uint16_t    GetRAMWord(uint32_t offset) const;
     uint8_t     GetRAMByte(uint32_t offset) const;
     void        SetRAMWord(uint32_t offset, uint16_t word);
     void        SetRAMByte(uint32_t offset, uint8_t byte);
     uint16_t    GetROMWord(uint16_t offset) const;
     uint8_t     GetROMByte(uint16_t offset) const;
+
 public:  // Debug
     void        DebugTicks();  // One Debug PPU tick -- use for debug step or debug breakpoint
     void        SetCPUBreakpoint(uint16_t bp) { m_CPUbp = bp; } // Set CPU breakpoint
-    bool        GetTrace() const { return m_okTraceCPU; }
-    void        SetTrace(bool okTraceCPU) { m_okTraceCPU = okTraceCPU; }
+    uint32_t    GetTrace() const { return m_dwTrace; }
+    void        SetTrace(uint32_t dwTraceCPU) { m_dwTrace = dwTraceCPU; }
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     void        Reset();  // Reset computer
     void        LoadROM(int bank, const uint8_t* pBuffer);  // Load 8 KB ROM image from the biffer
     void        LoadRAM(int startbank, const uint8_t* pBuffer, int length);  // Load data into the RAM
     void        Tick50();           // Tick 50 Hz - goes to CPU EVNT line
-    void		TimerTick();		// Timer Tick, 31250 Hz, 32uS -- dividers are within timer routine
-    void        DCLO_Signal() { }  ///< DCLO signal
+    void        TimerTick();        // Timer Tick, 31250 Hz, 32uS -- dividers are within timer routine
+    void        DCLO_Signal() { }   // DCLO signal
     void        ResetDevices();     // INIT signal
+
 public:
     void        ExecuteCPU();  // Execute one CPU instruction
     bool        SystemFrame();  // Do one frame -- use for normal run
@@ -123,9 +134,13 @@ public:  // Floppy
     void        DetachFloppyImage(int slot);
     bool        IsFloppyImageAttached(int slot);
     bool        IsFloppyReadOnly(int slot);
+
 public:  // Callbacks
+    /// \brief Assign tape read callback function.
     void        SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate);
+    /// \brief Assign write read callback function.
     void        SetTapeWriteCallback(TAPEWRITECALLBACK callback, int sampleRate);
+    /// \brief Assign sound output callback function.
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetTeletypeCallback(TELETYPECALLBACK callback);
 public:  // Memory
@@ -177,16 +192,17 @@ private:  // Ports: implementation
     uint16_t    m_Port177716;       // System register (read only)
     uint16_t    m_Port177716mem;    // System register (memory)
     uint16_t    m_Port177716tap;    // System register (tape)
+private:
+    uint16_t    m_CPUbp;  ///< Current CPU breakpoint, 177777 if not set
+    uint32_t    m_dwTrace;  ///< Trace flags
 private:  // Timer implementation
     uint16_t    m_timer;
     uint16_t    m_timerreload;
     uint16_t    m_timerflags;
     uint16_t    m_timerdivider;
-    void		SetTimerReload(uint16_t val);	//sets timer reload value
-    void		SetTimerState(uint16_t val);	//sets timer state
-private:
-    uint16_t    m_CPUbp;  // CPU breakpoint address
-    bool        m_okTraceCPU;
+    void        SetTimerReload(uint16_t val);   //sets timer reload value
+    void        SetTimerState(uint16_t val);    //sets timer state
+
 private:
     TAPEREADCALLBACK m_TapeReadCallback;
     TAPEWRITECALLBACK m_TapeWriteCallback;
@@ -195,6 +211,7 @@ private:
     TELETYPECALLBACK m_TeletypeCallback;
 private:
     void        DoSound(void);
+
 };
 
 
