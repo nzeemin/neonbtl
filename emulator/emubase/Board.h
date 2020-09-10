@@ -107,8 +107,8 @@ public:  // Memory access
     uint8_t     GetROMByte(uint16_t offset) const;
 
 public:  // Debug
-    void        DebugTicks();  // One Debug PPU tick -- use for debug step or debug breakpoint
-    void        SetCPUBreakpoint(uint16_t bp) { m_CPUbp = bp; } // Set CPU breakpoint
+    void        DebugTicks();  // One Debug CPU tick -- use for debug step or debug breakpoint
+    void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
     void        SetTrace(uint32_t dwTraceCPU) { m_dwTrace = dwTraceCPU; }
 public:  // System control
@@ -193,8 +193,8 @@ private:  // Ports: implementation
     uint16_t    m_Port177716mem;    // System register (memory)
     uint16_t    m_Port177716tap;    // System register (tape)
 private:
-    uint16_t    m_CPUbp;  ///< Current CPU breakpoint, 177777 if not set
-    uint32_t    m_dwTrace;  ///< Trace flags
+    const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
+    uint32_t    m_dwTrace;  // Trace flags
 private:  // Timer implementation
     uint16_t    m_timer;
     uint16_t    m_timerreload;

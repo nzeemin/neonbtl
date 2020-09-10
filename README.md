@@ -1,4 +1,4 @@
-# neon90btl
+# neonbtl
 **Neon Back to Life!** is emulator of **Sojuz-Neon PK 11/16**, soviet computer based on PDP-11 compatible processor.
 
 This is work in progress project on early stage of development.

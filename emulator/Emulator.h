@@ -19,33 +19,39 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 //////////////////////////////////////////////////////////////////////
 
 
+const int MAX_BREAKPOINTCOUNT = 16;
+
 extern CMotherboard* g_pBoard;
 extern NeonConfiguration g_nEmulatorConfiguration;  // Current configuration
-extern BOOL g_okEmulatorRunning;
+extern bool g_okEmulatorRunning;
 
-extern BYTE* g_pEmulatorRam;  // RAM values - for change tracking
-extern BYTE* g_pEmulatorChangedRam;  // RAM change flags
-extern WORD g_wEmulatorCpuPC;      // Current PC value
-extern WORD g_wEmulatorPrevCpuPC;  // Previous PC value
-extern WORD g_wEmulatorPpuPC;      // Current PC value
-extern WORD g_wEmulatorPrevPpuPC;  // Previous PC value
+extern uint8_t* g_pEmulatorRam;  // RAM values - for change tracking
+extern uint8_t* g_pEmulatorChangedRam;  // RAM change flags
+extern uint16_t g_wEmulatorCpuPC;      // Current PC value
+extern uint16_t g_wEmulatorPrevCpuPC;  // Previous PC value
 
 
 //////////////////////////////////////////////////////////////////////
 
 
-BOOL Emulator_Init();
-BOOL Emulator_InitConfiguration(NeonConfiguration configuration);
+bool Emulator_Init();
+bool Emulator_InitConfiguration(NeonConfiguration configuration);
 void Emulator_Done();
-void Emulator_SetCPUBreakpoint(WORD address);
-void Emulator_SetPPUBreakpoint(WORD address);
-BOOL Emulator_IsBreakpoint();
-void Emulator_SetSound(BOOL soundOnOff);
-void Emulator_SetCovox(BOOL covoxOnOff);
+
+bool Emulator_AddCPUBreakpoint(uint16_t address);
+bool Emulator_RemoveCPUBreakpoint(uint16_t address);
+void Emulator_SetTempCPUBreakpoint(uint16_t address);
+const uint16_t* Emulator_GetCPUBreakpointList();
+bool Emulator_IsBreakpoint();
+bool Emulator_IsBreakpoint(uint16_t address);
+void Emulator_RemoveAllBreakpoints();
+
+void Emulator_SetSound(bool soundOnOff);
+void Emulator_SetCovox(bool covoxOnOff);
 void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();
-int  Emulator_SystemFrame();
+bool Emulator_SystemFrame();
 void Emulator_ProcessJoystick();
 DWORD Emulator_GetUptime();  // BK uptime, in seconds
 
@@ -53,10 +59,10 @@ void Emulator_PrepareScreenRGB32(void* pBits, int screenMode);
 
 // Update cached values after Run or Step
 void Emulator_OnUpdate();
-WORD Emulator_GetChangeRamStatus(WORD address);
+uint16_t Emulator_GetChangeRamStatus(uint16_t address);
 
-void Emulator_SaveImage(LPCTSTR sFilePath);
-void Emulator_LoadImage(LPCTSTR sFilePath);
+bool Emulator_SaveImage(LPCTSTR sFilePath);
+bool Emulator_LoadImage(LPCTSTR sFilePath);
 
 
 //////////////////////////////////////////////////////////////////////

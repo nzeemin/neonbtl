@@ -29,11 +29,11 @@ public:  // Constructor / initialization
     void        SetACLOPin(bool value);
     void        MemoryError();
     int	        GetInternalTick() const { return m_internalTick; }
-    void        SetInternalTick (uint16_t tick) { m_internalTick = tick; }
+    void        ClearInternalTick() { m_internalTick = 0; }
 
 public:
-    static void Init();  ///< Initialize static tables
-    static void Done();  ///< Release memory used for static tables
+    static void Init();  // Initialize static tables
+    static void Done();  // Release memory used for static tables
 protected:  // Statics
     typedef void ( CProcessor::*ExecuteMethodRef )();
     static ExecuteMethodRef* m_pExecuteMethodMap;

@@ -16,31 +16,32 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Main.h"
 #include "Emulator.h"
 #include "Views.h"
-#include "Dialogs.h"
 #include "emubase\Emubase.h"
 
 
 //////////////////////////////////////////////////////////////////////
 
 
-CMotherboard* g_pBoard = NULL;
+CMotherboard* g_pBoard = nullptr;
 NeonConfiguration g_nEmulatorConfiguration;  // Current configuration
-BOOL g_okEmulatorRunning = FALSE;
+bool g_okEmulatorRunning = false;
 
-WORD m_wEmulatorCPUBreakpoint = 0177777;
+int m_wEmulatorCPUBpsCount = 0;
+uint16_t m_EmulatorCPUBps[MAX_BREAKPOINTCOUNT + 1];
+uint16_t m_wEmulatorTempCPUBreakpoint = 0177777;
 
-BOOL m_okEmulatorSound = FALSE;
-BOOL m_okEmulatorCovox = FALSE;
+bool m_okEmulatorSound = false;
+bool m_okEmulatorCovox = false;
 
 long m_nFrameCount = 0;
-DWORD m_dwTickCount = 0;
-DWORD m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
+uint32_t m_dwTickCount = 0;
+uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
 long m_nUptimeFrameCount = 0;
 
-BYTE* g_pEmulatorRam;  // RAM values - for change tracking
-BYTE* g_pEmulatorChangedRam;  // RAM change flags
-WORD g_wEmulatorCpuPC = 0177777;      // Current PC value
-WORD g_wEmulatorPrevCpuPC = 0177777;  // Previous PC value
+uint8_t* g_pEmulatorRam = nullptr;  // RAM values - for change tracking
+uint8_t* g_pEmulatorChangedRam = nullptr;  // RAM change flags
+uint16_t g_wEmulatorCpuPC = 0177777;      // Current PC value
+uint16_t g_wEmulatorPrevCpuPC = 0177777;  // Previous PC value
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R);
 
@@ -62,11 +63,11 @@ const LPCTSTR FILENAME_ROM1 = _T("rom1.rr1");
 
 //////////////////////////////////////////////////////////////////////
 
-BOOL Emulator_LoadRomFile(LPCTSTR strFileName, BYTE* buffer, DWORD fileOffset, DWORD bytesToRead)
+bool Emulator_LoadRomFile(LPCTSTR strFileName, uint8_t* buffer, uint32_t fileOffset, uint32_t bytesToRead)
 {
     FILE* fpRomFile = ::_tfsopen(strFileName, _T("rb"), _SH_DENYWR);
-    if (fpRomFile == NULL)
-        return FALSE;
+    if (fpRomFile == nullptr)
+        return false;
 
     ASSERT(bytesToRead <= 8192);
     ::memset(buffer, 0, 8192);
@@ -80,19 +81,25 @@ BOOL Emulator_LoadRomFile(LPCTSTR strFileName, BYTE* buffer, DWORD fileOffset, D
     if (dwBytesRead != bytesToRead)
     {
         ::fclose(fpRomFile);
-        return FALSE;
+        return false;
     }
 
     ::fclose(fpRomFile);
 
-    return TRUE;
+    return true;
 }
 
-BOOL Emulator_Init()
+bool Emulator_Init()
 {
-    ASSERT(g_pBoard == NULL);
+    ASSERT(g_pBoard == nullptr);
 
     CProcessor::Init();
+
+    m_wEmulatorCPUBpsCount = 0;
+    for (int i = 0; i <= MAX_BREAKPOINTCOUNT; i++)
+    {
+        m_EmulatorCPUBps[i] = 0177777;
+    }
 
     g_pBoard = new CMotherboard();
 
@@ -112,27 +119,27 @@ BOOL Emulator_Init()
 
     m_EmulatorTapeMode = TAPEMODE_STOPPED;
 
-    return TRUE;
+    return true;
 }
 
 void Emulator_Done()
 {
-    ASSERT(g_pBoard != NULL);
+    ASSERT(g_pBoard != nullptr);
 
     CProcessor::Done();
 
-    g_pBoard->SetSoundGenCallback(NULL);
+    g_pBoard->SetSoundGenCallback(nullptr);
     //SoundGen_Finalize();
 
     delete g_pBoard;
-    g_pBoard = NULL;
+    g_pBoard = nullptr;
 
     // Free memory used for old RAM values
     ::free(g_pEmulatorRam);
     ::free(g_pEmulatorChangedRam);
 }
 
-BOOL Emulator_InitConfiguration(NeonConfiguration configuration)
+bool Emulator_InitConfiguration(NeonConfiguration configuration)
 {
     g_pBoard->SetConfiguration(configuration);
 
@@ -142,14 +149,14 @@ BOOL Emulator_InitConfiguration(NeonConfiguration configuration)
     if (!Emulator_LoadRomFile(FILENAME_ROM0, buffer, 0, 8192))
     {
         AlertWarning(_T("Failed to load ROM0 file."));
-        return FALSE;
+        return false;
     }
     g_pBoard->LoadROM(0, buffer);
 
     if (!Emulator_LoadRomFile(FILENAME_ROM1, buffer, 0, 8192))
     {
         AlertWarning(_T("Failed to load ROM1 file."));
-        return FALSE;
+        return false;
     }
     g_pBoard->LoadROM(1, buffer);
 
@@ -160,37 +167,45 @@ BOOL Emulator_InitConfiguration(NeonConfiguration configuration)
     m_nUptimeFrameCount = 0;
     m_dwEmulatorUptime = 0;
 
-    return TRUE;
+    return true;
 }
 
 void Emulator_Start()
 {
-    g_okEmulatorRunning = TRUE;
+    g_okEmulatorRunning = true;
 
     // Set title bar text
-    SetWindowText(g_hwnd, _T("NEON Back to Life [run]"));
+    MainWindow_UpdateWindowTitle();
     MainWindow_UpdateMenu();
 
     m_nFrameCount = 0;
     m_dwTickCount = GetTickCount();
+
+    // For proper breakpoint processing
+    if (m_wEmulatorCPUBpsCount != 0)
+    {
+        g_pBoard->GetCPU()->ClearInternalTick();
+    }
 }
 void Emulator_Stop()
 {
-    g_okEmulatorRunning = FALSE;
-    m_wEmulatorCPUBreakpoint = 0177777;
+    g_okEmulatorRunning = false;
+
+    Emulator_SetTempCPUBreakpoint(0177777);
 
     // Reset title bar message
-    SetWindowText(g_hwnd, _T("NEON Back to Life [stop]"));
+    MainWindow_UpdateWindowTitle();
     MainWindow_UpdateMenu();
+
     // Reset FPS indicator
-    MainWindow_SetStatusbarText(StatusbarPartFPS, _T(""));
+    MainWindow_SetStatusbarText(StatusbarPartFPS, nullptr);
 
     MainWindow_UpdateAllViews();
 }
 
 void Emulator_Reset()
 {
-    ASSERT(g_pBoard != NULL);
+    ASSERT(g_pBoard != nullptr);
 
     g_pBoard->Reset();
 
@@ -202,20 +217,97 @@ void Emulator_Reset()
     MainWindow_UpdateAllViews();
 }
 
-void Emulator_SetCPUBreakpoint(WORD address)
+bool Emulator_AddCPUBreakpoint(uint16_t address)
 {
-    m_wEmulatorCPUBreakpoint = address;
+    if (m_wEmulatorCPUBpsCount == MAX_BREAKPOINTCOUNT - 1 || address == 0177777)
+        return false;
+    for (int i = 0; i < m_wEmulatorCPUBpsCount; i++)  // Check if the BP exists
+    {
+        if (m_EmulatorCPUBps[i] == address)
+            return false;  // Already in the list
+    }
+    for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)  // Put in the first empty cell
+    {
+        if (m_EmulatorCPUBps[i] == 0177777)
+        {
+            m_EmulatorCPUBps[i] = address;
+            break;
+        }
+    }
+    m_wEmulatorCPUBpsCount++;
+    return true;
+}
+bool Emulator_RemoveCPUBreakpoint(uint16_t address)
+{
+    if (m_wEmulatorCPUBpsCount == 0 || address == 0177777)
+        return false;
+    for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)
+    {
+        if (m_EmulatorCPUBps[i] == address)
+        {
+            m_EmulatorCPUBps[i] = 0177777;
+            m_wEmulatorCPUBpsCount--;
+            if (m_wEmulatorCPUBpsCount > i)  // fill the hole
+            {
+                m_EmulatorCPUBps[i] = m_EmulatorCPUBps[m_wEmulatorCPUBpsCount];
+                m_EmulatorCPUBps[m_wEmulatorCPUBpsCount] = 0177777;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+void Emulator_SetTempCPUBreakpoint(uint16_t address)
+{
+    if (m_wEmulatorTempCPUBreakpoint != 0177777)
+        Emulator_RemoveCPUBreakpoint(m_wEmulatorTempCPUBreakpoint);
+    if (address == 0177777)
+    {
+        m_wEmulatorTempCPUBreakpoint = 0177777;
+        return;
+    }
+    for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)
+    {
+        if (m_EmulatorCPUBps[i] == address)
+            return;  // We have regular breakpoint with the same address
+    }
+    m_wEmulatorTempCPUBreakpoint = address;
+    m_EmulatorCPUBps[m_wEmulatorCPUBpsCount] = address;
+    m_wEmulatorCPUBpsCount++;
+}
+const uint16_t* Emulator_GetCPUBreakpointList() { return m_EmulatorCPUBps; }
+bool Emulator_IsBreakpoint()
+{
+    uint16_t address = g_pBoard->GetCPU()->GetPC();
+    if (m_wEmulatorCPUBpsCount > 0)
+    {
+        for (int i = 0; i < m_wEmulatorCPUBpsCount; i++)
+        {
+            if (address == m_EmulatorCPUBps[i])
+                return true;
+        }
+    }
+    return false;
+}
+bool Emulator_IsBreakpoint(uint16_t address)
+{
+    if (m_wEmulatorCPUBpsCount == 0)
+        return false;
+    for (int i = 0; i < m_wEmulatorCPUBpsCount; i++)
+    {
+        if (address == m_EmulatorCPUBps[i])
+            return true;
+    }
+    return false;
+}
+void Emulator_RemoveAllBreakpoints()
+{
+    for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)
+        m_EmulatorCPUBps[i] = 0177777;
+    m_wEmulatorCPUBpsCount = 0;
 }
 
-BOOL Emulator_IsBreakpoint()
-{
-    WORD wCPUAddr = g_pBoard->GetCPU()->GetPC();
-    if (wCPUAddr == m_wEmulatorCPUBreakpoint)
-        return TRUE;
-    return FALSE;
-}
-
-void Emulator_SetSound(BOOL soundOnOff)
+void Emulator_SetSound(bool soundOnOff)
 {
     if (m_okEmulatorSound != soundOnOff)
     {
@@ -226,7 +318,7 @@ void Emulator_SetSound(BOOL soundOnOff)
         }
         else
         {
-            g_pBoard->SetSoundGenCallback(NULL);
+            g_pBoard->SetSoundGenCallback(nullptr);
             //SoundGen_Finalize();
         }
     }
@@ -234,25 +326,25 @@ void Emulator_SetSound(BOOL soundOnOff)
     m_okEmulatorSound = soundOnOff;
 }
 
-void Emulator_SetCovox(BOOL covoxOnOff)
+void Emulator_SetCovox(bool covoxOnOff)
 {
     m_okEmulatorCovox = covoxOnOff;
 }
 
 int Emulator_SystemFrame()
 {
-    g_pBoard->SetCPUBreakpoint(m_wEmulatorCPUBreakpoint);
+    g_pBoard->SetCPUBreakpoints(m_wEmulatorCPUBpsCount > 0 ? m_EmulatorCPUBps : nullptr);
 
     ScreenView_ScanKeyboard();
     ScreenView_ProcessKeyboard();
-    Emulator_ProcessJoystick();
+    //Emulator_ProcessJoystick();
 
     if (!g_pBoard->SystemFrame())
         return 0;
 
     // Calculate frames per second
     m_nFrameCount++;
-    DWORD dwCurrentTicks = GetTickCount();
+    uint32_t dwCurrentTicks = GetTickCount();
     long nTicksElapsed = dwCurrentTicks - m_dwTickCount;
     if (nTicksElapsed >= 1200)
     {
@@ -281,7 +373,7 @@ int Emulator_SystemFrame()
         MainWindow_SetStatusbarText(StatusbarPartUptime, buffer);
     }
 
-    BOOL okTapeMotor = g_pBoard->IsTapeMotorOn();
+    bool okTapeMotor = g_pBoard->IsTapeMotorOn();
     if (Settings_GetTape())
     {
         m_EmulatorTapeMode = okTapeMotor ? TAPEMODE_FINISHED : TAPEMODE_STOPPED;
@@ -305,7 +397,7 @@ int Emulator_SystemFrame()
                 m_EmulatorTapeCount--;
                 if (m_EmulatorTapeCount <= 0)
                 {
-                    WORD pc = g_pBoard->GetCPU()->GetPC();
+                    uint16_t pc = g_pBoard->GetCPU()->GetPC();
                     //
                 }
             }
@@ -318,15 +410,6 @@ int Emulator_SystemFrame()
     }
 
     return 1;
-}
-
-void Emulator_ProcessJoystick()
-{
-    //if (Settings_GetJoystick() == 0)
-    //    return;  // NumPad joystick processing is inside ScreenView_ScanKeyboard() function
-
-    //UINT joystate = Joystick_GetJoystickState();
-    //g_pBoard->SetPrinterInPort(joystate);
 }
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)
@@ -352,13 +435,13 @@ void Emulator_OnUpdate()
 
     // Update memory change flags
     {
-        BYTE* pOld = g_pEmulatorRam;
-        BYTE* pChanged = g_pEmulatorChangedRam;
-        WORD addr = 0;
+        uint8_t* pOld = g_pEmulatorRam;
+        uint8_t* pChanged = g_pEmulatorChangedRam;
+        uint16_t addr = 0;
         do
         {
-            BYTE newvalue = g_pBoard->GetRAMByte(addr);
-            BYTE oldvalue = *pOld;
+            uint8_t newvalue = g_pBoard->GetRAMByte(addr);
+            uint8_t oldvalue = *pOld;
             *pChanged = (newvalue != oldvalue) ? 255 : 0;
             *pOld = newvalue;
             addr++;
@@ -370,30 +453,30 @@ void Emulator_OnUpdate()
 
 // Get RAM change flag
 //   addrtype - address mode - see ADDRTYPE_XXX constants
-WORD Emulator_GetChangeRamStatus(WORD address)
+uint16_t Emulator_GetChangeRamStatus(uint16_t address)
 {
-    return *((WORD*)(g_pEmulatorChangedRam + address));
+    return *((uint16_t*)(g_pEmulatorChangedRam + address));
 }
 
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 {
-    if (pImageBits == NULL) return;
+    if (pImageBits == nullptr) return;
 
     const CMotherboard* pBoard = g_pBoard;
 
-    WORD vdptaslo = pBoard->GetRAMWordView(0170010);  // VDPTAS
-    WORD vdptashi = pBoard->GetRAMWordView(0170012);  // VDPTAS
-    WORD vdptaplo = pBoard->GetRAMWordView(0170004);  // VDPTAP
-    WORD vdptaphi = pBoard->GetRAMWordView(0170006);  // VDPTAP
+    uint16_t vdptaslo = pBoard->GetRAMWordView(0170010);  // VDPTAS
+    uint16_t vdptashi = pBoard->GetRAMWordView(0170012);  // VDPTAS
+    uint16_t vdptaplo = pBoard->GetRAMWordView(0170004);  // VDPTAP
+    uint16_t vdptaphi = pBoard->GetRAMWordView(0170006);  // VDPTAP
 
-    DWORD tasaddr = (((DWORD)vdptaslo) << 2) | (((DWORD)(vdptashi & 017)) << 18);
+    uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 017)) << 18);
     //tasaddr += 4 * 16;  //DEBUG: Skip first lines
     for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // ÷икл по строкам
     {
-        DWORD* plinebits = ((DWORD*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
+        uint32_t* plinebits = ((uint32_t*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
 
-        WORD linelo = pBoard->GetRAMWordView(tasaddr);
-        WORD linehi = pBoard->GetRAMWordView(tasaddr + 2);
+        uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
+        uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
         tasaddr += 4;
         if (linelo == 0 && linehi == 0)
         {
@@ -401,16 +484,16 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
             continue;
         }
 
-        DWORD lineaddr = (((DWORD)linelo) << 2) | (((DWORD)(linehi & 017)) << 18);
+        uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 017)) << 18);
         int x = 0;
         while (true)  // ÷икл по видеоотрезкам строки, до полного заполнени€ строки
         {
-            WORD otrlo = pBoard->GetRAMWordView(lineaddr);
-            WORD otrhi = pBoard->GetRAMWordView(lineaddr + 2);
+            uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
+            uint16_t otrhi = pBoard->GetRAMWordView(lineaddr + 2);
             lineaddr += 4;
             int otrcount = (otrhi >> 10) & 037;  // ƒлина отрезка в 32-разр€дных словах
             if (otrcount == 0) otrcount = 32;
-            DWORD otraddr = (((DWORD)otrlo) << 2) | (((DWORD)otrhi & 017) << 18);
+            uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 017) << 18);
             if (otraddr == 0)
             {
                 int otrlen = otrcount * 16 * 2;
@@ -421,17 +504,17 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
                 if (x >= 832) break;
                 continue;
             }
-            WORD otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
-            WORD otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определ€ют инф.плотность
+            uint16_t otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определ€ют бит/точку
+            uint16_t otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определ€ют инф.плотность
             for (int i = 0; i < otrcount; i++)  // ÷икл по 32-разр€дным словам отрезка
             {
-                WORD bitslo = pBoard->GetRAMWordView(otraddr);
-                WORD bitshi = pBoard->GetRAMWordView(otraddr + 2);
-                DWORD bits = MAKELONG(bitslo, bitshi);
+                uint16_t bitslo = pBoard->GetRAMWordView(otraddr);
+                uint16_t bitshi = pBoard->GetRAMWordView(otraddr + 2);
+                uint32_t bits = MAKELONG(bitslo, bitshi);
 
                 for (int i = 0; i < 32; i++)
                 {
-                    DWORD color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
+                    uint32_t color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
                     *plinebits = color;  plinebits++;
                     x++;
                     if (x >= 832) break;
@@ -449,23 +532,24 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
     }
 }
 
+
 //////////////////////////////////////////////////////////////////////
 //
 // Emulator image format - see CMotherboard::SaveToImage()
 // Image header format (32 bytes):
-//   4 bytes        BK_IMAGE_HEADER1
-//   4 bytes        BK_IMAGE_HEADER2
-//   4 bytes        BK_IMAGE_VERSION
-//   4 bytes        BK_IMAGE_SIZE
-//   4 bytes        BK uptime
+//   4 bytes        NEON_IMAGE_HEADER1
+//   4 bytes        NEON_IMAGE_HEADER2
+//   4 bytes        NEON_IMAGE_VERSION
+//   4 bytes        NEON_IMAGE_SIZE
+//   4 bytes        NEON uptime
 //   12 bytes       Not used
 
-void Emulator_SaveImage(LPCTSTR sFilePath)
+bool Emulator_SaveImage(LPCTSTR sFilePath)
 {
     //// Create file
     //HANDLE hFile = CreateFile(sFilePath,
-    //        GENERIC_WRITE, FILE_SHARE_READ, NULL,
-    //        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    //        GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+    //        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     //if (hFile == INVALID_HANDLE_VALUE)
     //{
     //    AlertWarning(_T("Failed to save image file."));
@@ -476,31 +560,33 @@ void Emulator_SaveImage(LPCTSTR sFilePath)
     //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  memset(pImage, 0, BKIMAGE_SIZE);
     //::memset(pImage, 0, BKIMAGE_SIZE);
     //// Prepare header
-    //DWORD* pHeader = (DWORD*) pImage;
+    //uint32_t* pHeader = (uint32_t*) pImage;
     //*pHeader++ = BKIMAGE_HEADER1;
     //*pHeader++ = BKIMAGE_HEADER2;
     //*pHeader++ = BKIMAGE_VERSION;
     //*pHeader++ = BKIMAGE_SIZE;
     //// Store emulator state to the image
     ////g_pBoard->SaveToImage(pImage);
-    //*(DWORD*)(pImage + 16) = m_dwEmulatorUptime;
+    //*(uint32_t*)(pImage + 16) = m_dwEmulatorUptime;
 
     //// Save image to the file
-    //DWORD dwBytesWritten = 0;
-    //WriteFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesWritten, NULL);
+    //uint32_t dwBytesWritten = 0;
+    //WriteFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesWritten, nullptr);
     ////TODO: Check if dwBytesWritten != BKIMAGE_SIZE
 
     //// Free memory, close file
     //::free(pImage);
     //CloseHandle(hFile);
+
+    return true;
 }
 
-void Emulator_LoadImage(LPCTSTR sFilePath)
+bool Emulator_LoadImage(LPCTSTR sFilePath)
 {
     //// Open file
     //HANDLE hFile = CreateFile(sFilePath,
-    //        GENERIC_READ, FILE_SHARE_READ, NULL,
-    //        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    //        GENERIC_READ, FILE_SHARE_READ, nullptr,
+    //        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     //if (hFile == INVALID_HANDLE_VALUE)
     //{
     //    AlertWarning(_T("Failed to load image file."));
@@ -508,9 +594,9 @@ void Emulator_LoadImage(LPCTSTR sFilePath)
     //}
 
     //// Read header
-    //DWORD bufHeader[BKIMAGE_HEADER_SIZE / sizeof(DWORD)];
-    //DWORD dwBytesRead = 0;
-    //ReadFile(hFile, bufHeader, BKIMAGE_HEADER_SIZE, &dwBytesRead, NULL);
+    //uint32_t bufHeader[BKIMAGE_HEADER_SIZE / sizeof(uint32_t)];
+    //uint32_t dwBytesRead = 0;
+    //ReadFile(hFile, bufHeader, BKIMAGE_HEADER_SIZE, &dwBytesRead, nullptr);
     ////TODO: Check if dwBytesRead != BKIMAGE_HEADER_SIZE
 
     ////TODO: Check version and size
@@ -519,23 +605,25 @@ void Emulator_LoadImage(LPCTSTR sFilePath)
     //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  ::memset(pImage, 0, BKIMAGE_SIZE);
 
     //// Read image
-    //SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+    //SetFilePointer(hFile, 0, nullptr, FILE_BEGIN);
     //dwBytesRead = 0;
-    //ReadFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesRead, NULL);
+    //ReadFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesRead, nullptr);
     ////TODO: Check if dwBytesRead != BKIMAGE_SIZE
 
     //// Restore emulator state from the image
     ////g_pBoard->LoadFromImage(pImage);
 
-    //m_dwEmulatorUptime = *(DWORD*)(pImage + 16);
+    //m_dwEmulatorUptime = *(uint32_t*)(pImage + 16);
 
     //// Free memory, close file
     //::free(pImage);
     //CloseHandle(hFile);
 
-    //g_okEmulatorRunning = FALSE;
+    //g_okEmulatorRunning = false;
 
     //MainWindow_UpdateAllViews();
+
+    return true;
 }
 
 

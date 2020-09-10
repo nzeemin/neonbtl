@@ -17,6 +17,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include <mmintrin.h>
 #include <vfw.h>
 #include <commctrl.h>
+#include <shellapi.h>
 
 #include "Main.h"
 #include "Emulator.h"
@@ -84,19 +85,16 @@ int APIENTRY _tWinMain(
         ::QueryPerformanceCounter(&nFrameStartTime);
 
         if (!g_okEmulatorRunning)
-            ::Sleep(20);
+            ::Sleep(1);
         else
         {
-            if (Emulator_IsBreakpoint())
-                Emulator_Stop();
-            else
+            if (!Emulator_SystemFrame())
             {
-                if (Emulator_SystemFrame())
-                {
-                    ScreenView_RedrawScreen();
-                    //MemoryMapView_RedrawMap();
-                }
+                // Breakpoint hit
+                Emulator_Stop();
             }
+
+            ScreenView_RedrawScreen();
         }
 
         // Process all queue
@@ -188,6 +186,7 @@ BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
 void DoneInstance()
 {
     ScreenView_Done();
+    DisasmView_Done();
 
     Emulator_Done();
 
@@ -196,7 +195,19 @@ void DoneInstance()
 
 void ParseCommandLine()
 {
-    //TODO
+    LPTSTR commandline = ::GetCommandLine();
+
+    int argnum = 0;
+    LPTSTR* args = CommandLineToArgvW(commandline, &argnum);
+
+    for (int curargn = 1; curargn < argnum; curargn++)
+    {
+        LPTSTR arg = args[curargn];
+
+        //TODO
+    }
+
+    ::LocalFree(args);
 }
 
 

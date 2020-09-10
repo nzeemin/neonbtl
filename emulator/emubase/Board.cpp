@@ -303,7 +303,7 @@ void CMotherboard::SetTimerState(uint16_t val) // Sets timer state, write to por
 
 void CMotherboard::DebugTicks()
 {
-    m_pCPU->SetInternalTick(0);
+    m_pCPU->ClearInternalTick();
     m_pCPU->Execute();
     if (m_pFloppyCtl != NULL)
         m_pFloppyCtl->Periodic();
@@ -341,13 +341,16 @@ bool CMotherboard::SystemFrame()
     {
         for (int procticks = 0; procticks < frameProcTicks; procticks++)  // CPU ticks
         {
-            if (m_pCPU->GetPC() == m_CPUbp)
-                return false;  // Breakpoint
 #if !defined(PRODUCT)
             if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
                 TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
             m_pCPU->Execute();
+            if (m_CPUbps != nullptr)  // Check for breakpoints
+            {
+                const uint16_t* pbps = m_CPUbps;
+                while (*pbps != 0177777) { if (m_pCPU->GetPC() == *pbps++) return false; }
+            }
 
             timerTicks++;
             if (timerTicks >= 128)

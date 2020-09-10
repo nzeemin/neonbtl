@@ -254,8 +254,9 @@ void CProcessor::Done()
 //////////////////////////////////////////////////////////////////////
 
 
-CProcessor::CProcessor (CMotherboard* pBoard)
+CProcessor::CProcessor(CMotherboard* pBoard)
 {
+    ASSERT(pBoard != nullptr);
     m_pBoard = pBoard;
 
     memset(m_R, 0, sizeof(m_R));

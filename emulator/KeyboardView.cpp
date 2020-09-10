@@ -19,7 +19,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 //////////////////////////////////////////////////////////////////////
 
 
-HWND g_hwndKeyboard = (HWND) INVALID_HANDLE_VALUE;  // Keyboard View window handle
+HWND g_hwndKeyboard = (HWND)INVALID_HANDLE_VALUE;  // Keyboard View window handle
 
 int m_nKeyboardBitmapLeft = 0;
 int m_nKeyboardBitmapTop = 0;
@@ -157,6 +157,14 @@ void KeyboardView_RegisterClass()
     wcex.hIconSm		= NULL;
 
     RegisterClassEx(&wcex);
+}
+
+void KeyboardView_Init()
+{
+}
+
+void KeyboardView_Done()
+{
 }
 
 void KeyboardView_Create(HWND hwndParent, int x, int y, int width, int height)

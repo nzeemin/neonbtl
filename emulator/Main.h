@@ -21,6 +21,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 extern TCHAR g_szTitle[MAX_LOADSTRING];            // The title bar text
 extern TCHAR g_szWindowClass[MAX_LOADSTRING];      // Main window class name
 
+
 extern HINSTANCE g_hInst; // current instance
 
 
@@ -33,6 +34,7 @@ void MainWindow_RegisterClass();
 BOOL CreateMainWindow();
 void MainWindow_RestoreSettings();
 void MainWindow_UpdateMenu();
+void MainWindow_UpdateWindowTitle();
 void MainWindow_UpdateAllViews();
 BOOL MainWindow_InitToolbar();
 BOOL MainWindow_InitStatusbar();
@@ -54,6 +56,7 @@ enum ToolbarButtons
     // Separator
     ToolbarButtonColor = 3,
 };
+
 enum ToolbarButtonImages
 {
     ToolbarImageRun = 0,
@@ -69,6 +72,11 @@ enum ToolbarButtonImages
     ToolbarImageColorScreen = 10,
     ToolbarImageBWScreen = 11,
     ToolbarImageScreenshot = 12,
+    ToolbarImageDebugger = 14,
+    ToolbarImageStepInto = 15,
+    ToolbarImageStepOver = 16,
+    ToolbarImageWordByte = 17,
+    ToolbarImageGotoAddress = 18,
 };
 
 enum StatusbarParts
@@ -76,6 +84,28 @@ enum StatusbarParts
     StatusbarPartMessage = 0,
     StatusbarPartFPS = 1,
     StatusbarPartUptime = 2,
+};
+
+enum ColorIndices
+{
+    ColorDebugText          = 0,
+    ColorDebugBackCurrent   = 1,
+    ColorDebugValueChanged  = 2,
+    ColorDebugPrevious      = 3,
+    ColorDebugMemoryRom     = 4,
+    ColorDebugMemoryIO      = 5,
+    ColorDebugMemoryNA      = 6,
+    ColorDebugValue         = 7,
+    ColorDebugValueRom      = 8,
+    ColorDebugSubtitles     = 9,
+    ColorDebugJump          = 10,
+    ColorDebugJumpYes       = 11,
+    ColorDebugJumpNo        = 12,
+    ColorDebugJumpHint      = 13,
+    ColorDebugHint          = 14,
+    ColorDebugBreakpoint    = 15,
+
+    ColorIndicesCount       = 16,
 };
 
 
@@ -104,13 +134,13 @@ void Settings_SetDebug(BOOL flag);
 BOOL Settings_GetDebug();
 void Settings_GetDebugFontName(LPTSTR buffer);
 void Settings_SetDebugFontName(LPCTSTR sFontName);
-void Settings_SetDebugMemoryAddress(WORD speed);
+void Settings_SetDebugMemoryAddress(WORD address);
 WORD Settings_GetDebugMemoryAddress();
 BOOL Settings_GetDebugMemoryByte();
 void Settings_SetDebugMemoryByte(BOOL flag);
 void Settings_SetAutostart(BOOL flag);
 BOOL Settings_GetAutostart();
-void Settings_SetRealSpeed(WORD flag);
+void Settings_SetRealSpeed(WORD speed);
 WORD Settings_GetRealSpeed();
 void Settings_SetSound(BOOL flag);
 BOOL Settings_GetSound();
@@ -122,6 +152,11 @@ void Settings_SetKeyboard(BOOL flag);
 BOOL Settings_GetKeyboard();
 void Settings_SetTape(BOOL flag);
 BOOL Settings_GetTape();
+
+LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex);
+COLORREF Settings_GetColor(ColorIndices colorIndex);
+COLORREF Settings_GetDefaultColor(ColorIndices colorIndex);
+void Settings_SetColor(ColorIndices colorIndex, COLORREF color);
 
 
 //////////////////////////////////////////////////////////////////////

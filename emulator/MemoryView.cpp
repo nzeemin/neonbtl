@@ -135,9 +135,9 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
         buttons[i].iString = -1;
     }
     buttons[0].idCommand = ID_DEBUG_MEMORY_GOTO;
-    buttons[0].iBitmap = 18;
+    buttons[0].iBitmap = ToolbarImageGotoAddress;
     buttons[1].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
-    buttons[1].iBitmap = 17;
+    buttons[1].iBitmap = ToolbarImageWordByte;
 
     SendMessage(m_hwndMemoryToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -214,7 +214,6 @@ void MemoryView_OnDraw(HDC hdc)
 {
     ASSERT(g_pBoard != NULL);
 
-    // Create and select font
     HFONT hFont = CreateMonospacedFont();
     HGDIOBJ hOldFont = SelectObject(hdc, hFont);
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);

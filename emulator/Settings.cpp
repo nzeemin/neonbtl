@@ -74,10 +74,40 @@ BOOL Settings_LoadDwordValue(LPCTSTR sName, DWORD* dwValue)
     return TRUE;
 }
 
+BOOL Settings_SaveColorValue(LPCTSTR sName, COLORREF color)
+{
+    // 00BBGGRR -> 00RRGGBB conversion
+    DWORD dwValue = ((color & 0x0000ff) << 16) | (color & 0x00ff00) | ((color & 0xff0000) >> 16);
+
+    TCHAR buffer[12];
+    wsprintf(buffer, _T("%06lX"), dwValue);
+
+    return Settings_SaveStringValue(sName, buffer);
+}
+BOOL Settings_LoadColorValue(LPCTSTR sName, COLORREF* pColor)
+{
+    TCHAR buffer[12];
+    if (!Settings_LoadStringValue(sName, buffer, 12))
+        return FALSE;
+
+    DWORD dwValue;
+    int result = _stscanf(buffer, _T("%lX"), &dwValue);
+    if (result == 0)
+        return FALSE;
+
+    // 00RRGGBB -> 00BBGGRR conversion
+    *pColor = ((dwValue & 0x0000ff) << 16) | (dwValue & 0x00ff00) | ((dwValue & 0xff0000) >> 16);
+
+    return TRUE;
+}
+
+
 BOOL Settings_SaveBinaryValue(LPCTSTR sName, const void * pData, int size)
 {
-    TCHAR* buffer = (TCHAR*) ::calloc(size * 2 + 1, sizeof(TCHAR));
-    const BYTE* p = (const BYTE*) pData;
+    TCHAR* buffer = static_cast<TCHAR*>(::calloc(size * 2 + 1, sizeof(TCHAR)));
+    if (buffer == NULL)
+        return FALSE;
+    const BYTE* p = (const BYTE*)pData;
     TCHAR* buf = buffer;
     for (int i = 0; i < size; i++)
     {
@@ -96,8 +126,10 @@ BOOL Settings_SaveBinaryValue(LPCTSTR sName, const void * pData, int size)
 
 BOOL Settings_LoadBinaryValue(LPCTSTR sName, void * pData, int size)
 {
-    size_t buffersize = (size * 2 + 1) * sizeof(TCHAR);
-    TCHAR* buffer = (TCHAR*) ::calloc(buffersize, 1);
+    size_t buffersize = size * 2 + 1;
+    TCHAR* buffer = static_cast<TCHAR*>(::calloc(buffersize, sizeof(TCHAR)));
+    if (buffer == NULL)
+        return FALSE;
     if (!Settings_LoadStringValue(sName, buffer, buffersize))
     {
         free(buffer);
@@ -229,7 +261,7 @@ void Settings_SetCartridgeFilePath(int slot, LPCTSTR sFilePath)
     Settings_SaveStringValue(bufValueName, sFilePath);
 }
 
-SETTINGS_GETSET_DWORD(ScreenViewMode, _T("ScreenViewMode"), int, 1);
+SETTINGS_GETSET_DWORD(ScreenViewMode, _T("ScreenViewMode"), int, 0);
 
 SETTINGS_GETSET_DWORD(ScreenHeightMode, _T("ScreenHeightMode"), int, 0);
 
@@ -249,7 +281,7 @@ void Settings_SetDebugFontName(LPCTSTR sFontName)
     Settings_SaveStringValue(_T("DebugFontName"), sFontName);
 }
 
-SETTINGS_GETSET_DWORD(DebugMemoryAddress, _T("DebugMemoryAddress"), WORD, 3);
+SETTINGS_GETSET_DWORD(DebugMemoryAddress, _T("DebugMemoryAddress"), WORD, 0);
 SETTINGS_GETSET_DWORD(DebugMemoryByte, _T("DebugMemoryByte"), BOOL, FALSE);
 
 SETTINGS_GETSET_DWORD(Autostart, _T("Autostart"), BOOL, FALSE);
@@ -262,6 +294,88 @@ SETTINGS_GETSET_DWORD(SoundVolume, _T("SoundVolume"), WORD, 0x3fff);
 SETTINGS_GETSET_DWORD(Keyboard, _T("Keyboard"), BOOL, TRUE);
 
 SETTINGS_GETSET_DWORD(Tape, _T("Tape"), BOOL, FALSE);
+
+
+//////////////////////////////////////////////////////////////////////
+// Colors
+
+struct ColorDescriptorStruct
+{
+    LPCTSTR  settingname;
+    COLORREF defaultcolor;
+    BOOL     valid;
+    LPCTSTR  friendlyname;
+    COLORREF currentcolor;
+}
+static ColorDescriptors[ColorIndicesCount] =
+{
+    { _T("ColorDebugText"),         RGB(0,   0,   0),   FALSE, _T("Debug Text") },
+    { _T("ColorDebugBackCurrent"),  RGB(255, 255, 224), FALSE, _T("Debug Current Line Background") },
+    { _T("ColorDebugValueChanged"), RGB(255, 0,   0),   FALSE, _T("Debug Value Changed") },
+    { _T("ColorDebugPrevious"),     RGB(0,   0,   255), FALSE, _T("Debug Previous Address Marker") },
+    { _T("ColorDebugMemoryROM"),    RGB(0,   0,   255), FALSE, _T("Debug Memory ROM") },
+    { _T("ColorDebugMemoryIO"),     RGB(0,   128, 0),   FALSE, _T("Debug Memory IO") },
+    { _T("ColorDebugMemoryNA"),     RGB(128, 128, 128), FALSE, _T("Debug Memory NA") },
+    { _T("ColorDebugValue"),        RGB(128, 128, 128), FALSE, _T("Debug Value") },
+    { _T("ColorDebugValueRom"),     RGB(128, 128, 192), FALSE, _T("Debug Value ROM") },
+    { _T("ColorDebugSubtitles"),    RGB(0,   128, 0),   FALSE, _T("Debug Subtitles") },
+    { _T("ColorDebugJump"),         RGB(80,  192, 224), FALSE, _T("Debug Jump") },
+    { _T("ColorDebugJumpYes"),      RGB(80,  240, 80),  FALSE, _T("Debug Jump Yes") },
+    { _T("ColorDebugJumpNo"),       RGB(180, 180, 180), FALSE, _T("Debug Jump No") },
+    { _T("ColorDebugJumpHint"),     RGB(40,  128, 160), FALSE, _T("Debug Jump Hint") },
+    { _T("ColorDebugHint"),         RGB(40,  40,  160), FALSE, _T("Debug Hint") },
+    { _T("ColorDebugBreakpoint"),   RGB(255, 128, 128), FALSE, _T("Debug Breakpoint") },
+};
+
+LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex)
+{
+    ColorDescriptorStruct* desc = ColorDescriptors + colorIndex;
+
+    return desc->friendlyname;
+}
+
+COLORREF Settings_GetColor(ColorIndices colorIndex)
+{
+    if (colorIndex < 0 || colorIndex >= ColorIndicesCount)
+        return 0;
+
+    ColorDescriptorStruct* desc = ColorDescriptors + colorIndex;
+
+    if (desc->valid)
+        return desc->currentcolor;
+
+    COLORREF color;
+    if (Settings_LoadColorValue(desc->settingname, &color))
+        desc->currentcolor = color;
+    else
+        desc->currentcolor = desc->defaultcolor;
+
+    desc->valid = TRUE;
+    return desc->currentcolor;
+}
+
+void Settings_SetColor(ColorIndices colorIndex, COLORREF color)
+{
+    if (colorIndex < 0 || colorIndex >= ColorIndicesCount)
+        return;
+
+    ColorDescriptorStruct* desc = ColorDescriptors + colorIndex;
+
+    desc->currentcolor = color;
+    desc->valid = TRUE;
+
+    Settings_SaveColorValue(desc->settingname, color);
+}
+
+COLORREF Settings_GetDefaultColor(ColorIndices colorIndex)
+{
+    if (colorIndex < 0 || colorIndex >= ColorIndicesCount)
+        return 0;
+
+    ColorDescriptorStruct* desc = ColorDescriptors + colorIndex;
+
+    return desc->defaultcolor;
+}
 
 
 //////////////////////////////////////////////////////////////////////

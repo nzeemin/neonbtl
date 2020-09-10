@@ -21,10 +21,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
-// Colors
-#define COLOR_RED   RGB(255,0,0)
-#define COLOR_BLUE  RGB(0,0,255)
-
 
 HWND g_hwndDebug = (HWND) INVALID_HANDLE_VALUE;  // Debug View window handle
 WNDPROC m_wndprocDebugToolWindow = NULL;  // Old window proc address of the ToolWindow
@@ -120,7 +116,7 @@ void DebugView_Create(HWND hwndParent, int x, int y, int width, int height)
     SendMessage(m_hwndDebugToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
     SendMessage(m_hwndDebugToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
 
-    TBBUTTON buttons[2];
+    TBBUTTON buttons[3];
     ZeroMemory(buttons, sizeof(buttons));
     for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -128,10 +124,13 @@ void DebugView_Create(HWND hwndParent, int x, int y, int width, int height)
         buttons[i].fsStyle = BTNS_BUTTON;
         buttons[i].iString = -1;
     }
-    buttons[0].idCommand = ID_DEBUG_STEPINTO;
-    buttons[0].iBitmap = 15;
-    buttons[1].idCommand = ID_DEBUG_STEPOVER;
-    buttons[1].iBitmap = 16;
+    buttons[0].idCommand = ID_VIEW_DEBUG;
+    buttons[0].iBitmap = ToolbarImageDebugger;
+    buttons[0].fsState = TBSTATE_ENABLED | TBSTATE_WRAP | TBSTATE_CHECKED;
+    buttons[1].idCommand = ID_DEBUG_STEPINTO;
+    buttons[1].iBitmap = ToolbarImageStepInto;
+    buttons[2].idCommand = ID_DEBUG_STEPOVER;
+    buttons[2].iBitmap = ToolbarImageStepOver;
 
     SendMessage(m_hwndDebugToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 }
@@ -294,14 +293,16 @@ void DebugView_DrawRectangle(HDC hdc, int x1, int y1, int x2, int y2)
 void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WORD* arrR, BOOL* arrRChanged, WORD oldPsw)
 {
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    COLORREF colorText = GetSysColor(COLOR_WINDOWTEXT);
+    COLORREF colorText = Settings_GetColor(ColorDebugText);
+    COLORREF colorChanged = Settings_GetColor(ColorDebugValueChanged);
+    ::SetTextColor(hdc, colorText);
 
     DebugView_DrawRectangle(hdc, x - cxChar, y - 8, x + cxChar + 31 * cxChar, y + 8 + cyLine * 14);
 
     // Registers
     for (int r = 0; r < 8; r++)
     {
-        ::SetTextColor(hdc, arrRChanged[r] ? COLOR_RED : colorText);
+        ::SetTextColor(hdc, arrRChanged[r] ? colorChanged : colorText);
 
         LPCTSTR strRegName = REGISTER_NAME[r];
         TextOut(hdc, x, y + r * cyLine, strRegName, (int) _tcslen(strRegName));
@@ -314,7 +315,7 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     ::SetTextColor(hdc, colorText);
 
     // CPC value
-    ::SetTextColor(hdc, arrRChanged[9] ? COLOR_RED : colorText);
+    ::SetTextColor(hdc, arrRChanged[9] ? colorChanged : colorText);
     TextOut(hdc, x, y + 8 * cyLine, _T("PC'"), 3);
     WORD cpc = arrR[9];
     DrawOctalValue(hdc, x + cxChar * 3, y + 8 * cyLine, cpc);
@@ -322,7 +323,7 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     DrawBinaryValue(hdc, x + cxChar * 15, y + 8 * cyLine, cpc);
 
     // PSW value
-    ::SetTextColor(hdc, arrRChanged[8] ? COLOR_RED : colorText);
+    ::SetTextColor(hdc, arrRChanged[8] ? colorChanged : colorText);
     TextOut(hdc, x, y + 10 * cyLine, _T("PS"), 2);
     WORD psw = arrR[8]; // pProc->GetPSW();
     DrawOctalValue(hdc, x + cxChar * 3, y + 10 * cyLine, psw);
@@ -336,12 +337,12 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     {
         WORD bitpos = 1 << i;
         buffera[0] = (psw & bitpos) ? '1' : '0';
-        ::SetTextColor(hdc, ((psw & bitpos) != (oldPsw & bitpos)) ? COLOR_RED : colorText);
+        ::SetTextColor(hdc, ((psw & bitpos) != (oldPsw & bitpos)) ? colorChanged : colorText);
         TextOut(hdc, x + cxChar * (15 + 15 - i), y + 10 * cyLine, buffera, 1);
     }
 
     // CPSW value
-    ::SetTextColor(hdc, arrRChanged[10] ? COLOR_RED : colorText);
+    ::SetTextColor(hdc, arrRChanged[10] ? colorChanged : colorText);
     TextOut(hdc, x, y + 11 * cyLine, _T("PS'"), 3);
     WORD cpsw = arrR[10];
     DrawOctalValue(hdc, x + cxChar * 3, y + 11 * cyLine, cpsw);
@@ -360,49 +361,75 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
         TextOut(hdc, x + 6 * cxChar, y + 13 * cyLine, _T("STOP"), 4);
 }
 
+void DebugView_DrawAddressAndValue(HDC hdc, const CProcessor* pProc, CMotherboard* pBoard, uint16_t address, int x, int y, int cxChar)
+{
+    COLORREF colorText = Settings_GetColor(ColorDebugText);
+    SetTextColor(hdc, colorText);
+    DrawOctalValue(hdc, x + 0 * cxChar, y, address);
+    x += 7 * cxChar;
+
+    int addrtype = ADDRTYPE_DENY;
+    uint16_t value = pBoard->GetWordView(address, pProc->IsHaltMode(), FALSE, &addrtype);
+    if (addrtype == ADDRTYPE_RAM)
+    {
+        DrawOctalValue(hdc, x, y, value);
+    }
+    else if (addrtype == ADDRTYPE_ROM)
+    {
+        SetTextColor(hdc, Settings_GetColor(ColorDebugMemoryRom));
+        DrawOctalValue(hdc, x, y, value);
+    }
+    else if (addrtype == ADDRTYPE_IO || addrtype == ADDRTYPE_EMUL)
+    {
+        value = pBoard->GetPortView(address);
+        SetTextColor(hdc, Settings_GetColor(ColorDebugMemoryIO));
+        DrawOctalValue(hdc, x, y, value);
+    }
+    else //if (addrtype == ADDRTYPE_DENY)
+    {
+        SetTextColor(hdc, Settings_GetColor(ColorDebugMemoryNA));
+        TextOut(hdc, x, y, _T("  NA  "), 6);
+    }
+
+    SetTextColor(hdc, colorText);
+}
+
 void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, int x, int y, WORD oldValue)
 {
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    COLORREF colorText = GetSysColor(COLOR_WINDOWTEXT);
+    COLORREF colorText = Settings_GetColor(ColorDebugText);
+    COLORREF colorChanged = Settings_GetColor(ColorDebugValueChanged);
+    COLORREF colorPrev = Settings_GetColor(ColorDebugPrevious);
     COLORREF colorOld = SetTextColor(hdc, colorText);
 
-    WORD current = pProc->GetReg(reg);
+    WORD current = pProc->GetReg(reg) & ~1;
     WORD previous = oldValue;
     BOOL okExec = (reg == 7);
 
-    // Читаем из памяти процессора в буфер
+    // Reading from memory into the buffer
     WORD memory[16];
     int addrtype[16];
     for (int idx = 0; idx < 16; idx++)
     {
         memory[idx] = g_pBoard->GetWordView(
-                current + idx * 2 - 16, pProc->IsHaltMode(), okExec, addrtype + idx);
+                (uint16_t)(current + idx * 2 - 14), pProc->IsHaltMode(), okExec, addrtype + idx);
     }
 
-    WORD address = current - 16;
-    for (int index = 0; index < 16; index++)    // Рисуем строки
+    WORD address = current - 14;
+    for (int index = 0; index < 14; index++)    // Draw strings
     {
-        // Адрес
-        SetTextColor(hdc, colorText);
-        DrawOctalValue(hdc, x + 3 * cxChar, y, address);
+        DebugView_DrawAddressAndValue(hdc, pProc, g_pBoard, address, x + 4 * cxChar, y, cxChar);
 
-        // Значение по адресу
-        WORD value = memory[index];
-        WORD wChanged = Emulator_GetChangeRamStatus(address);
-        ::SetTextColor(hdc, (wChanged != 0) ? COLOR_RED : colorText);
-        DrawOctalValue(hdc, x + 10 * cxChar, y, value);
-
-        // Текущая позиция
-        if (address == current)
+        if (address == current)  // Current position
         {
             SetTextColor(hdc, colorText);
             TextOut(hdc, x + 2 * cxChar, y, _T(">"), 1);
-            if (current != previous) ::SetTextColor(hdc, COLOR_RED);
+            if (current != previous) SetTextColor(hdc, colorChanged);
             TextOut(hdc, x, y, REGISTER_NAME[reg], 2);
         }
         else if (address == previous)
         {
-            ::SetTextColor(hdc, COLOR_BLUE);
+            SetTextColor(hdc, colorPrev);
             TextOut(hdc, x + 2 * cxChar, y, _T(">"), 1);
         }
 
