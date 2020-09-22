@@ -41,10 +41,10 @@ enum NeonConfiguration
 #define ADDRTYPE_DENY  128  // Access denied
 
 //floppy debug
-#define FLOPPY_FSM_WAITFORLSB	0
-#define FLOPPY_FSM_WAITFORMSB	1
-#define FLOPPY_FSM_WAITFORTERM1	2
-#define FLOPPY_FSM_WAITFORTERM2	3
+#define FLOPPY_FSM_WAITFORLSB   0
+#define FLOPPY_FSM_WAITFORMSB   1
+#define FLOPPY_FSM_WAITFORTERM1 2
+#define FLOPPY_FSM_WAITFORTERM2 3
 
 // Trace flags
 #define TRACE_NONE         0  // Turn off all tracing
@@ -206,7 +206,7 @@ private:  // Timer implementation
 private:
     TAPEREADCALLBACK m_TapeReadCallback;
     TAPEWRITECALLBACK m_TapeWriteCallback;
-    int			m_nTapeSampleRate;
+    int         m_nTapeSampleRate;
     SOUNDGENCALLBACK m_SoundGenCallback;
     TELETYPECALLBACK m_TeletypeCallback;
 private:

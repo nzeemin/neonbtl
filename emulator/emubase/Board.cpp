@@ -288,7 +288,7 @@ void CMotherboard::TimerTick() // Timer Tick, 31250 Hz = 32 ìêñ (BK-0011), 23437
     }
 }
 
-void CMotherboard::SetTimerReload(uint16_t val)	 // Sets timer reload value, write to port 177706
+void CMotherboard::SetTimerReload(uint16_t val)  // Sets timer reload value, write to port 177706
 {
     //DebugPrintFormat(_T("SetTimerReload %06o\r\n"), val);
     m_timerreload = val;
@@ -666,7 +666,7 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
     ASSERT(false);  // If we are here - then addrtype has invalid value
 }
 
-int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool okExec, uint32_t* pOffset) const
+int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okExec*/, uint32_t* pOffset) const
 {
     if (okHaltMode && address < 040000)
     {
@@ -1004,7 +1004,7 @@ void TraceInstruction(CProcessor* pProc, CMotherboard* pBoard, uint16_t address)
 
     uint16_t memory[4];
     int addrtype;
-    for (int i = 0; i < 4; i++)
+    for (uint16_t i = 0; i < 4; i++)
         memory[i] = pBoard->GetWordView(address + i * 2, okHaltMode, true, &addrtype);
 
     //if (addrtype != ADDRTYPE_RAM)

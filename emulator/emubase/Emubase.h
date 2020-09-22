@@ -36,16 +36,16 @@ int DisassembleInstruction(uint16_t* pMemory, uint16_t addr, TCHAR* sInstr, TCHA
 //////////////////////////////////////////////////////////////////////
 // CFloppy
 
-#define FLOPPY_FSM_IDLE			0
+#define FLOPPY_FSM_IDLE         0
 
-#define FLOPPY_CMD_CORRECTION250		04
-#define FLOPPY_CMD_ENGINESTART			020
-#define FLOPPY_CMD_CORRECTION500		010
-#define FLOPPY_CMD_SIDEUP				040
-#define FLOPPY_CMD_DIR					0100
-#define FLOPPY_CMD_STEP					0200
-#define FLOPPY_CMD_SEARCHSYNC			0400
-#define FLOPPY_CMD_SKIPSYNC				01000
+#define FLOPPY_CMD_CORRECTION250        04
+#define FLOPPY_CMD_ENGINESTART          020
+#define FLOPPY_CMD_CORRECTION500        010
+#define FLOPPY_CMD_SIDEUP               040
+#define FLOPPY_CMD_DIR                  0100
+#define FLOPPY_CMD_STEP                 0200
+#define FLOPPY_CMD_SEARCHSYNC           0400
+#define FLOPPY_CMD_SKIPSYNC             01000
 //dir == 0 to center (towards trk0)
 //dir == 1 from center (towards trk80)
 

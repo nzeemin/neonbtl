@@ -143,7 +143,7 @@ bool Emulator_InitConfiguration(NeonConfiguration configuration)
 {
     g_pBoard->SetConfiguration(configuration);
 
-    BYTE buffer[8192];
+    uint8_t buffer[8192];
 
     // Load ROM file
     if (!Emulator_LoadRomFile(FILENAME_ROM0, buffer, 0, 8192))

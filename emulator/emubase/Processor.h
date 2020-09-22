@@ -28,7 +28,7 @@ public:  // Constructor / initialization
     void        SetDCLOPin(bool value);
     void        SetACLOPin(bool value);
     void        MemoryError();
-    int	        GetInternalTick() const { return m_internalTick; }
+    int         GetInternalTick() const { return m_internalTick; }
     void        ClearInternalTick() { m_internalTick = 0; }
 
 public:

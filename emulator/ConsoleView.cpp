@@ -56,17 +56,17 @@ void ConsoleView_RegisterClass()
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style			= CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc	= ConsoleViewWndProc;
-    wcex.cbClsExtra		= 0;
-    wcex.cbWndExtra		= 0;
-    wcex.hInstance		= g_hInst;
-    wcex.hIcon			= NULL;
-    wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-    wcex.hbrBackground	= (HBRUSH)(COLOR_BTNFACE + 1);
-    wcex.lpszMenuName	= NULL;
-    wcex.lpszClassName	= CLASSNAME_CONSOLEVIEW;
-    wcex.hIconSm		= NULL;
+    wcex.style          = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc    = ConsoleViewWndProc;
+    wcex.cbClsExtra     = 0;
+    wcex.cbWndExtra     = 0;
+    wcex.hInstance      = g_hInst;
+    wcex.hIcon          = NULL;
+    wcex.hCursor        = LoadCursor(NULL, IDC_ARROW);
+    wcex.hbrBackground  = (HBRUSH)(COLOR_BTNFACE + 1);
+    wcex.lpszMenuName   = NULL;
+    wcex.lpszClassName  = CLASSNAME_CONSOLEVIEW;
+    wcex.hIconSm        = NULL;
 
     RegisterClassEx(&wcex);
 }
@@ -276,7 +276,7 @@ BOOL ConsoleView_SaveMemoryDump(CProcessor *pProc)
 {
     BOOL okHaltMode = pProc->IsHaltMode();
     uint8_t buf[65536];
-    for (int i = 0; i < 65536; i++)
+    for (uint16_t i = 0; i < 65536; i++)
     {
         buf[i] = g_pBoard->GetByte(i, okHaltMode);
     }
@@ -306,7 +306,7 @@ void ConsoleView_PrintMemoryDump(CProcessor* pProc, WORD address, int lines)
     for (int line = 0; line < lines; line++)
     {
         WORD dump[8];
-        for (int i = 0; i < 8; i++)
+        for (uint16_t i = 0; i < 8; i++)
             dump[i] = g_pBoard->GetWord(address + i * 2, okHaltMode);
 
         TCHAR buffer[2 + 6 + 2 + 7 * 8 + 1 + 16 + 1 + 2];
@@ -345,14 +345,14 @@ void ConsoleView_PrintMemoryDump(CProcessor* pProc, WORD address, int lines)
 }
 // Print disassembled instructions
 // Return value: number of words in the last instruction
-int ConsoleView_PrintDisassemble(CProcessor* pProc, WORD address, BOOL okOneInstr, BOOL okShort)
+int ConsoleView_PrintDisassemble(CProcessor* pProc, uint16_t address, BOOL okOneInstr, BOOL okShort)
 {
-    BOOL okHaltMode = pProc->IsHaltMode();
+    bool okHaltMode = pProc->IsHaltMode();
 
     const int nWindowSize = 30;
-    WORD memory[nWindowSize + 2];
+    uint16_t memory[nWindowSize + 2];
     int addrtype;
-    for (int i = 0; i < nWindowSize + 2; i++)
+    for (uint16_t i = 0; i < nWindowSize + 2; i++)
         memory[i] = g_pBoard->GetWordView(address + i * 2, okHaltMode, TRUE, &addrtype);
 
     TCHAR bufaddr[7];
@@ -364,7 +364,7 @@ int ConsoleView_PrintDisassemble(CProcessor* pProc, WORD address, BOOL okOneInst
     for (int index = 0; index < nWindowSize; index++)  // Рисуем строки
     {
         PrintOctalValue(bufaddr, address);
-        WORD value = memory[index];
+        uint16_t value = memory[index];
         PrintOctalValue(bufvalue, value);
 
         if (length > 0)
@@ -429,7 +429,54 @@ void ConsoleView_ShowHelp()
             _T("  rN XXXXXX  Set register N to value XXXXXX; N=0..7,ps\r\n")
             _T("  s          Step Into; executes one instruction\r\n")
             _T("  so         Step Over; executes and stops after the current instruction\r\n")
-            _T("  u          Save memory dump to file memdump.bin\r\n"));
+            _T("  b          List all breakpoints\r\n")
+            _T("  bXXXXXX    Set breakpoint at address XXXXXX\r\n")
+            _T("  bcXXXXXX   Remove breakpoint at address XXXXXX\r\n")
+            _T("  bc         Remove all breakpoints\r\n")
+            _T("  u          Save memory dump to file memdump.bin\r\n")
+#if !defined(PRODUCT)
+            _T("  t          Tracing on/off to trace.log file\r\n")
+#endif
+                     );
+}
+
+void ConsoleView_ShowBreakpoints()
+{
+    const uint16_t* pbps = Emulator_GetCPUBreakpointList();
+    if (pbps == nullptr || *pbps == 0177777)
+    {
+        ConsoleView_Print(_T("  No breakpoints.\r\n"));
+    }
+    else
+    {
+        while (*pbps != 0177777)
+        {
+            ConsoleView_PrintFormat(_T("  %06ho\r\n"), *pbps);
+            pbps++;
+        }
+    }
+}
+void ConsoleView_RemoveAllBreakpoints()
+{
+    Emulator_RemoveAllBreakpoints();
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+void ConsoleView_AddBreakpoint(WORD address)
+{
+    bool result = Emulator_AddCPUBreakpoint(address);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to add breakpoint.\r\n"));
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+void ConsoleView_RemoveBreakpoint(WORD address)
+{
+    bool result = Emulator_RemoveCPUBreakpoint(address);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to remove breakpoint.\r\n"));
+    DebugView_Redraw();
+    DisasmView_Redraw();
 }
 
 void ConsoleView_DoConsoleCommand()
@@ -605,6 +652,37 @@ void ConsoleView_DoConsoleCommand()
                 Emulator_Start();
             }
         }
+        break;
+    case _T('b'):
+        if (command[1] == 0)  // b - list breakpoints
+        {
+            ConsoleView_ShowBreakpoints();
+        }
+        else if (command[1] == _T('c'))
+        {
+            if (command[2] == 0)  // bc - remove all breakpoints
+            {
+                ConsoleView_RemoveAllBreakpoints();
+            }
+            else  // bcXXXXXX - remove breakpoint XXXXXX
+            {
+                WORD value;
+                if (ParseOctalValue(command + 2, &value))
+                    ConsoleView_RemoveBreakpoint(value);
+                else
+                    ConsoleView_Print(MESSAGE_WRONG_VALUE);
+            }
+        }
+        else if (command[1] >= _T('0') && command[1] <= _T('7'))  // "bXXXXXX" - add breakpoint XXXXXX
+        {
+            WORD value;
+            if (ParseOctalValue(command + 1, &value))
+                ConsoleView_AddBreakpoint(value);
+            else
+                ConsoleView_Print(MESSAGE_WRONG_VALUE);
+        }
+        else
+            ConsoleView_Print(MESSAGE_UNKNOWN_COMMAND);
         break;
 #if !defined(PRODUCT)
     case _T('t'):
