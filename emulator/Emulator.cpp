@@ -18,7 +18,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Views.h"
 #include "emubase\Emubase.h"
 
-
 //////////////////////////////////////////////////////////////////////
 
 

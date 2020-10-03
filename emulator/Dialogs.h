@@ -10,6 +10,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 // Dialogs.h
 
+#pragma once
+
 //////////////////////////////////////////////////////////////////////
 
 
@@ -26,5 +28,6 @@ BOOL ShowOpenDialog(HWND hwndOwner, LPCTSTR strTitle, LPCTSTR strFilter, TCHAR* 
 void ShowLoadBinDialog();
 
 void ShowSettingsDialog();
+
 
 //////////////////////////////////////////////////////////////////////

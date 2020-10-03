@@ -9,7 +9,6 @@ See the GNU Lesser General Public License for more details.
 NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 // MainWindow.cpp
-//
 
 #include "stdafx.h"
 #include <commdlg.h>
@@ -23,7 +22,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Dialogs.h"
 #include "Views.h"
 #include "ToolWindow.h"
-
 
 //////////////////////////////////////////////////////////////////////
 

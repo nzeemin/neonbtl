@@ -18,7 +18,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "util\\WavPcmFile.h"
 #include "Emulator.h"
 
-
 //////////////////////////////////////////////////////////////////////
 
 

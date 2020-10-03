@@ -9,7 +9,6 @@ See the GNU Lesser General Public License for more details.
 NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 // Main.cpp : Defines the entry point for the application.
-//
 
 #include "stdafx.h"
 #include <commdlg.h>
@@ -23,7 +22,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Emulator.h"
 #include "Dialogs.h"
 #include "Views.h"
-
 
 //////////////////////////////////////////////////////////////////////
 // Global Variables
