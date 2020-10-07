@@ -719,22 +719,16 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     switch (address)
     {
     case 0161032:  // PPIB
-#if !defined(PRODUCT)
         DebugLogFormat(_T("%06o\tGETPORT PPIB = %06o\n"), m_pCPU->GetInstructionPC(), address, m_PortPPIB);
-#endif
         return m_PortPPIB;
 
     case 0161060:
-#if !defined(PRODUCT)
         DebugLogFormat(_T("%06o\tGETPORT DLBUF\n"), m_pCPU->GetInstructionPC(), address);
-#endif
         //TODO: DLBUF -- Programmable parallel port
         return 0;
     case 0161062:
         //TODO: DLCSR -- Programmable parallel port
-#if !defined(PRODUCT)
         DebugLogFormat(_T("%06o\tGETPORT DLCSR\n"), m_pCPU->GetInstructionPC(), address);
-#endif
         return 0x0f;
 
     case 0161200:
@@ -747,9 +741,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161216:
         {
             int chunk = (address >> 1) & 7;
-#if !defined(PRODUCT)
             DebugLogFormat(_T("%06o\tGETPORT HR%d = %06o\n"), m_pCPU->GetInstructionPC(), chunk, m_HR[chunk]);
-#endif
             return m_HR[chunk];
         }
 
@@ -763,16 +755,12 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161236:
         {
             int chunk = (address >> 1) & 7;
-#if !defined(PRODUCT)
             DebugLogFormat(_T("%06o\tGETPORT UR%d = %06o\n"), m_pCPU->GetInstructionPC(), chunk, m_UR[chunk]);
-#endif
             return m_UR[chunk];
         }
 
     default:
-#if !defined(PRODUCT)
         DebugLogFormat(_T("%06o\tGETPORT Unknown (%06o)\n"), m_pCPU->GetInstructionPC(), address);
-#endif
         m_pCPU->MemoryError();
         return 0;
     }
@@ -837,9 +825,8 @@ void CMotherboard::SetPortByte(uint16_t address, uint8_t byte)
 //void DebugPrintFormat(LPCTSTR pszFormat, ...);  //DEBUG
 void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 {
-#if !defined(PRODUCT)
     DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o)\n"), m_pCPU->GetInstructionPC(), word, address);
-#endif
+
     switch (address)
     {
     case 0161000:  // Unknown port
@@ -915,9 +902,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
 
     default:
-#if !defined(PRODUCT)
         DebugLogFormat(_T("SETPORT Unknown %06o = %06o @ %06o\n"), address, word, m_pCPU->GetInstructionPC());
-#endif
         m_pCPU->MemoryError();
         break;
     }

@@ -72,9 +72,7 @@ CFloppyController::~CFloppyController()
 
 void CFloppyController::Reset()
 {
-#if !defined(PRODUCT)
     if (m_okTrace) DebugLog(_T("Floppy RESET\r\n"));
-#endif
 
     FlushChanges();
 
@@ -157,21 +155,17 @@ uint16_t CFloppyController::GetState(void)
 
     uint16_t res = m_status /*| FLOPPY_STATUS_RDY*/;
 
-//#if !defined(PRODUCT)
-//    //if (res & FLOPPY_STATUS_MOREDATA)
+//    if (res & FLOPPY_STATUS_MOREDATA)
 //    {
 //        DebugLogFormat(_T("Floppy GET STATE %06o\r\n"), res);
 //    }
-//#endif
 
     return res;
 }
 
 void CFloppyController::SetCommand(uint16_t cmd)
 {
-#if !defined(PRODUCT)
     if (m_okTrace) DebugLogFormat(_T("Floppy COMMAND %06o\r\n"), cmd);
-#endif
 
     bool okPrepareTrack = false;  // Нужно ли считывать дорожку в буфер
 
@@ -184,9 +178,8 @@ void CFloppyController::SetCommand(uint16_t cmd)
         m_drive = newdrive;
         m_pDrive = (newdrive == -1) ? NULL : m_drivedata + m_drive;
         okPrepareTrack = true;
-#if !defined(PRODUCT)
+
         DebugLogFormat(_T("Floppy CURRENT DRIVE %d\r\n"), newdrive);
-#endif
     }
     if (m_drive == -1)
         return;
@@ -208,9 +201,8 @@ void CFloppyController::SetCommand(uint16_t cmd)
 
     if (cmd & FLOPPY_CMD_STEP)  // Move head for one track to center or from center
     {
-#if !defined(PRODUCT)
         if (m_okTrace) DebugLogFormat(_T("Floppy STEP %d\r\n"), (m_flags & FLOPPY_CMD_DIR) ? 1 : 0);
-#endif
+
         m_side = (m_flags & FLOPPY_CMD_SIDEUP) ? 1 : 0;
 
         if (m_flags & FLOPPY_CMD_DIR)
@@ -227,9 +219,8 @@ void CFloppyController::SetCommand(uint16_t cmd)
 
     if (cmd & FLOPPY_CMD_SEARCHSYNC) // Search for marker
     {
-#if !defined(PRODUCT)
-        DebugLog(_T("Floppy SEARCHSYNC\r\n"));  //DEBUG
-#endif
+        DebugLog(_T("Floppy SEARCHSYNC\r\n"));
+
         m_flags &= ~FLOPPY_CMD_SEARCHSYNC;
         m_searchsync = true;
         m_crccalculus = true;
@@ -238,9 +229,8 @@ void CFloppyController::SetCommand(uint16_t cmd)
 
     if (m_writing && (cmd & FLOPPY_CMD_SKIPSYNC))  // Запись маркера
     {
-//#if !defined(PRODUCT)
 //        DebugLog(_T("Floppy MARKER\r\n"));  //DEBUG
-//#endif
+
         m_writemarker = true;
         m_status &= ~FLOPPY_STATUS_CHECKSUMOK;
     }
@@ -269,9 +259,7 @@ uint16_t CFloppyController::GetData(void)
 
 void CFloppyController::WriteData(uint16_t data)
 {
-//#if !defined(PRODUCT)
-//    DebugLogFormat(_T("Floppy WRITE\t\t%04x\r\n"), data);  //DEBUG
-//#endif
+//    DebugLogFormat(_T("Floppy WRITE\t\t%04x\r\n"), data);
 
     m_writing = true;  // Switch to write mode if not yet
     m_searchsync = false;
@@ -313,10 +301,9 @@ void CFloppyController::Periodic()
         if (m_drivedata[drive].dataptr >= FLOPPY_RAWTRACKSIZE)
             m_drivedata[drive].dataptr = 0;
     }
-#if !defined(PRODUCT)
+
     if (m_pDrive != NULL && m_pDrive->dataptr == 0)
         DebugLogFormat(_T("Floppy Index\n"));
-#endif
 
     // Далее обрабатываем чтение/запись на текущем драйве
     if (m_pDrive == NULL) return;
@@ -342,9 +329,8 @@ void CFloppyController::Periodic()
                 {
                     m_status |= FLOPPY_STATUS_MOREDATA;
                     m_searchsync = false;
-#if !defined(PRODUCT)
+
                     DebugLogFormat(_T("Floppy Marker Found\n"));
-#endif
                 }
             }
             else  // Just read
@@ -362,18 +348,16 @@ void CFloppyController::Periodic()
 
             if (m_shiftmarker)
             {
-//#if !defined(PRODUCT)
 //            DebugLogFormat(_T("Floppy WRITING %06o MARKER\r\n"), m_shiftreg);  //DEBUG
-//#endif
+
                 m_pDrive->marker[m_pDrive->dataptr / 2] = true;
                 m_shiftmarker = false;
                 m_crccalculus = true;  // Start CRC calculation
             }
             else
             {
-//#if !defined(PRODUCT)
 //            DebugLogFormat(_T("Floppy WRITING %06o\r\n"), m_shiftreg);  //DEBUG
-//#endif
+
                 m_pDrive->marker[m_pDrive->dataptr / 2] = false;
             }
 
@@ -407,9 +391,7 @@ void CFloppyController::PrepareTrack()
 
     if (m_pDrive == NULL) return;
 
-#if !defined(PRODUCT)
     if (m_okTrace) DebugLogFormat(_T("Floppy PREP  %hu TR %hu SD %hu\r\n"), m_drive, m_track, m_side);
-#endif
 
     size_t count;
 
@@ -455,9 +437,7 @@ void CFloppyController::FlushChanges()
     if (!IsAttached(m_drive)) return;
     if (!m_trackchanged) return;
 
-#if !defined(PRODUCT)
     if (m_okTrace) DebugLogFormat(_T("Floppy FLUSH %hu TR %hu SD %hu\r\n"), m_drive, m_pDrive->datatrack, m_pDrive->dataside);
-#endif
 
     // Decode track data from m_data
     uint8_t data[5120];  memset(data, 0, 5120);
@@ -488,9 +468,7 @@ void CFloppyController::FlushChanges()
     }
     else
     {
-#if !defined(PRODUCT)
-        if (m_okTrace) DebugLog(_T("Floppy FLUSH FAILED\r\n"));  //DEBUG
-#endif
+        if (m_okTrace) DebugLog(_T("Floppy FLUSH FAILED\r\n"));
     }
 
     m_trackchanged = false;
