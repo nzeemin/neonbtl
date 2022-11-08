@@ -12,13 +12,14 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "stdafx.h"
 #include "BitmapFile.h"
+#include <Share.h>
 
 
 //////////////////////////////////////////////////////////////////////
 
-BOOL BmpFile_SaveScreenshot(
-    const DWORD* pBits,
-    const DWORD* palette,
+bool BmpFile_SaveScreenshot(
+    const uint32_t* pBits,
+    const uint32_t* palette,
     LPCTSTR sFileName)
 {
     ASSERT(pBits != NULL);
@@ -30,7 +31,7 @@ BOOL BmpFile_SaveScreenshot(
             GENERIC_WRITE, FILE_SHARE_READ, NULL,
             CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
-        return FALSE;
+        return false;
 
     BITMAPFILEHEADER hdr;
     ::ZeroMemory(&hdr, sizeof(hdr));
@@ -45,21 +46,21 @@ BOOL BmpFile_SaveScreenshot(
     bih.biBitCount = 8;
     bih.biCompression = BI_RGB;
     bih.biXPelsPerMeter = bih.biXPelsPerMeter = 2000;
-    hdr.bfSize = (DWORD) sizeof(BITMAPFILEHEADER) + bih.biSize + bih.biSizeImage;
-    hdr.bfOffBits = (DWORD) sizeof(BITMAPFILEHEADER) + bih.biSize + sizeof(RGBQUAD) * 256;
+    hdr.bfSize = (uint32_t) sizeof(BITMAPFILEHEADER) + bih.biSize + bih.biSizeImage;
+    hdr.bfOffBits = (uint32_t) sizeof(BITMAPFILEHEADER) + bih.biSize + sizeof(RGBQUAD) * 256;
 
     DWORD dwBytesWritten = 0;
 
     BYTE * pData = (BYTE *) ::malloc(bih.biSizeImage);
 
     // Prepare the image data
-    const DWORD * psrc = pBits;
+    const uint32_t * psrc = pBits;
     for (int i = 0; i < 288; i++)
     {
         BYTE * pdst = pData + (288 - 1 - i) * 640;
         for (int j = 0; j < 640; j++)
         {
-            DWORD rgb = *psrc;
+            uint32_t rgb = *psrc;
             psrc++;
             BYTE color = 0;
             for (BYTE c = 0; c < 128; c++)
@@ -79,37 +80,37 @@ BOOL BmpFile_SaveScreenshot(
     if (dwBytesWritten != sizeof(BITMAPFILEHEADER))
     {
         ::free(pData);
-        return FALSE;
+        return false;
     }
     WriteFile(hFile, &bih, sizeof(BITMAPINFOHEADER), &dwBytesWritten, NULL);
     if (dwBytesWritten != sizeof(BITMAPINFOHEADER))
     {
         ::free(pData);
-        return FALSE;
+        return false;
     }
     WriteFile(hFile, palette, sizeof(RGBQUAD) * 128, &dwBytesWritten, NULL);
     if (dwBytesWritten != sizeof(RGBQUAD) * 128)
     {
         ::free(pData);
-        return FALSE;
+        return false;
     }
     //NOTE: Write the palette for the second time, to fill colors #128-255
     WriteFile(hFile, palette, sizeof(RGBQUAD) * 128, &dwBytesWritten, NULL);
     if (dwBytesWritten != sizeof(RGBQUAD) * 128)
     {
         ::free(pData);
-        return FALSE;
+        return false;
     }
 
     WriteFile(hFile, pData, bih.biSizeImage, &dwBytesWritten, NULL);
     ::free(pData);
     if (dwBytesWritten != bih.biSizeImage)
-        return FALSE;
+        return false;
 
     // Close file
     CloseHandle(hFile);
 
-    return TRUE;
+    return true;
 }
 
 
@@ -121,9 +122,9 @@ unsigned long crc(unsigned char *buf, int len);
 // Declaration for ADLER32 calculation function, see the definition below
 unsigned long update_adler32(unsigned long adler, unsigned char *buf, int len);
 
-DWORD ReadValueMSB(const BYTE * buffer)
+uint32_t ReadValueMSB(const BYTE * buffer)
 {
-    DWORD value = *(buffer++);  value <<= 8;
+    uint32_t value = *(buffer++);  value <<= 8;
     value |= *(buffer++);  value <<= 8;
     value |= *(buffer++);  value <<= 8;
     value |= *buffer;
@@ -135,7 +136,7 @@ void SaveWordMSB(BYTE * buffer, WORD value)
     *(buffer++) = (BYTE)(value >> 8);
     * buffer    = (BYTE)(value);
 }
-void SaveValueMSB(BYTE * buffer, DWORD value)
+void SaveValueMSB(BYTE * buffer, uint32_t value)
 {
     *(buffer++) = (BYTE)(value >> 24);
     *(buffer++) = (BYTE)(value >> 16);
@@ -145,18 +146,18 @@ void SaveValueMSB(BYTE * buffer, DWORD value)
 
 void SavePngChunkChecksum(BYTE * chunk)
 {
-    DWORD datalen = ReadValueMSB(chunk);
-    DWORD value = crc(chunk + 4, datalen + 4);
+    uint32_t datalen = ReadValueMSB(chunk);
+    uint32_t value = crc(chunk + 4, datalen + 4);
     BYTE* crcplace = (chunk + 8 + datalen);
     SaveValueMSB(crcplace, value);
 }
 
-BOOL PngFile_WriteHeader(FILE * fpFile, BYTE bitdepth)
+bool PngFile_WriteHeader(FILE * fpFile, BYTE bitdepth)
 {
     const BYTE pngheader[] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
     size_t dwBytesWritten = ::fwrite(pngheader, 1, sizeof(pngheader), fpFile);
     if (dwBytesWritten != sizeof(pngheader))
-        return FALSE;
+        return false;
 
     BYTE IHDRchunk[12 + 13];
     SaveValueMSB(IHDRchunk, 13);
@@ -171,25 +172,25 @@ BOOL PngFile_WriteHeader(FILE * fpFile, BYTE bitdepth)
     SavePngChunkChecksum(IHDRchunk);
     dwBytesWritten = ::fwrite(IHDRchunk, 1, sizeof(IHDRchunk), fpFile);
     if (dwBytesWritten != sizeof(IHDRchunk))
-        return FALSE;
+        return false;
 
-    return TRUE;
+    return true;
 }
 
-BOOL PngFile_WriteEnd(FILE * fpFile)
+bool PngFile_WriteEnd(FILE * fpFile)
 {
     BYTE IENDchunk[12 + 0];
-    *((DWORD*)IENDchunk) = 0;
+    *((uint32_t*)IENDchunk) = 0;
     memcpy(IENDchunk + 4, "IEND", 4);
     SavePngChunkChecksum(IENDchunk);
     size_t dwBytesWritten = ::fwrite(IENDchunk, 1, sizeof(IENDchunk), fpFile);
     if (dwBytesWritten != sizeof(IENDchunk))
-        return FALSE;
+        return false;
 
-    return TRUE;
+    return true;
 }
 
-BOOL PngFile_WritePalette(FILE * fpFile, const DWORD* palette)
+bool PngFile_WritePalette(FILE * fpFile, const uint32_t* palette)
 {
     BYTE PLTEchunk[12 + 128 * 3];
     SaveValueMSB(PLTEchunk, 128 * 3);
@@ -197,7 +198,7 @@ BOOL PngFile_WritePalette(FILE * fpFile, const DWORD* palette)
     BYTE * p = PLTEchunk + 8;
     for (int i = 0; i < 128; i++)
     {
-        DWORD color = *(palette++);
+        uint32_t color = *(palette++);
         *(p++) = (BYTE)(color >> 16);
         *(p++) = (BYTE)(color >> 8);
         *(p++) = (BYTE)(color >> 0);
@@ -205,18 +206,18 @@ BOOL PngFile_WritePalette(FILE * fpFile, const DWORD* palette)
     SavePngChunkChecksum(PLTEchunk);
     size_t dwBytesWritten = ::fwrite(PLTEchunk, 1, sizeof(PLTEchunk), fpFile);
     if (dwBytesWritten != sizeof(PLTEchunk))
-        return FALSE;
+        return false;
 
-    return TRUE;
+    return true;
 }
 
-BOOL PngFile_WriteImageData8(FILE * fpFile, DWORD framenum, const DWORD* pBits, const DWORD* palette)
+bool PngFile_WriteImageData8(FILE * fpFile, uint32_t framenum, const uint32_t* pBits, const uint32_t* palette)
 {
     // The IDAT chunk data format defined by RFC-1950 "ZLIB Compressed Data Format Specification version 3.3"
     // http://www.ietf.org/rfc/rfc1950.txt
     // We use uncomressed DEFLATE format, see RFC-1951
     // http://tools.ietf.org/html/rfc1951
-    DWORD pDataLength = 8 + 2 + (6 + NEON_SCREEN_WIDTH) * NEON_SCREEN_HEIGHT + 4/*adler*/ + 4;
+    uint32_t pDataLength = 8 + 2 + (6 + NEON_SCREEN_WIDTH) * NEON_SCREEN_HEIGHT + 4/*adler*/ + 4;
     if (framenum > 1) pDataLength += 4;
     BYTE * pData = (BYTE *) ::malloc(pDataLength);
     SaveValueMSB(pData, pDataLength - 12);
@@ -229,7 +230,7 @@ BOOL PngFile_WriteImageData8(FILE * fpFile, DWORD framenum, const DWORD* pBits, 
     pDataStart[1] = (31 - ((cmf << 8) % 31)) % 31; // FCHECK (FDICT/FLEVEL=0)
 
     BYTE * pdst = pDataStart + 2;
-    DWORD adler = 1L;
+    uint32_t adler = 1L;
     for (int line = 0; line < 288; line++)
     {
         const WORD linelen = 640 + 1;  // Each line is 641-byte block of non-compressed data
@@ -241,10 +242,10 @@ BOOL PngFile_WriteImageData8(FILE * fpFile, DWORD framenum, const DWORD* pBits, 
 
         BYTE * pline = pdst;
         *(pdst++) = 0;  // additional "filter-type" byte at the beginning of every scanline
-        const DWORD * psrc = pBits + (line * 640);
+        const uint32_t * psrc = pBits + (line * 640);
         for (int i = 0; i < 640; i++)
         {
-            DWORD rgb = *(psrc++);
+            uint32_t rgb = *(psrc++);
             BYTE color = 0;
             for (BYTE c = 0; c < 128; c++)
             {
@@ -269,14 +270,14 @@ BOOL PngFile_WriteImageData8(FILE * fpFile, DWORD framenum, const DWORD* pBits, 
     size_t dwBytesWritten = ::fwrite(pData, 1, pDataLength, fpFile);
     ::free(pData);
     if (dwBytesWritten != pDataLength)
-        return FALSE;
+        return false;
 
-    return TRUE;
+    return true;
 }
 
-BOOL PngFile_SaveScreenshot(
-    const DWORD* pBits,
-    const DWORD* palette,
+bool PngFile_SaveScreenshot(
+    const uint32_t* pBits,
+    const uint32_t* palette,
     LPCTSTR sFileName)
 {
     ASSERT(pBits != NULL);
@@ -286,47 +287,40 @@ BOOL PngFile_SaveScreenshot(
     // Create file
     FILE * fpFile = ::_tfopen(sFileName, _T("w+b"));
     if (fpFile == NULL)
-        return FALSE;
+        return false;
 
     if (!PngFile_WriteHeader(fpFile, 8))
     {
         ::fclose(fpFile);
-        return FALSE;
+        return false;
     }
 
     if (!PngFile_WritePalette(fpFile, palette))
     {
         ::fclose(fpFile);
-        return FALSE;
+        return false;
     }
 
     if (!PngFile_WriteImageData8(fpFile, 0, pBits, palette))
     {
         ::fclose(fpFile);
-        return FALSE;
+        return false;
     }
 
     if (!PngFile_WriteEnd(fpFile))
     {
         ::fclose(fpFile);
-        return FALSE;
+        return false;
     }
 
     ::fclose(fpFile);
-    return TRUE;
+    return true;
 }
 
 
 //////////////////////////////////////////////////////////////////////
 
-struct APNGFILE
-{
-    FILE* fpFile;
-    DWORD dwNextFrameNumber;
-    fpos_t nActlOffset;       // "acTL" chunk offset
-};
-
-BOOL PngFile_WriteActl(FILE * fpFile, DWORD numframes)
+bool PngFile_WriteActl(FILE * fpFile, uint32_t numframes)
 {
     BYTE acTLchunk[12 + 8];
     SaveValueMSB(acTLchunk, 8);
@@ -336,12 +330,12 @@ BOOL PngFile_WriteActl(FILE * fpFile, DWORD numframes)
     SavePngChunkChecksum(acTLchunk);
     size_t bytesWritten = ::fwrite(acTLchunk, 1, sizeof(acTLchunk), fpFile);
     if (bytesWritten != sizeof(acTLchunk))
-        return FALSE;
+        return false;
 
-    return TRUE;
+    return true;
 }
 
-BOOL PngFile_WriteFctl(FILE * fpFile, DWORD framenum)
+bool PngFile_WriteFctl(FILE * fpFile, uint32_t framenum)
 {
     BYTE acTLchunk[12 + 26];
     SaveValueMSB(acTLchunk, 26);
@@ -358,87 +352,9 @@ BOOL PngFile_WriteFctl(FILE * fpFile, DWORD framenum)
     SavePngChunkChecksum(acTLchunk);
     size_t bytesWritten = ::fwrite(acTLchunk, 1, sizeof(acTLchunk), fpFile);
     if (bytesWritten != sizeof(acTLchunk))
-        return FALSE;
+        return false;
 
-    return TRUE;
-}
-
-HAPNGFILE ApngFile_Create(LPCTSTR filename)
-{
-    FILE* fpFileNew = ::_tfopen(filename, _T("w+b"));
-    if (fpFileNew == NULL)
-        return (HAPNGFILE) INVALID_HANDLE_VALUE;  // Failed to create file
-
-    // Write IHDR chunk
-    if (!PngFile_WriteHeader(fpFileNew, 4))
-        return FALSE;
-
-    fpos_t actlOffset;
-    ::fgetpos(fpFileNew, &actlOffset);
-
-    // Write acTL chunk
-    if (! PngFile_WriteActl(fpFileNew, 0))
-        return (HAPNGFILE) INVALID_HANDLE_VALUE;
-
-    APNGFILE* pApng = (APNGFILE*) ::malloc(sizeof(APNGFILE));  memset(pApng, 0, sizeof(APNGFILE));
-    pApng->fpFile = fpFileNew;
-    pApng->nActlOffset = actlOffset;
-
-    return (HAPNGFILE) pApng;
-}
-
-void ApngFile_Close(HAPNGFILE apngfile)
-{
-    if (apngfile == INVALID_HANDLE_VALUE)
-        return;
-    APNGFILE* pApng = reinterpret_cast<APNGFILE*>(apngfile);
-
-    // Write IEND chunk
-    PngFile_WriteEnd(pApng->fpFile);
-    //NOTE: The possible error is ignored -- we should close the file anyway
-
-    // Reposition to acTL chunk
-    ::fseek(pApng->fpFile, (long) pApng->nActlOffset, SEEK_SET);
-
-    // Rewrite acTL chunk to fix Number of frames and Checksum
-    PngFile_WriteActl(pApng->fpFile, pApng->dwNextFrameNumber);
-    //NOTE: The possible error is ignored -- we should close the file anyway
-
-    ::fclose(pApng->fpFile);
-    ::free(pApng);
-}
-
-BOOL ApngFile_WriteFrame(
-    HAPNGFILE apngfile,
-    const DWORD* pBits,
-    const DWORD* palette)
-{
-    if (apngfile == INVALID_HANDLE_VALUE)
-        return FALSE;
-    APNGFILE* pApng = reinterpret_cast<APNGFILE*>(apngfile);
-
-    BOOL firstFrame = (pApng->dwNextFrameNumber == 0);
-
-    if (firstFrame)
-    {
-        // Write PLTE chunk
-        if (!PngFile_WritePalette(pApng->fpFile, palette))
-            return FALSE;
-    }
-
-    // Write fcTL chunk
-    if (!PngFile_WriteFctl(pApng->fpFile, pApng->dwNextFrameNumber))
-        return FALSE;
-
-    pApng->dwNextFrameNumber++;
-
-    // Write IDAT or fdAT chunk
-    if (!PngFile_WriteImageData8(pApng->fpFile, pApng->dwNextFrameNumber, pBits, palette))
-        return FALSE;
-    if (!firstFrame)
-        pApng->dwNextFrameNumber++;
-
-    return TRUE;
+    return true;
 }
 
 

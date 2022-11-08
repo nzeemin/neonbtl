@@ -103,8 +103,8 @@ bool Emulator_Init()
     g_pBoard = new CMotherboard();
 
     // Allocate memory for old RAM values
-    g_pEmulatorRam = (BYTE*) ::malloc(65536);  ::memset(g_pEmulatorRam, 0, 65536);
-    g_pEmulatorChangedRam = (BYTE*) ::malloc(65536);  ::memset(g_pEmulatorChangedRam, 0, 65536);
+    g_pEmulatorRam = static_cast<uint8_t*>(::calloc(65536, 1));
+    g_pEmulatorChangedRam = static_cast<uint8_t*>(::calloc(65536, 1));
 
     g_pBoard->Reset();
 
@@ -140,7 +140,7 @@ void Emulator_Done()
 
 bool Emulator_InitConfiguration(NeonConfiguration configuration)
 {
-    g_pBoard->SetConfiguration(configuration);
+    g_pBoard->SetConfiguration((uint16_t)configuration);
 
     uint8_t buffer[8192];
 
@@ -545,15 +545,15 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 
 bool Emulator_SaveImage(LPCTSTR sFilePath)
 {
-    //// Create file
-    //HANDLE hFile = CreateFile(sFilePath,
-    //        GENERIC_WRITE, FILE_SHARE_READ, nullptr,
-    //        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    //if (hFile == INVALID_HANDLE_VALUE)
-    //{
-    //    AlertWarning(_T("Failed to save image file."));
-    //    return;
-    //}
+    // Create file
+    HANDLE hFile = CreateFile(sFilePath,
+            GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+            CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        AlertWarning(_T("Failed to save image file."));
+        return false;
+    }
 
     //// Allocate memory
     //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  memset(pImage, 0, BKIMAGE_SIZE);
@@ -575,22 +575,22 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
 
     //// Free memory, close file
     //::free(pImage);
-    //CloseHandle(hFile);
+    CloseHandle(hFile);
 
     return true;
 }
 
 bool Emulator_LoadImage(LPCTSTR sFilePath)
 {
-    //// Open file
-    //HANDLE hFile = CreateFile(sFilePath,
-    //        GENERIC_READ, FILE_SHARE_READ, nullptr,
-    //        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    //if (hFile == INVALID_HANDLE_VALUE)
-    //{
-    //    AlertWarning(_T("Failed to load image file."));
-    //    return;
-    //}
+    // Open file
+    HANDLE hFile = CreateFile(sFilePath,
+            GENERIC_READ, FILE_SHARE_READ, nullptr,
+            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        AlertWarning(_T("Failed to load image file."));
+        return false;
+    }
 
     //// Read header
     //uint32_t bufHeader[BKIMAGE_HEADER_SIZE / sizeof(uint32_t)];
@@ -616,11 +616,11 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
 
     //// Free memory, close file
     //::free(pImage);
-    //CloseHandle(hFile);
+    CloseHandle(hFile);
 
-    //g_okEmulatorRunning = false;
+    g_okEmulatorRunning = false;
 
-    //MainWindow_UpdateAllViews();
+    MainWindow_UpdateAllViews();
 
     return true;
 }

@@ -15,6 +15,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <share.h>
 #include "Emubase.h"
 
 
@@ -33,7 +34,7 @@ static bool DecodeTrackData(const uint8_t* pRaw, uint8_t* pDest);
 
 CFloppyDrive::CFloppyDrive()
 {
-    fpFile = NULL;
+    fpFile = nullptr;
     okReadOnly = false;
     datatrack = dataside = 0;
     dataptr = 0;
@@ -82,7 +83,7 @@ void CFloppyController::Reset()
     m_writing = m_searchsync = m_writemarker = m_crccalculus = false;
     m_writeflag = m_shiftflag = false;
     m_trackchanged = false;
-    m_status = FLOPPY_STATUS_TRACK0 | FLOPPY_STATUS_WRITEPROTECT;
+    m_status = (m_pDrive->okReadOnly) ? FLOPPY_STATUS_TRACK0 | FLOPPY_STATUS_WRITEPROTECT : FLOPPY_STATUS_TRACK0;
     m_flags = FLOPPY_CMD_CORRECTION500 | FLOPPY_CMD_SIDEUP | FLOPPY_CMD_DIR | FLOPPY_CMD_SKIPSYNC;
 
     PrepareTrack();
@@ -90,21 +91,21 @@ void CFloppyController::Reset()
 
 bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
 {
-    ASSERT(sFileName != NULL);
+    ASSERT(sFileName != nullptr);
 
     // If image attached - detach one first
-    if (m_drivedata[drive].fpFile != NULL)
+    if (m_drivedata[drive].fpFile != nullptr)
         DetachImage(drive);
 
     // Open file
     m_drivedata[drive].okReadOnly = false;
-    m_drivedata[drive].fpFile = ::_tfopen(sFileName, _T("r+b"));
-    if (m_drivedata[drive].fpFile == NULL)
+    m_drivedata[drive].fpFile = ::_tfsopen(sFileName, _T("r+b"), _SH_DENYNO);
+    if (m_drivedata[drive].fpFile == nullptr)
     {
         m_drivedata[drive].okReadOnly = true;
-        m_drivedata[drive].fpFile = ::_tfopen(sFileName, _T("rb"));
+        m_drivedata[drive].fpFile = ::_tfsopen(sFileName, _T("rb"), _SH_DENYNO);
     }
-    if (m_drivedata[drive].fpFile == NULL)
+    if (m_drivedata[drive].fpFile == nullptr)
         return false;
 
     m_side = m_track = m_drivedata[drive].datatrack = m_drivedata[drive].dataside = 0;
@@ -113,7 +114,7 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
     m_writing = m_searchsync = m_writemarker = m_crccalculus = false;
     m_writeflag = m_shiftflag = false;
     m_trackchanged = false;
-    m_status = FLOPPY_STATUS_TRACK0 | FLOPPY_STATUS_WRITEPROTECT;
+    m_status = (m_pDrive->okReadOnly) ? FLOPPY_STATUS_TRACK0 | FLOPPY_STATUS_WRITEPROTECT : FLOPPY_STATUS_TRACK0;
     m_flags = FLOPPY_CMD_CORRECTION500 | FLOPPY_CMD_SIDEUP | FLOPPY_CMD_DIR | FLOPPY_CMD_SKIPSYNC;
 
     PrepareTrack();
@@ -123,12 +124,12 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
 
 void CFloppyController::DetachImage(int drive)
 {
-    if (m_drivedata[drive].fpFile == NULL) return;
+    if (m_drivedata[drive].fpFile == nullptr) return;
 
     FlushChanges();
 
     ::fclose(m_drivedata[drive].fpFile);
-    m_drivedata[drive].fpFile = NULL;
+    m_drivedata[drive].fpFile = nullptr;
     m_drivedata[drive].okReadOnly = false;
     m_drivedata[drive].Reset();
 }
@@ -138,9 +139,9 @@ void CFloppyController::DetachImage(int drive)
 
 uint16_t CFloppyController::GetState(void)
 {
-    if (m_pDrive == NULL)
+    if (m_pDrive == nullptr)
         return 0;
-    if (m_pDrive->fpFile == NULL)
+    if (m_pDrive->fpFile == nullptr)
         return FLOPPY_STATUS_INDEXMARK | (m_track == 0 ? FLOPPY_STATUS_TRACK0 : 0);
 
     if (m_track == 0)
@@ -176,7 +177,7 @@ void CFloppyController::SetCommand(uint16_t cmd)
         FlushChanges();
 
         m_drive = newdrive;
-        m_pDrive = (newdrive == -1) ? NULL : m_drivedata + m_drive;
+        m_pDrive = (newdrive == -1) ? nullptr : m_drivedata + m_drive;
         okPrepareTrack = true;
 
         DebugLogFormat(_T("Floppy CURRENT DRIVE %d\r\n"), newdrive);
@@ -201,9 +202,9 @@ void CFloppyController::SetCommand(uint16_t cmd)
 
     if (cmd & FLOPPY_CMD_STEP)  // Move head for one track to center or from center
     {
-        if (m_okTrace) DebugLogFormat(_T("Floppy STEP %d\r\n"), (m_flags & FLOPPY_CMD_DIR) ? 1 : 0);
+        if (m_okTrace) DebugLog(_T("Floppy STEP\r\n"));
 
-        m_side = (m_flags & FLOPPY_CMD_SIDEUP) ? 1 : 0;
+        m_side = (m_flags & FLOPPY_CMD_SIDEUP) ? 1 : 0; // DO WE NEED IT HERE?
 
         if (m_flags & FLOPPY_CMD_DIR)
         {
@@ -215,11 +216,14 @@ void CFloppyController::SetCommand(uint16_t cmd)
         }
     }
     if (okPrepareTrack)
+    {
         PrepareTrack();
+
+    }
 
     if (cmd & FLOPPY_CMD_SEARCHSYNC) // Search for marker
     {
-        DebugLog(_T("Floppy SEARCHSYNC\r\n"));
+//        DebugLog(_T("Floppy SEARCHSYNC\r\n"));
 
         m_flags &= ~FLOPPY_CMD_SEARCHSYNC;
         m_searchsync = true;
@@ -229,7 +233,7 @@ void CFloppyController::SetCommand(uint16_t cmd)
 
     if (m_writing && (cmd & FLOPPY_CMD_SKIPSYNC))  // Запись маркера
     {
-//        DebugLog(_T("Floppy MARKER\r\n"));  //DEBUG
+//        DebugLog(_T("Floppy MARKER\r\n"));
 
         m_writemarker = true;
         m_status &= ~FLOPPY_STATUS_CHECKSUMOK;
@@ -239,7 +243,7 @@ void CFloppyController::SetCommand(uint16_t cmd)
 uint16_t CFloppyController::GetData(void)
 {
 #if !defined(PRODUCT)
-    if (m_pDrive != NULL)
+    if (m_pDrive != nullptr)
     {
         uint16_t offset = m_pDrive->dataptr;
         if (offset >= 102 && (offset - 102) % 610 == 0)
@@ -251,7 +255,7 @@ uint16_t CFloppyController::GetData(void)
     m_writing = m_searchsync = false;
     m_writeflag = m_shiftflag = false;
 
-    if (m_pDrive == NULL || m_pDrive->fpFile == NULL)
+    if (m_pDrive == nullptr || m_pDrive->fpFile == nullptr)
         return 0;
 
     return m_datareg;
@@ -302,11 +306,11 @@ void CFloppyController::Periodic()
             m_drivedata[drive].dataptr = 0;
     }
 
-    if (m_pDrive != NULL && m_pDrive->dataptr == 0)
+    if (m_pDrive != nullptr && m_pDrive->dataptr == 0)
         DebugLogFormat(_T("Floppy Index\n"));
 
     // Далее обрабатываем чтение/запись на текущем драйве
-    if (m_pDrive == NULL) return;
+    if (m_pDrive == nullptr) return;
     if (!IsAttached(m_drive)) return;
 
     if (!m_writing)  // Read mode
@@ -389,7 +393,7 @@ void CFloppyController::PrepareTrack()
 {
     FlushChanges();
 
-    if (m_pDrive == NULL) return;
+    if (m_pDrive == nullptr) return;
 
     if (m_okTrace) DebugLogFormat(_T("Floppy PREP  %hu TR %hu SD %hu\r\n"), m_drive, m_track, m_side);
 
@@ -397,7 +401,7 @@ void CFloppyController::PrepareTrack()
 
     m_trackchanged = false;
     m_status |= FLOPPY_STATUS_MOREDATA;
-    m_pDrive->dataptr = 0;
+    //NOTE: Not changing m_pDrive->dataptr
     m_pDrive->datatrack = m_track;
     m_pDrive->dataside = m_side;
 
@@ -407,10 +411,10 @@ void CFloppyController::PrepareTrack()
     uint8_t data[5120];
     memset(data, 0, 5120);
 
-    if (m_pDrive->fpFile != NULL)
+    if (m_pDrive->fpFile != nullptr)
     {
         ::fseek(m_pDrive->fpFile, foffset, SEEK_SET);
-        count = ::fread(&data, 1, 5120, m_pDrive->fpFile);
+        count = ::fread(data, 1, 5120, m_pDrive->fpFile);
         //TODO: Контроль ошибок чтения
     }
 

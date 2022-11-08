@@ -57,7 +57,7 @@ uint16_t CLR_TIMING[8] =
     0x000B, 0x001C, 0x0023, 0x002F, 0x0023, 0x002F, 0x002F, 0x003F
 };
 
-uint16_t CRLB_TIMING[8] =
+uint16_t CLRB_TIMING[8] =
 {
     0x000B, 0x0021, 0x0027, 0x0033, 0x0027, 0x0033, 0x0037, 0x0043
 };
@@ -125,7 +125,7 @@ uint16_t RESET_TIMING = 105 + 968;  // ТО КМ1801ВМ2 стр. 134
 //////////////////////////////////////////////////////////////////////
 
 
-CProcessor::ExecuteMethodRef* CProcessor::m_pExecuteMethodMap = NULL;
+CProcessor::ExecuteMethodRef* CProcessor::m_pExecuteMethodMap = nullptr;
 
 #define RegisterMethodRef(/*uint16_t*/ opstart, /*uint16_t*/ opend, /*CProcessor::ExecuteMethodRef*/ methodref) \
     { \
@@ -135,7 +135,7 @@ CProcessor::ExecuteMethodRef* CProcessor::m_pExecuteMethodMap = NULL;
 
 void CProcessor::Init()
 {
-    ASSERT(m_pExecuteMethodMap == NULL);
+    ASSERT(m_pExecuteMethodMap == nullptr);
     m_pExecuteMethodMap = (CProcessor::ExecuteMethodRef*) ::calloc(65536, sizeof(CProcessor::ExecuteMethodRef));
 
     // Сначала заполняем таблицу ссылками на метод ExecuteUNKNOWN, выполняющий TRAP 10
@@ -248,7 +248,7 @@ void CProcessor::Init()
 
 void CProcessor::Done()
 {
-    ::free(m_pExecuteMethodMap);  m_pExecuteMethodMap = NULL;
+    ::free(m_pExecuteMethodMap);  m_pExecuteMethodMap = nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////

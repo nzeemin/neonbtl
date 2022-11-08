@@ -276,9 +276,9 @@ BOOL ConsoleView_SaveMemoryDump(CProcessor *pProc)
 {
     BOOL okHaltMode = pProc->IsHaltMode();
     uint8_t buf[65536];
-    for (uint16_t i = 0; i < 65536; i++)
+    for (int i = 0; i < 65536; i++)
     {
-        buf[i] = g_pBoard->GetByte(i, okHaltMode);
+        buf[i] = g_pBoard->GetByte((uint16_t)i, okHaltMode);
     }
 
     const TCHAR fname[] = _T("memdump.bin");
