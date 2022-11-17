@@ -22,11 +22,11 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2013
       toolchain: msvc13
       platform: Win32
-      PROJECTFILE: UKNCBTL-VS2013.sln
+      PROJECTFILE: NEONBTL-VS2013.sln
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       toolchain: msvc15
-      platform: x86
-      PROJECTFILE: UKNCBTL-VS2015.sln
+      platform: Win32
+      PROJECTFILE: NEONBTL-VS2015.sln
 
 build:
   project: emulator\$(PROJECTFILE)
