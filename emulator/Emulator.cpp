@@ -330,7 +330,7 @@ void Emulator_SetCovox(bool covoxOnOff)
     m_okEmulatorCovox = covoxOnOff;
 }
 
-int Emulator_SystemFrame()
+bool Emulator_SystemFrame()
 {
     g_pBoard->SetCPUBreakpoints(m_wEmulatorCPUBpsCount > 0 ? m_EmulatorCPUBps : nullptr);
 
@@ -339,7 +339,7 @@ int Emulator_SystemFrame()
     //Emulator_ProcessJoystick();
 
     if (!g_pBoard->SystemFrame())
-        return 0;
+        return false;
 
     // Calculate frames per second
     m_nFrameCount++;
@@ -408,7 +408,7 @@ int Emulator_SystemFrame()
         }
     }
 
-    return 1;
+    return true;
 }
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)

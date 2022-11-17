@@ -42,27 +42,25 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 #define WIN32_LEAN_AND_MEAN     // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
-#include <windows.h>
+#include <Windows.h>
 
 // C RunTime Header Files
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
 
 // Define C99 stdint.h types for VS2008
 #ifdef _MSC_VER
+   typedef signed __int8     int8_t;
    typedef unsigned __int8   uint8_t;
    typedef unsigned __int16  uint16_t;
    typedef signed   __int16  int16_t;
    typedef unsigned __int32  uint32_t;
    typedef signed   __int32  int32_t;
+   typedef unsigned __int32  uint32_t;
    typedef unsigned __int64  uint64_t;
-
-#  define false   0
-#  define true    1
-#  define bool int
 #else
 #include <stdint.h>
 #include <stdbool.h>
