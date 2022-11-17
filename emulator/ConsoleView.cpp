@@ -38,7 +38,6 @@ LRESULT CALLBACK ConsoleEditWndProc(HWND, UINT, WPARAM, LPARAM);
 void ConsoleView_DoConsoleCommand();
 
 void ConsoleView_ShowHelp();
-void ConsoleView_ClearConsole();
 void ConsoleView_PrintConsolePrompt();
 void ConsoleView_PrintRegister(LPCTSTR strName, WORD value);
 void ConsoleView_PrintMemoryDump(CProcessor* pProc, WORD address, int lines);
@@ -270,6 +269,14 @@ void ConsoleView_PrintRegister(LPCTSTR strName, WORD value)
     *p++ = _T('\n');
     *p++ = 0;
     ConsoleView_Print(buffer);
+}
+
+void ConsoleView_DeleteAllBreakpoints()
+{
+    // Put command to console prompt
+    SendMessage(m_hwndConsoleEdit, WM_SETTEXT, 0, (LPARAM)_T("bc"));
+    // Execute command
+    ConsoleView_DoConsoleCommand();
 }
 
 BOOL ConsoleView_SaveMemoryDump(CProcessor *pProc)
