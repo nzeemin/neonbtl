@@ -65,7 +65,6 @@ void MainWindow_DoEmulatorFloppy(int slot);
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
 void MainWindow_DoFileScreenshot();
 void MainWindow_DoFileScreenshotSaveAs();
-void MainWindow_DoFileLoadBin();
 void MainWindow_DoFileSettings();
 void MainWindow_OnToolbarGetInfoTip(LPNMTBGETINFOTIP);
 
@@ -807,9 +806,6 @@ bool MainWindow_DoCommand(int commandId)
     case ID_FILE_SAVESCREENSHOTAS:
         MainWindow_DoFileScreenshotSaveAs();
         break;
-    case ID_FILE_LOADBIN:
-        MainWindow_DoFileLoadBin();
-        break;
     case ID_FILE_SETTINGS:
         MainWindow_DoFileSettings();
         break;
@@ -955,12 +951,6 @@ void MainWindow_DoFileScreenshotSaveAs()
     {
         AlertWarning(_T("Failed to save screenshot bitmap."));
     }
-}
-
-//TODO: Remove, fake tape replaced it
-void MainWindow_DoFileLoadBin()
-{
-    ShowLoadBinDialog();
 }
 
 void MainWindow_DoFileSettings()

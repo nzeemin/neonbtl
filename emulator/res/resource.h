@@ -19,10 +19,10 @@
 #define IDB_KEYBOARD                    142
 #define IDB_TOOLBAR                     143
 #define IDD_CREATEDISK                  144
-#define IDD_LOADBIN                     145
-#define IDD_SETTINGS                    146
-#define IDD_SETTINGS_COLORS             147
+#define IDD_SETTINGS                    145
+#define IDD_SETTINGS_COLORS             146
 #define IDB_KEYBOARDMASK                150
+#define IDD_COMMANDLINEHELP             152
 #define IDC_EDIT1                       1000
 #define IDC_BUILDDATE                   1001
 #define IDC_EDITADDR                    1001
@@ -43,11 +43,13 @@
 #define IDC_SCREENSHOTMODE              1031
 #define IDC_SYSLINK1                    1032
 #define IDC_VERSION                     1033
+#define IDC_COMBO1                      1034
 #define ID_FILE                         32771
 #define ID_FILE_SAVESTATE               32772
 #define ID_FILE_LOADSTATE               32773
 #define ID_FILE_SCREENSHOT              32774
 #define ID_FILE_SAVESCREENSHOTAS        32775
+#define ID_FILE_SCREENTOCLIPBOARD       32776
 #define ID_FILE_SCREENSHOTTOCLIPBOARD   32777
 #define ID_FILE_CREATEDISK              32778
 #define ID_FILE_SETTINGS                32779
@@ -73,8 +75,13 @@
 #define ID_EMULATOR_FLOPPY1             32805
 #define ID_EMULATOR_FLOPPY2             32806
 #define ID_EMULATOR_FLOPPY3             32807
+#define ID_EMULATOR_HARDDRIVE1          32808
+#define ID_EMULATOR_HARDDRIVE2          32809
 #define ID_EMULATOR_CARTRIDGE1          32810
 #define ID_EMULATOR_CARTRIDGE2          32811
+#define ID_EMULATOR_SERIAL              32826
+#define ID_EMULATOR_PARALLEL            32827
+#define ID_EMULATOR_NETWORK             32828
 #define ID_EMULATOR_SOUND               32831
 #define ID_VIEW_SCREENMODE0             32847
 #define ID_VIEW_SCREENMODE1             32848
@@ -91,6 +98,13 @@
 #define ID_DEBUG_SPRITES                32886
 #define ID_DEBUG_MEMORY_WORDBYTE        32894
 #define ID_DEBUG_MEMORY_GOTO            32895
+#define ID_DEBUG_CLEARCONSOLE           32896
+#define ID_DEBUG_DELETEALLBREAKPTS      32897
+#define ID_DEBUG_SUBTITLES              32898
+#define ID_DEBUG_COPY_ADDRESS           32899
+#define ID_DEBUG_COPY_VALUE             32900
+#define ID_DEBUG_GOTO_ADDRESS           32901
+#define ID_HELP_COMMAND_LINE_HELP       32921
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -99,7 +113,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        152
-#define _APS_NEXT_COMMAND_VALUE         32896
+#define _APS_NEXT_COMMAND_VALUE         32999
 #define _APS_NEXT_CONTROL_VALUE         1034
 #define _APS_NEXT_SYMED_VALUE           110
 #endif

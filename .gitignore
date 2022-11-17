@@ -2,6 +2,8 @@ Debug
 Product
 Release
 *.ncb
+*.VC.db
+*.VC.opendb
 *.suo
 *.user
 *.suppress
@@ -10,8 +12,9 @@ Release
 .vs
 ipch
 *.bin
-/emulator/Version.h
 trace.log
+printer.log
+/emulator/Version.h
 *.dsk
 *.img
 *.lst
