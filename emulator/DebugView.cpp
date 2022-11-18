@@ -41,6 +41,7 @@ void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, 
 void DebugView_DrawHRandUR(HDC hdc, int x, int y);
 void DebugView_DrawPorts(HDC hdc, int x, int y);
 void DebugView_DrawBreakpoints(HDC hdc, int x, int y);
+void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc);
 void DebugView_UpdateWindowText();
 
 
@@ -312,6 +313,7 @@ void DebugView_DoDraw(HDC hdc)
 
     DebugView_DrawBreakpoints(hdc, xBreaks + cxChar / 2, cyLine / 2);
 
+    DebugView_DrawMemoryMap(hdc, xMemmap + cxChar / 2, 0, pDebugPU);
     SetTextColor(hdc, colorOld);
     SetBkColor(hdc, colorBkOld);
     SelectObject(hdc, hOldFont);
@@ -575,6 +577,54 @@ void DebugView_DrawBreakpoints(HDC hdc, int x, int y)
         y += cyLine;
         pbps++;
     }
+}
+
+void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc)
+{
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+
+    int x1 = x + cxChar * 7;
+    int y1 = y + cxChar / 2;
+    int x2 = x1 + cxChar * 13;
+    int y2 = y1 + cyLine * 16;
+    int xtype = x1 + cxChar * 2;
+    int ybase = y + cyLine * 16;
+
+    HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNSHADOW));
+    PatBlt(hdc, x1, y1, 1, y2 - y1, PATCOPY);
+    PatBlt(hdc, x2, y1, 1, y2 - y1 + 1, PATCOPY);
+    PatBlt(hdc, x1, y1, x2 - x1, 1, PATCOPY);
+    PatBlt(hdc, x1, y2, x2 - x1, 1, PATCOPY);
+
+    TextOut(hdc, x, ybase - cyLine / 2, _T("000000"), 6);
+
+    uint16_t portBaseAddr = pProc->IsHaltMode() ? 0161200 : 0161220;
+    for (int i = 1; i < 8; i++)
+    {
+        PatBlt(hdc, x1, y2 - cyLine * i * 2, x2 - x1, 1, PATCOPY);
+        WORD addr = (WORD)(i * 020000);
+        DrawOctalValue(hdc, x, y2 - cyLine * i * 2 - cyLine / 2, addr);
+    }
+    ::SelectObject(hdc, hOldBrush);
+    for (int i = 0; i < 7; i++)
+    {
+        int ytype = ybase - cyLine * i * 2 - cyLine;
+        if (i < 2 && pProc->IsHaltMode())
+            TextOut(hdc, xtype, ytype, _T("ROM"), 3);
+        else
+        {
+            uint16_t value = g_pBoard->GetPortView((uint16_t)(portBaseAddr + 2 * i));
+            TCHAR buffer[7];
+            PrintOctalValue(buffer, (value & 0037760) >> 4);
+            TextOut(hdc, xtype, ytype, buffer + 2, 4);
+            if ((value & 4) != 0)
+                TextOut(hdc, xtype + cxChar * 5, ytype, _T("OFF"), 3);
+            else
+                TextOut(hdc, xtype + cxChar * 5, ytype, _T("ON"), 2);
+        }
+    }
+
+    TextOut(hdc, xtype, ybase - cyLine * 15, _T("I/O"), 3);
 }
 
 
