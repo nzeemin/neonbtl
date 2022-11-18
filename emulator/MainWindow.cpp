@@ -142,6 +142,7 @@ BOOL CreateMainWindow()
     UpdateWindow(g_hwnd);
     MainWindow_UpdateAllViews();
     MainWindow_UpdateMenu();
+    MainWindow_UpdateWindowTitle();
 
     // Autostart
     if (Settings_GetAutostart())
@@ -792,6 +793,9 @@ bool MainWindow_DoCommand(int commandId)
     case ID_DEBUG_DELETEALLBREAKPTS:
         if (Settings_GetDebug())
             ConsoleView_DeleteAllBreakpoints();
+        break;
+    case ID_DEBUG_SUBTITLES:
+        DisasmView_LoadUnloadSubtitles();
         break;
     case ID_DEBUG_MEMORY_WORDBYTE:
         MemoryView_SwitchWordByte();

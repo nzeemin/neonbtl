@@ -67,12 +67,12 @@ WNDPROC m_wndprocDisasmToolWindow = NULL;  // Old window proc address of the Too
 HWND m_hwndDisasmViewer = (HWND) INVALID_HANDLE_VALUE;
 
 uint16_t m_wDisasmBaseAddr = 0;
+int m_nDisasmCurrentLineIndex   = -1;  // Line index for PC address
+int m_nDisasmSelectedLineIndex  = -1;  // Line selected by user
 
-BOOL m_okDisasmSubtitles = FALSE;
-TCHAR* m_strDisasmSubtitles = NULL;
-DisasmSubtitleItem* m_pDisasmSubtitleItems = NULL;
-int m_nDisasmSubtitleMax = 0;
-int m_nDisasmSubtitleCount = 0;
+bool m_okDisasmSubtitles = false;
+TCHAR* m_strDisasmSubtitles = nullptr;
+std::vector<DisasmSubtitleItem> m_SubtitleItems;
 
 const int MAX_DISASMLINECOUNT = 50;
 DisasmLineItem* m_pDisasmLineItems = nullptr;
@@ -86,11 +86,12 @@ int m_cyDisasmLine = 10;  // cyLine for the current font
 
 void DisasmView_UpdateWindowText();
 BOOL DisasmView_OnKeyDown(WPARAM vkey, LPARAM lParam);
-void DisasmView_OnLButtonDown(WPARAM wParam, LPARAM lParam);
-void DisasmView_DoSubtitles();
+void DisasmView_OnLButtonDown(int mousex, int mousey);
+void DisasmView_OnRButtonDown(int mousex, int mousey);
+void DisasmView_CopyToClipboard(WPARAM command);
 BOOL DisasmView_ParseSubtitles();
 void DisasmView_DoDraw(HDC hdc);
-int  DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD base, WORD previous, int x, int y);
+int  DisasmView_DrawDisassemble(HDC hdc, const CProcessor* pProc, uint16_t current, uint16_t previous, int x, int y);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -127,11 +128,8 @@ void DisasmView_Done()
     {
         free(m_strDisasmSubtitles);  m_strDisasmSubtitles = nullptr;
     }
-    if (m_pDisasmSubtitleItems != nullptr)
-    {
-        free(m_pDisasmSubtitleItems);
-        m_pDisasmSubtitleItems = nullptr;
-    }
+
+    m_SubtitleItems.clear();
 
     if (m_pDisasmLineItems != nullptr)
     {
@@ -214,13 +212,23 @@ LRESULT CALLBACK DisasmViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
         }
         break;
     case WM_LBUTTONDOWN:
-        DisasmView_OnLButtonDown(wParam, lParam);
+        DisasmView_OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+    case WM_RBUTTONDOWN:
+        DisasmView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
     case WM_KEYDOWN:
         return (LRESULT) DisasmView_OnKeyDown(wParam, lParam);
     case WM_SETFOCUS:
     case WM_KILLFOCUS:
         ::InvalidateRect(hWnd, NULL, TRUE);
+        break;
+    case WM_COMMAND:
+        if (wParam == ID_DEBUG_COPY_ADDRESS || wParam == ID_DEBUG_COPY_VALUE)
+            DisasmView_CopyToClipboard(wParam);
+        else
+            // Forward commands to the main window
+            ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -233,7 +241,7 @@ BOOL DisasmView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
     switch (vkey)
     {
     case 0x53:  // S - Load/Unload Subtitles
-        DisasmView_DoSubtitles();
+        DisasmView_LoadUnloadSubtitles();
         break;
     case VK_ESCAPE:
         ConsoleView_Activate();
@@ -244,38 +252,106 @@ BOOL DisasmView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
     return FALSE;
 }
 
-void DisasmView_OnLButtonDown(WPARAM /*wParam*/, LPARAM lParam)
+void DisasmView_OnLButtonDown(int mousex, int mousey)
 {
     ::SetFocus(m_hwndDisasmViewer);
 
-    // For click in the breakpoint zone at the left - try to find the line/address and add/remove breakpoint
-    if (GET_X_LPARAM(lParam) < m_cxDisasmBreakpointZone)
-    {
-        int lineindex = (GET_Y_LPARAM(lParam) - 2) / m_cyDisasmLine;
-        if (lineindex >= 0 && lineindex < MAX_DISASMLINECOUNT)
-        {
-            DisasmLineItem* pLineItem = m_pDisasmLineItems + lineindex;
-            if (pLineItem->type != LINETYPE_NONE)
-            {
-                WORD address = pLineItem->address;
-                if (!Emulator_IsBreakpoint(address))
-                {
-                    bool result = Emulator_AddCPUBreakpoint(address);
-                    if (!result)
-                        AlertWarningFormat(_T("Failed to add breakpoint at %06ho."), address);
-                }
-                else
-                {
-                    bool result = Emulator_RemoveCPUBreakpoint(address);
-                    if (!result)
-                        AlertWarningFormat(_T("Failed to remove breakpoint at %06ho."), address);
-                }
+    if (mousex >= m_cxDisasmBreakpointZone)
+        return;
 
-                DebugView_Redraw();
-                DisasmView_Redraw();
-            }
-        }
+    int lineindex = (mousey - 2) / m_cyDisasmLine;
+    if (lineindex < 0 || lineindex >= MAX_DISASMLINECOUNT)
+        return;
+
+    DisasmLineItem* pLineItem = m_pDisasmLineItems + lineindex;
+    if (pLineItem->type == LINETYPE_NONE)
+        return;
+
+    // Try to and add/remove breakpoint for the line
+    uint16_t address = pLineItem->address;
+    if (!Emulator_IsBreakpoint(address))
+    {
+        bool result = Emulator_AddCPUBreakpoint(address);
+        if (!result)
+            AlertWarningFormat(_T("Failed to add breakpoint at %06ho."), address);
     }
+    else
+    {
+        bool result = Emulator_RemoveCPUBreakpoint(address);
+        if (!result)
+            AlertWarningFormat(_T("Failed to remove breakpoint at %06ho."), address);
+    }
+
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+
+void DisasmView_OnRButtonDown(int mousex, int mousey)
+{
+    // Find out if we have a valid line under the mouse cursor
+    int lineindex = (mousey - 2) / m_cyDisasmLine;
+    DisasmLineItem* pLineItem = nullptr;
+    if (lineindex >= 0 && lineindex < MAX_DISASMLINECOUNT)
+        pLineItem = m_pDisasmLineItems + lineindex;
+    if (pLineItem->type == LINETYPE_NONE)
+        pLineItem = nullptr;
+
+    m_nDisasmSelectedLineIndex = (pLineItem == nullptr) ? m_nDisasmCurrentLineIndex : lineindex;
+
+    ::SetFocus(m_hwndDisasmViewer);
+
+    HMENU hMenu = ::CreatePopupMenu();
+    if (pLineItem != nullptr)
+    {
+        TCHAR buffer[24];
+        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Address: %06o"), pLineItem->address);
+        ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_ADDRESS, buffer);
+        if ((pLineItem->type & (LINETYPE_DATA | LINETYPE_INSTR)) != 0)  // if the item has a valid value
+        {
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Value: %06o"), pLineItem->value);
+            ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_VALUE, buffer);
+        }
+        ::AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    }
+    ::AppendMenu(hMenu, 0, ID_DEBUG_SUBTITLES, m_okDisasmSubtitles ? _T("Unload Subtitles\tS") : _T("Load Subtitles...\tS"));
+
+    int linebottom = 2 + m_cyDisasmLine * (m_nDisasmSelectedLineIndex + 1);
+    POINT pt = { mousex, linebottom };
+    ::ClientToScreen(m_hwndDisasmViewer, &pt);
+    ::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, m_hwndDisasmViewer, NULL);
+
+    VERIFY(::DestroyMenu(hMenu));
+}
+
+void DisasmView_CopyToClipboard(WPARAM command)
+{
+    if (m_nDisasmSelectedLineIndex < 0 || m_nDisasmSelectedLineIndex >= MAX_DISASMLINECOUNT)
+        return;
+
+    DisasmLineItem* pLineItem = m_pDisasmLineItems + m_nDisasmSelectedLineIndex;
+    if (pLineItem->type == LINETYPE_NONE)
+        return;
+
+    uint16_t value;
+    if (command == ID_DEBUG_COPY_ADDRESS)
+        value = pLineItem->address;
+    else
+        value = pLineItem->value;
+
+    TCHAR buffer[7];
+    PrintOctalValue(buffer, value);
+
+    // Prepare global memory object for the text
+    HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(buffer));
+    LPTSTR lptstrCopy = (LPTSTR) ::GlobalLock(hglbCopy);
+    memcpy(lptstrCopy, buffer, sizeof(buffer));
+    ::GlobalUnlock(hglbCopy);
+
+    // Send the text to the Clipboard
+    ::OpenClipboard(g_hwnd);
+    ::EmptyClipboard();
+    ::SetClipboardData(CF_UNICODETEXT, hglbCopy);
+    ::CloseClipboard();
 }
 
 void DisasmView_UpdateWindowText()
@@ -286,40 +362,21 @@ void DisasmView_UpdateWindowText()
         ::SetWindowText(g_hwndDisasm, _T("Disassemble"));
 }
 
-void DisasmView_ResizeSubtitleArray(int newSize)
+void DisasmView_AddSubtitle(uint16_t addr, int type, LPCTSTR pCommentText)
 {
-    DisasmSubtitleItem* pNewMemory = (DisasmSubtitleItem*) ::calloc(newSize, sizeof(DisasmSubtitleItem));
-    if (m_pDisasmSubtitleItems != NULL)
-    {
-        ::memcpy(pNewMemory, m_pDisasmSubtitleItems, sizeof(DisasmSubtitleItem) * m_nDisasmSubtitleMax);
-        ::free(m_pDisasmSubtitleItems);
-    }
-
-    m_pDisasmSubtitleItems = pNewMemory;
-    m_nDisasmSubtitleMax = newSize;
-}
-void DisasmView_AddSubtitle(WORD address, int type, LPCTSTR pCommentText)
-{
-    if (m_nDisasmSubtitleCount >= m_nDisasmSubtitleMax)
-    {
-        // Расширить массив
-        int newsize = m_nDisasmSubtitleMax + m_nDisasmSubtitleMax / 2;
-        DisasmView_ResizeSubtitleArray(newsize);
-    }
-
-    m_pDisasmSubtitleItems[m_nDisasmSubtitleCount].address = address;
-    m_pDisasmSubtitleItems[m_nDisasmSubtitleCount].type = (DisasmSubtitleType) type;
-    m_pDisasmSubtitleItems[m_nDisasmSubtitleCount].comment = pCommentText;
-    m_nDisasmSubtitleCount++;
+    DisasmSubtitleItem item;
+    item.address = addr;
+    item.type = static_cast<DisasmSubtitleType>(type);
+    item.comment = pCommentText;
+    m_SubtitleItems.push_back(item);
 }
 
-void DisasmView_DoSubtitles()
+void DisasmView_LoadUnloadSubtitles()
 {
     if (m_okDisasmSubtitles)  // Reset subtitles
     {
-        ::free(m_strDisasmSubtitles);  m_strDisasmSubtitles = NULL;
-        ::free(m_pDisasmSubtitleItems);  m_pDisasmSubtitleItems = NULL;
-        m_nDisasmSubtitleMax = m_nDisasmSubtitleCount = 0;
+        ::free(m_strDisasmSubtitles);  m_strDisasmSubtitles = nullptr;
+        m_SubtitleItems.clear();
         m_okDisasmSubtitles = FALSE;
         DisasmView_UpdateWindowText();
         DisasmView_OnUpdate();  // We have to re-build the list of lines to show
@@ -350,23 +407,17 @@ void DisasmView_DoSubtitles()
         return;
     }
 
-    m_strDisasmSubtitles = (TCHAR*) ::calloc(dwSubFileSize + 2, 1);
+    m_strDisasmSubtitles = static_cast<TCHAR*>(::calloc(dwSubFileSize + sizeof(TCHAR), 1));
     DWORD dwBytesRead;
     ::ReadFile(hSubFile, m_strDisasmSubtitles, dwSubFileSize, &dwBytesRead, NULL);
     ASSERT(dwBytesRead == dwSubFileSize);
     ::CloseHandle(hSubFile);
 
-    // Estimate comment count and allocate memory
-    int estimateSubtitleCount = dwSubFileSize / (75 * sizeof(TCHAR));
-    if (estimateSubtitleCount < 256)
-        estimateSubtitleCount = 256;
-    DisasmView_ResizeSubtitleArray(estimateSubtitleCount);
-
     // Parse subtitles
     if (!DisasmView_ParseSubtitles())
     {
-        ::free(m_strDisasmSubtitles);  m_strDisasmSubtitles = NULL;
-        ::free(m_pDisasmSubtitleItems);  m_pDisasmSubtitleItems = NULL;
+        ::free(m_strDisasmSubtitles);  m_strDisasmSubtitles = nullptr;
+        m_SubtitleItems.clear();
         AlertWarning(_T("Failed to parse subtitles file."));
         return;
     }
@@ -378,18 +429,18 @@ void DisasmView_DoSubtitles()
 
 // Разбор текста "субтитров".
 // На входе -- текст в m_strDisasmSubtitles в формате UTF16 LE, заканчивается символом с кодом 0.
-// На выходе -- массив описаний [адрес в памяти, тип, адрес строки комментария] в m_pDisasmSubtitleItems.
+// На выходе -- массив описаний [адрес в памяти, тип, адрес строки комментария] в m_SubtitleItems.
 BOOL DisasmView_ParseSubtitles()
 {
-    ASSERT(m_strDisasmSubtitles != NULL);
+    ASSERT(m_strDisasmSubtitles != nullptr);
     TCHAR* pText = m_strDisasmSubtitles;
     if (*pText == 0 || *pText == 0xFFFE)  // EOF or Unicode Big Endian
         return FALSE;
     if (*pText == 0xFEFF)
         pText++;  // Skip Unicode LE mark
 
-    m_nDisasmSubtitleCount = 0;
-    TCHAR* pBlockCommentStart = NULL;
+    m_SubtitleItems.clear();
+    TCHAR* pBlockCommentStart = nullptr;
 
     for (;;)  // Text reading loop - line by line
     {
@@ -409,15 +460,15 @@ BOOL DisasmView_ParseSubtitles()
             if (*pText == 0) break;
             TCHAR chSave = *pText;
             *pText++ = 0;
-            WORD address;
+            uint16_t address;
             ParseOctalValue(pAddrStart, &address);
             *pText = chSave;
 
-            if (pBlockCommentStart != NULL)  // На предыдущей строке был комментарий к блоку
+            if (pBlockCommentStart != nullptr)  // На предыдущей строке был комментарий к блоку
             {
                 // Сохраняем комментарий к блоку в массиве
                 DisasmView_AddSubtitle(address, SUBTYPE_BLOCKCOMMENT, pBlockCommentStart);
-                pBlockCommentStart = NULL;
+                pBlockCommentStart = nullptr;
             }
 
             // Пропускаем разделители
@@ -456,7 +507,7 @@ BOOL DisasmView_ParseSubtitles()
             if (*pText == _T(';'))  // Строка начинается с комментария - предположительно, комментарий к блоку
                 pBlockCommentStart = pText;
             else
-                pBlockCommentStart = NULL;
+                pBlockCommentStart = nullptr;
 
             while (*pText != 0 && *pText != _T('\n') && *pText != _T('\r')) pText++;
             if (*pText == 0) break;
@@ -471,14 +522,19 @@ BOOL DisasmView_ParseSubtitles()
     return TRUE;
 }
 
-DisasmSubtitleItem* DisasmView_FindSubtitle(WORD address, int typemask)
+const DisasmSubtitleItem* DisasmView_FindSubtitle(uint16_t address, int typemask)
 {
-    DisasmSubtitleItem* pItem = m_pDisasmSubtitleItems;
+    if (m_SubtitleItems.empty())
+        return nullptr;
+
+    const DisasmSubtitleItem* pItem = m_SubtitleItems.data();
     while (pItem->type != 0)
     {
+        if (pItem->address > address)
+            return nullptr;
         if (pItem->address == address && (pItem->type & typemask) != 0)
             return pItem;
-        pItem++;
+        ++pItem;
     }
 
     return nullptr;
@@ -486,7 +542,6 @@ DisasmSubtitleItem* DisasmView_FindSubtitle(WORD address, int typemask)
 
 
 //////////////////////////////////////////////////////////////////////
-
 
 // Update after Run or Step
 void DisasmView_OnUpdate()
@@ -511,7 +566,7 @@ void DisasmView_OnUpdate()
     for (int idx = 0; idx < nWindowSize; idx++)
     {
         memory[idx] = g_pBoard->GetWordView(
-                (WORD)(current + idx * 2 - 10), pProc->IsHaltMode(), TRUE, addrtype + idx);
+                static_cast<uint16_t>(current + idx * 2 - 10), pProc->IsHaltMode(), TRUE, addrtype + idx);
     }
 
     uint16_t address = current - 10;
@@ -647,7 +702,6 @@ void DisasmView_DoDraw(HDC hdc)
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
     COLORREF colorOld = SetTextColor(hdc, GetSysColor(COLOR_WINDOWTEXT));
     SetBkMode(hdc, TRANSPARENT);
-    //COLORREF colorBkOld = SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
 
     CProcessor* pDisasmPU = g_pBoard->GetCPU();
 
@@ -656,7 +710,6 @@ void DisasmView_DoDraw(HDC hdc)
     int yFocus = DisasmView_DrawDisassemble(hdc, pDisasmPU, m_wDisasmBaseAddr, prevPC, 0, 2 + 0 * cyLine);
 
     SetTextColor(hdc, colorOld);
-    //SetBkColor(hdc, colorBkOld);
     SelectObject(hdc, hOldFont);
     VERIFY(::DeleteObject(hFont));
 
@@ -685,12 +738,13 @@ void DisasmView_DrawBreakpoint(HDC hdc, int x, int y, int size)
     VERIFY(::DeleteObject(hBreakBrush));
 }
 
-int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD previous, int x, int y)
+int DisasmView_DrawDisassemble(HDC hdc, const CProcessor* pProc, uint16_t current, uint16_t previous, int x, int y)
 {
     int result = -1;
+    m_nDisasmCurrentLineIndex = -1;
 
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    m_cxDisasmBreakpointZone = x + cxChar * 2;
+    m_cxDisasmBreakpointZone = x + cxChar * 5 / 2;
     m_cyDisasmLine = cyLine;
     COLORREF colorText = Settings_GetColor(ColorDebugText);
     COLORREF colorPrev = Settings_GetColor(ColorDebugPrevious);
@@ -719,7 +773,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
         HGDIOBJ oldBrush = ::SelectObject(hdc, hBrushCurrent);
         PatBlt(hdc, 0, yCurrent, 1000, cyLine, PATCOPY);
         ::SelectObject(hdc, oldBrush);
-        ::DeleteObject(hBrushCurrent);
+        VERIFY(::DeleteObject(hBrushCurrent));
     }
 
     for (int lineindex = 0; lineindex < MAX_DISASMLINECOUNT; lineindex++)  // Draw the lines
@@ -727,7 +781,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
         DisasmLineItem* pLineItem = m_pDisasmLineItems + lineindex;
         if (pLineItem->type == LINETYPE_NONE)
             break;
-        WORD address = pLineItem->address;
+        uint16_t address = pLineItem->address;
 
         if ((pLineItem->type & LINETYPE_SUBTITLE) != 0 && (pLineItem->type & (LINETYPE_DATA | LINETYPE_INSTR)) == 0 &&
             pLineItem->pSubItem != nullptr)  // Subtitles - comment for a block
@@ -735,7 +789,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
             LPCTSTR strBlockSubtitle = pLineItem->pSubItem->comment;
 
             ::SetTextColor(hdc, colorSubtitle);
-            TextOut(hdc, x + 21 * cxChar, y, strBlockSubtitle, (int) _tcslen(strBlockSubtitle));
+            TextOut(hdc, x + 21 * cxChar, y, strBlockSubtitle, static_cast<int>(_tcslen(strBlockSubtitle)));
             ::SetTextColor(hdc, colorText);
 
             y += cyLine;
@@ -749,7 +803,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
 
         DrawOctalValue(hdc, x + 5 * cxChar, y, address);  // Address
         // Value at the address
-        WORD value = pLineItem->value;
+        uint16_t value = pLineItem->value;
         int memorytype = pLineItem->addrtype;
         ::SetTextColor(hdc, (memorytype == ADDRTYPE_ROM) ? colorValueRom : colorValue);
         DrawOctalValue(hdc, x + 13 * cxChar, y, value);
@@ -760,6 +814,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
         {
             //TextOut(hdc, x + 2 * cxChar, y, _T(" > "), 3);
             result = y;  // Remember line for the focus rect
+            m_nDisasmCurrentLineIndex = lineindex;
         }
         if (address == proccurrent)
             TextOut(hdc, x + 2 * cxChar, y, _T("PC>"), 3);
@@ -775,8 +830,8 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
             LPCTSTR strInstr = pLineItem->strInstr;
             LPCTSTR strArg = pLineItem->strArg;
             ::SetTextColor(hdc, colorText);
-            TextOut(hdc, x + 21 * cxChar, y, strInstr, (int)_tcslen(strInstr));
-            TextOut(hdc, x + 29 * cxChar, y, strArg, (int)_tcslen(strArg));
+            TextOut(hdc, x + 21 * cxChar, y, strInstr, static_cast<int>(_tcslen(strInstr)));
+            TextOut(hdc, x + 29 * cxChar, y, strArg, static_cast<int>(_tcslen(strArg)));
             posAfterArgs += _tcslen(strArg);
         }
 
@@ -787,7 +842,7 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
             if (strComment != nullptr)
             {
                 ::SetTextColor(hdc, colorSubtitle);
-                TextOut(hdc, x + 52 * cxChar, y, strComment, (int)_tcslen(strComment));
+                TextOut(hdc, x + 52 * cxChar, y, strComment, static_cast<int>(_tcslen(strComment)));
                 ::SetTextColor(hdc, colorText);
             }
         }
@@ -812,9 +867,9 @@ int DisasmView_DrawDisassemble(HDC hdc, CProcessor* pProc, WORD current, WORD pr
             {
                 COLORREF hintcolor = Settings_GetColor(isjump ? ColorDebugJumpHint : ColorDebugHint);
                 ::SetTextColor(hdc, hintcolor);
-                TextOut(hdc, x + 52 * cxChar, y, m_strDisasmHint, (int)_tcslen(m_strDisasmHint));
+                TextOut(hdc, x + 52 * cxChar, y, m_strDisasmHint, static_cast<int>(_tcslen(m_strDisasmHint)));
                 if (*m_strDisasmHint2 != 0)
-                    TextOut(hdc, x + 52 * cxChar, y + cyLine, m_strDisasmHint2, (int)_tcslen(m_strDisasmHint2));
+                    TextOut(hdc, x + 52 * cxChar, y + cyLine, m_strDisasmHint2, static_cast<int>(_tcslen(m_strDisasmHint2)));
                 ::SetTextColor(hdc, colorText);
             }
         }
