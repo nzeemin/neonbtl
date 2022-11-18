@@ -12,10 +12,12 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "stdafx.h"
 #include <commdlg.h>
-#include <commctrl.h>
+#include <CommCtrl.h>
+#include <shellapi.h>
 #include "Dialogs.h"
 #include "Emulator.h"
 #include "Main.h"
+#include "Views.h"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -26,7 +28,6 @@ BOOL InputBoxValidate(HWND hDlg);
 INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
 
 LPCTSTR m_strInputBoxTitle = NULL;
-LPCTSTR m_strInputBoxPrompt = NULL;
 WORD* m_pInputBoxValueOctal = NULL;
 
 
@@ -65,10 +66,9 @@ INT_PTR CALLBACK AboutBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPa
 //////////////////////////////////////////////////////////////////////
 
 
-BOOL InputBoxOctal(HWND hwndOwner, LPCTSTR strTitle, LPCTSTR strPrompt, WORD* pValue)
+BOOL InputBoxOctal(HWND hwndOwner, LPCTSTR strTitle, WORD* pValue)
 {
     m_strInputBoxTitle = strTitle;
-    m_strInputBoxPrompt = strPrompt;
     m_pInputBoxValueOctal = pValue;
     INT_PTR result = DialogBox(g_hInst, MAKEINTRESOURCE(IDD_INPUTBOX), hwndOwner, InputBoxProc);
     if (result != IDOK)
@@ -77,7 +77,6 @@ BOOL InputBoxOctal(HWND hwndOwner, LPCTSTR strTitle, LPCTSTR strPrompt, WORD* pV
     return TRUE;
 }
 
-
 INT_PTR CALLBACK InputBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM /*lParam*/)
 {
     switch (message)
@@ -85,12 +84,10 @@ INT_PTR CALLBACK InputBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM /*l
     case WM_INITDIALOG:
         {
             SetWindowText(hDlg, m_strInputBoxTitle);
-            HWND hStatic = GetDlgItem(hDlg, IDC_STATIC);
-            SetWindowText(hStatic, m_strInputBoxPrompt);
             HWND hEdit = GetDlgItem(hDlg, IDC_EDIT1);
 
             TCHAR buffer[8];
-            _snwprintf_s(buffer, 8, _T("%06o"), *m_pInputBoxValueOctal);
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%06ho"), *m_pInputBoxValueOctal);
             SetWindowText(hEdit, buffer);
             SendMessage(hEdit, EM_SETSEL, 0, -1);
 
@@ -100,20 +97,54 @@ INT_PTR CALLBACK InputBoxProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM /*l
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
+        case IDC_EDIT1:
+            {
+                const size_t buffersize = 8;
+                TCHAR buffer[buffersize];
+                GetDlgItemText(hDlg, IDC_EDIT1, buffer, buffersize);
+                if (_sntscanf_s(buffer, buffersize, _T("%ho"), m_pInputBoxValueOctal) > 0)
+                {
+                    GetDlgItemText(hDlg, IDC_EDIT2, buffer, buffersize);
+                    WORD otherValue;
+                    if (_sntscanf_s(buffer, buffersize, _T("%hx"), &otherValue) <= 0 || *m_pInputBoxValueOctal != otherValue)
+                    {
+                        _sntprintf(buffer, buffersize - 1, _T("%04hx"), *m_pInputBoxValueOctal);
+                        SetDlgItemText(hDlg, IDC_EDIT2, buffer);
+                    }
+                }
+            }
+            return (INT_PTR)TRUE;
+        case IDC_EDIT2:
+            {
+                const size_t buffersize = 8;
+                TCHAR buffer[buffersize];
+                GetDlgItemText(hDlg, IDC_EDIT2, buffer, buffersize);
+                if (_sntscanf_s(buffer, buffersize, _T("%hx"), m_pInputBoxValueOctal) > 0)
+                {
+                    GetDlgItemText(hDlg, IDC_EDIT1, buffer, buffersize);
+                    WORD otherValue;
+                    if (_sntscanf_s(buffer, buffersize, _T("%ho"), &otherValue) <= 0 || *m_pInputBoxValueOctal != otherValue)
+                    {
+                        _sntprintf(buffer, buffersize - 1, _T("%06ho"), *m_pInputBoxValueOctal);
+                        SetDlgItemText(hDlg, IDC_EDIT1, buffer);
+                    }
+                }
+            }
+            return (INT_PTR)TRUE;
         case IDOK:
             if (! InputBoxValidate(hDlg))
-                return (INT_PTR) FALSE;
+                return (INT_PTR)FALSE;
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
         case IDCANCEL:
             EndDialog(hDlg, LOWORD(wParam));
             return (INT_PTR)TRUE;
         default:
-            return (INT_PTR) FALSE;
+            return (INT_PTR)FALSE;
         }
         break;
     }
-    return (INT_PTR) FALSE;
+    return (INT_PTR)FALSE;
 }
 
 BOOL InputBoxValidate(HWND hDlg)

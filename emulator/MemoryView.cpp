@@ -11,56 +11,47 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 // MemoryView.cpp
 
 #include "stdafx.h"
-#include <commctrl.h>
+#include <CommCtrl.h>
+#include <windowsx.h>
 #include "Main.h"
 #include "Views.h"
 #include "ToolWindow.h"
 #include "Dialogs.h"
 #include "Emulator.h"
-#include "emubase\Emubase.h"
+#include "emubase/Emubase.h"
 
 //////////////////////////////////////////////////////////////////////
 
 
-// Colors
-#define COLOR_RED       RGB(255,0,0)
-#define COLOR_BLUE      RGB(0,0,255)
-#define COLOR_GREEN     RGB(128,192,128)
-#define COLOR_NA        RGB(128,128,128)
-
-
-HWND g_hwndMemory = (HWND) INVALID_HANDLE_VALUE;  // Memory view window handler
+HWND g_hwndMemory = (HWND)INVALID_HANDLE_VALUE;  // Memory view window handler
 WNDPROC m_wndprocMemoryToolWindow = NULL;  // Old window proc address of the ToolWindow
 
+HWND m_hwndMemoryViewer = (HWND)INVALID_HANDLE_VALUE;
+HWND m_hwndMemoryToolbar = (HWND)INVALID_HANDLE_VALUE;
+
+int m_cxChar = 0;
 int m_cyLineMemory = 0;  // Line height in pixels
-int m_nPageSize = 0;  // Page size in lines
-
-HWND m_hwndMemoryViewer = (HWND) INVALID_HANDLE_VALUE;
-HWND m_hwndMemoryToolbar = (HWND) INVALID_HANDLE_VALUE;
-
-void MemoryView_OnDraw(HDC hdc);
-BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM lParam);
-BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM lParam);
-BOOL MemoryView_OnVScroll(WPARAM wParam, LPARAM lParam);
-void MemoryView_ScrollTo(WORD wAddress);
-void MemoryView_Scroll(int nDeltaLines);
-void MemoryView_UpdateScrollPos();
-void MemoryView_UpdateWindowText();
-LPCTSTR MemoryView_GetMemoryModeName();
-void MemoryView_AdjustWindowLayout();
-
-//enum MemoryViewMode {
-//    MEMMODE_RAM0 = 0,  // RAM plane 0
-//    MEMMODE_RAM1 = 1,  // RAM plane 1
-//    MEMMODE_RAM2 = 2,  // RAM plane 2
-//    MEMMODE_ROM  = 3,  // ROM
-//    MEMMODE_CPU  = 4,  // CPU memory
-//    MEMMODE_LAST = 5,  // Last mode number
-//};
+int m_nPageSize = 100;  // Page size in lines
 
 //int     m_Mode = MEMMODE_ROM;  // See MemoryViewMode enum
-WORD    m_wBaseAddress = 0;
+WORD    m_wBaseAddress = 0xFFFF;
+WORD    m_wCurrentAddress = 0xFFFF;
 BOOL    m_okMemoryByteMode = FALSE;
+
+void MemoryView_AdjustWindowLayout();
+BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM lParam);
+void MemoryView_OnLButtonDown(int mousex, int mousey);
+void MemoryView_OnRButtonDown(int mousex, int mousey);
+BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM lParam);
+BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos);
+void MemoryView_CopyValueToClipboard(WPARAM command);
+void MemoryView_GotoAddress(WORD wAddress);
+void MemoryView_ScrollTo(WORD wBaseAddress);
+void MemoryView_UpdateWindowText();
+//LPCTSTR MemoryView_GetMemoryModeName();
+void MemoryView_UpdateScrollPos();
+void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine);
+void MemoryView_OnDraw(HDC hdc);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -141,8 +132,8 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
 
     SendMessage(m_hwndMemoryToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
-    MemoryView_ScrollTo(Settings_GetDebugMemoryAddress());
-    //MemoryView_UpdateToolbar();
+    MemoryView_ScrollTo(Settings_GetDebugMemoryBase());
+    MemoryView_GotoAddress(Settings_GetDebugMemoryAddress());
 }
 
 // Adjust position of client windows
@@ -179,27 +170,35 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
     switch (message)
     {
     case WM_COMMAND:
-        ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
+        if (wParam == ID_DEBUG_COPY_VALUE || wParam == ID_DEBUG_COPY_ADDRESS)  // Copy command from context menu
+            MemoryView_CopyValueToClipboard(wParam);
+        else if (wParam == ID_DEBUG_GOTO_ADDRESS)  // "Go to Address" from context menu
+            MemoryView_SelectAddress();
+        else
+            ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
 
-            MemoryView_OnDraw(hdc);  // Draw memory dump
+            MemoryView_OnDraw(hdc);
 
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_LBUTTONDOWN:
-        SetFocus(hWnd);
+        MemoryView_OnLButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+    case WM_RBUTTONDOWN:
+        MemoryView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
     case WM_KEYDOWN:
         return (LRESULT) MemoryView_OnKeyDown(wParam, lParam);
     case WM_MOUSEWHEEL:
         return (LRESULT) MemoryView_OnMouseWheel(wParam, lParam);
     case WM_VSCROLL:
-        return (LRESULT) MemoryView_OnVScroll(wParam, lParam);
+        return (LRESULT) MemoryView_OnVScroll(LOWORD(wParam), HIWORD(wParam));
     case WM_SETFOCUS:
     case WM_KILLFOCUS:
         ::InvalidateRect(hWnd, NULL, TRUE);
@@ -210,112 +209,193 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
     return (LRESULT)FALSE;
 }
 
-void MemoryView_OnDraw(HDC hdc)
+// Returns even address 0-65534, or -1 if out of area
+int MemoryView_GetAddressByPoint(int mousex, int mousey)
 {
-    ASSERT(g_pBoard != NULL);
+    int line = mousey / m_cyLineMemory - 1;
+    if (line < 0) return -1;
+    else if (line >= m_nPageSize) return -1;
+    int pos = (mousex - 12 * m_cxChar - m_cxChar / 2) / (m_cxChar * 7);
+    if (pos < 0) return -1;
+    else if (pos > 7) return -1;
 
-    HFONT hFont = CreateMonospacedFont();
-    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
-    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    COLORREF colorText = GetSysColor(COLOR_WINDOWTEXT);
-    COLORREF colorOld = SetTextColor(hdc, colorText);
-    COLORREF colorBkOld = SetBkColor(hdc, GetSysColor(COLOR_WINDOW));
+    return (WORD)(m_wBaseAddress + line * 16 + pos * 2);
+}
 
-    m_cyLineMemory = cyLine;
+BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
+{
+    switch (vkey)
+    {
+    case VK_ESCAPE:
+        ConsoleView_Activate();
+        break;
+    case VK_HOME:
+        MemoryView_GotoAddress(0);
+        break;
+    case VK_END:
+        MemoryView_GotoAddress(0177777);
+        break;
+    case VK_LEFT:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress - 2));
+        break;
+    case VK_RIGHT:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress + 2));
+        break;
+    case VK_UP:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress - 16));
+        break;
+    case VK_DOWN:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress + 16));
+        break;
+    case VK_PRIOR:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress - m_nPageSize * 16));
+        break;
+    case VK_NEXT:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress + m_nPageSize * 16));
+        break;
+    case 0x47:  // G - Go To Address
+        MemoryView_SelectAddress();
+        break;
+    case 0x42:  // B - change byte/word mode
+    case 0x57:  // W
+        MemoryView_SwitchWordByte();
+        break;
+    default:
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void MemoryView_OnLButtonDown(int mousex, int mousey)
+{
+    ::SetFocus(m_hwndMemoryViewer);
+
+    int addr = MemoryView_GetAddressByPoint(mousex, mousey);
+    if (addr >= 0)
+        MemoryView_GotoAddress((WORD)addr);
+}
+
+void MemoryView_OnRButtonDown(int mousex, int mousey)
+{
+    ::SetFocus(m_hwndMemoryViewer);
+
+    POINT pt = { mousex, mousey };
+    HMENU hMenu = ::CreatePopupMenu();
+
+    int addr = MemoryView_GetAddressByPoint(mousex, mousey);
+    if (addr >= 0)
+    {
+        MemoryView_GotoAddress((WORD)addr);
+
+        RECT rcValue;
+        MemoryView_GetCurrentValueRect(&rcValue, m_cxChar, m_cyLineMemory);
+        pt.x = rcValue.left;  pt.y = rcValue.bottom;
+
+        bool okHaltMode = g_pBoard->GetCPU()->IsHaltMode();
+        int addrType;
+        uint16_t value = g_pBoard->GetWordView((uint16_t)addr, okHaltMode, false, &addrType);
+
+        TCHAR buffer[24];
+        if (addrType != ADDRTYPE_IO && addrType != ADDRTYPE_DENY)
+        {
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Value: %06o"), value);
+            ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_VALUE, buffer);
+        }
+        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Address: %06o"), addr);
+        ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_ADDRESS, buffer);
+        ::AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    }
+
+    ::AppendMenu(hMenu, 0, ID_DEBUG_GOTO_ADDRESS, _T("Go to Address...\tG"));
+
+    ::ClientToScreen(m_hwndMemoryViewer, &pt);
+    ::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, m_hwndMemoryViewer, NULL);
+
+    VERIFY(::DestroyMenu(hMenu));
+}
+
+BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM /*lParam*/)
+{
+    short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+
+    int nDelta = zDelta / 120;
+    if (nDelta > 5) nDelta = 5;
+    if (nDelta < -5) nDelta = -5;
+
+    MemoryView_GotoAddress((WORD)(m_wCurrentAddress - nDelta * 2 * 16));
+
+    return FALSE;
+}
+
+BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos)
+{
+    switch (scrollcmd)
+    {
+    case SB_LINEDOWN:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress + 16));
+        break;
+    case SB_LINEUP:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress - 16));
+        break;
+    case SB_PAGEDOWN:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress + m_nPageSize * 16));
+        break;
+    case SB_PAGEUP:
+        MemoryView_GotoAddress((WORD)(m_wCurrentAddress - m_nPageSize * 16));
+        break;
+    case SB_THUMBPOSITION:
+        MemoryView_GotoAddress((WORD)(scrollpos * 16));
+        break;
+    }
+
+    return FALSE;
+}
+
+void MemoryView_UpdateWindowText()
+{
+    TCHAR buffer[64];
+    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Memory - %06o"), m_wCurrentAddress);
+    ::SetWindowText(g_hwndMemory, buffer);
+}
+
+void MemoryView_CopyValueToClipboard(WPARAM command)
+{
+    WORD address = m_wCurrentAddress;
+    WORD value;
+
+    if (command == ID_DEBUG_COPY_ADDRESS)
+    {
+        value = address;
+    }
+    else
+    {
+        // Get word from memory
+        int addrtype;
+        bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
+        value = g_pBoard->GetWordView(address, okHalt, FALSE, &addrtype);
+        bool okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
+
+        if (!okValid)
+        {
+            AlertWarning(_T("Failed to get value: invalid memory type."));
+            return;
+        }
+    }
 
     TCHAR buffer[7];
-    const TCHAR* ADDRESS_LINE = _T(" addr     0      2      4      6      10     12     14     16");
-    TextOut(hdc, cxChar * 4, 0, ADDRESS_LINE, (int) _tcslen(ADDRESS_LINE));
+    PrintOctalValue(buffer, value);
 
-    RECT rcClip;
-    GetClipBox(hdc, &rcClip);
-    RECT rcClient;
-    GetClientRect(m_hwndMemoryViewer, &rcClient);
-    m_nPageSize = rcClient.bottom / cyLine - 1;
+    // Prepare global memory object for the text
+    HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(buffer));
+    LPTSTR lptstrCopy = (LPTSTR)::GlobalLock(hglbCopy);
+    memcpy(lptstrCopy, buffer, sizeof(buffer));
+    ::GlobalUnlock(hglbCopy);
 
-    WORD address = m_wBaseAddress;
-    int y = 1 * cyLine;
-    for (;;)    // Draw lines
-    {
-        DrawOctalValue(hdc, 5 * cxChar, y, address);
-
-        int x = 13 * cxChar;
-        TCHAR wchars[16];
-        for (int j = 0; j < 8; j++)    // Draw words as octal value
-        {
-            // Get word from memory
-            int addrtype;
-            BOOL okHalt = g_pBoard->GetCPU()->IsHaltMode();
-            WORD word = g_pBoard->GetWordView(address, okHalt, FALSE, &addrtype);
-            BOOL okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
-            WORD wChanged = Emulator_GetChangeRamStatus(address);
-
-            if (okValid)
-            {
-                if (addrtype == ADDRTYPE_ROM)
-                    ::SetTextColor(hdc, COLOR_BLUE);
-                else
-                    ::SetTextColor(hdc, (wChanged != 0) ? COLOR_RED : colorText);
-                if (m_okMemoryByteMode)
-                {
-                    PrintOctalValue(buffer, (word & 0xff));
-                    TextOut(hdc, x, y, buffer + 3, 3);
-                    PrintOctalValue(buffer, (word >> 8));
-                    TextOut(hdc, x + 3 * cxChar + 3, y, buffer + 3, 3);
-                }
-                else
-                    DrawOctalValue(hdc, x, y, word);
-            }
-            else  // !okValid
-            {
-                if (addrtype == ADDRTYPE_IO)
-                {
-                    ::SetTextColor(hdc, COLOR_GREEN);
-                    TextOut(hdc, x, y, _T("  IO"), 4);
-                }
-                else
-                {
-                    ::SetTextColor(hdc, COLOR_NA);
-                    TextOut(hdc, x, y, _T("  NA"), 4);
-                }
-            }
-
-            // Prepare characters to draw at right
-            BYTE ch1 = LOBYTE(word);
-            TCHAR wch1 = Translate_BK_Unicode(ch1);
-            if (ch1 < 32) wch1 = _T('·');
-            wchars[j * 2] = wch1;
-            BYTE ch2 = HIBYTE(word);
-            TCHAR wch2 = Translate_BK_Unicode(ch2);
-            if (ch2 < 32) wch2 = _T('·');
-            wchars[j * 2 + 1] = wch2;
-
-            address += 2;
-            x += 7 * cxChar;
-        }
-        ::SetTextColor(hdc, colorText);
-
-        // Draw characters at right
-        int xch = x + cxChar;
-        TextOut(hdc, xch, y, wchars, 16);
-
-        y += cyLine;
-        if (y > rcClip.bottom) break;
-    }
-
-    SetTextColor(hdc, colorOld);
-    SetBkColor(hdc, colorBkOld);
-    SelectObject(hdc, hOldFont);
-    DeleteObject(hFont);
-
-    if (::GetFocus() == m_hwndMemoryViewer)
-    {
-        RECT rcFocus = rcClient;
-        rcFocus.left += cxChar * 5 - 1;
-        rcFocus.top += cyLine - 1;
-        rcFocus.right = cxChar * (63 + 24);
-        DrawFocusRect(hdc, &rcFocus);
-    }
+    // Send the text to the Clipboard
+    ::OpenClipboard(g_hwnd);
+    ::EmptyClipboard();
+    ::SetClipboardData(CF_UNICODETEXT, hglbCopy);
+    ::CloseClipboard();
 }
 
 LPCTSTR MemoryView_GetMemoryModeName()
@@ -342,120 +422,46 @@ void MemoryView_SwitchWordByte()
 
 void MemoryView_SelectAddress()
 {
-    WORD value = m_wBaseAddress;
-    if (InputBoxOctal(m_hwndMemoryViewer, _T("Go To Address"), _T("Address (octal):"), &value))
-        MemoryView_ScrollTo(value);
+    WORD value = m_wCurrentAddress;
+    if (InputBoxOctal(m_hwndMemoryViewer, _T("Go To Address"), &value))
+        MemoryView_GotoAddress(value);
+    ::SetFocus(m_hwndMemoryViewer);
 }
 
-void MemoryView_UpdateWindowText()
+void MemoryView_GotoAddress(WORD wAddress)
 {
-    //TCHAR buffer[64];
-    //swprintf_s(buffer, 64, _T("Memory - %s"), MemoryView_GetMemoryModeName());
-    ::SetWindowText(g_hwndMemory, _T("Memory"));
-}
+    m_wCurrentAddress = wAddress & ((WORD)~1);  // Address should be even
+    Settings_SetDebugMemoryAddress(m_wCurrentAddress);
 
-BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
-{
-    switch (vkey)
+    int addroffset = wAddress - m_wBaseAddress;
+    if (addroffset < 0)
     {
-    case VK_ESCAPE:
-        ConsoleView_Activate();
-        break;
-    case VK_HOME:
-        MemoryView_ScrollTo(0);
-        break;
-    case VK_LEFT:
-        MemoryView_Scroll(-2);
-        break;
-    case VK_RIGHT:
-        MemoryView_Scroll(2);
-        break;
-    case VK_UP:
-        MemoryView_Scroll(-16);
-        break;
-    case VK_DOWN:
-        MemoryView_Scroll(16);
-        break;
-    case VK_PRIOR:
-        MemoryView_Scroll(-m_nPageSize * 16);
-        break;
-    case VK_NEXT:
-        MemoryView_Scroll(m_nPageSize * 16);
-        break;
-    case 0x47:  // G - Go To Address
-        MemoryView_SelectAddress();
-        break;
-    case 0x42:  // B - change byte/word mode
-    case 0x57:  // W
-        MemoryView_SwitchWordByte();
-        break;
-    default:
-        return TRUE;
+        WORD baseaddr = (m_wCurrentAddress & 0xFFF0);  // Base address should be 16-byte aligned
+        MemoryView_ScrollTo(baseaddr);
     }
-    return FALSE;
-}
-
-BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM /*lParam*/)
-{
-    short zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
-
-    int nDelta = zDelta / 120;
-    if (nDelta > 5) nDelta = 5;
-    if (nDelta < -5) nDelta = -5;
-
-    MemoryView_Scroll(-nDelta * 2 * 16);
-
-    return FALSE;
-}
-
-BOOL MemoryView_OnVScroll(WPARAM wParam, LPARAM /*lParam*/)
-{
-    WORD scrollpos = HIWORD(wParam);
-    WORD scrollcmd = LOWORD(wParam);
-    switch (scrollcmd)
+    else if (addroffset >= m_nPageSize * 16)
     {
-    case SB_LINEDOWN:
-        MemoryView_Scroll(16);
-        break;
-    case SB_LINEUP:
-        MemoryView_Scroll(-16);
-        break;
-    case SB_PAGEDOWN:
-        MemoryView_Scroll(m_nPageSize * 16);
-        break;
-    case SB_PAGEUP:
-        MemoryView_Scroll(-m_nPageSize * 16);
-        break;
-    case SB_THUMBPOSITION:
-        MemoryView_ScrollTo(scrollpos * 16);
-        break;
+        WORD baseaddr = (WORD)((m_wCurrentAddress & 0xFFF0) - (m_nPageSize - 1) * 16);
+        MemoryView_ScrollTo(baseaddr);
     }
 
-    return FALSE;
+    MemoryView_UpdateWindowText();
 }
 
-// Scroll window to given base address
-void MemoryView_ScrollTo(WORD wAddress)
+// Scroll window to the given base address
+void MemoryView_ScrollTo(WORD wBaseAddress)
 {
-    m_wBaseAddress = wAddress & ((WORD)~1);
-    Settings_SetDebugMemoryAddress(m_wBaseAddress);
+    if (wBaseAddress == m_wBaseAddress)
+        return;
+
+    m_wBaseAddress = wBaseAddress;
+    Settings_SetDebugMemoryBase(wBaseAddress);
 
     InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
 
     MemoryView_UpdateScrollPos();
 }
-// Scroll window on given lines forward or backward
-void MemoryView_Scroll(int nDelta)
-{
-    if (nDelta == 0) return;
 
-    m_wBaseAddress = (WORD)(m_wBaseAddress + nDelta) & ((WORD)~1);
-    Settings_SetDebugMemoryAddress(m_wBaseAddress);
-
-    InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
-
-    MemoryView_UpdateScrollPos();
-}
 void MemoryView_UpdateScrollPos()
 {
     SCROLLINFO si;
@@ -467,6 +473,136 @@ void MemoryView_UpdateScrollPos()
     si.nMin = 0;
     si.nMax = 0x10000 / 16 - 1;
     SetScrollInfo(m_hwndMemoryViewer, SB_VERT, &si, TRUE);
+}
+
+void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine)
+{
+    ASSERT(pRect != NULL);
+
+    int addroffset = m_wCurrentAddress - m_wBaseAddress;
+    int line = addroffset / 16;
+    int pos = addroffset & 15;
+
+    pRect->left = cxChar * (13 + 7 * (pos / 2)) - cxChar / 2;
+    pRect->right = pRect->left + cxChar * 7;
+    pRect->top = (line + 1) * cyLine - 1;
+    pRect->bottom = pRect->top + cyLine + 1;
+}
+
+void MemoryView_OnDraw(HDC hdc)
+{
+    ASSERT(g_pBoard != NULL);
+
+    HFONT hFont = CreateMonospacedFont();
+    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+    COLORREF colorText = Settings_GetColor(ColorDebugText);
+    COLORREF colorChanged = Settings_GetColor(ColorDebugValueChanged);
+    COLORREF colorMemoryRom = Settings_GetColor(ColorDebugMemoryRom);
+    COLORREF colorMemoryIO = Settings_GetColor(ColorDebugMemoryIO);
+    COLORREF colorMemoryNA = Settings_GetColor(ColorDebugMemoryNA);
+    COLORREF colorOld = ::SetTextColor(hdc, colorText);
+    COLORREF colorHighlight = Settings_GetColor(ColorDebugHighlight);
+    COLORREF colorBack = ::GetSysColor(COLOR_WINDOW);
+    COLORREF colorBkOld = SetBkColor(hdc, colorBack);
+
+    m_cxChar = cxChar;
+    m_cyLineMemory = cyLine;
+
+    TCHAR buffer[7];
+    const TCHAR* ADDRESS_LINE = _T(" addr   0      2      4      6      10     12     14     16");
+    TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE, (int)_tcslen(ADDRESS_LINE));
+
+    RECT rcClip;
+    GetClipBox(hdc, &rcClip);
+    RECT rcClient;
+    GetClientRect(m_hwndMemoryViewer, &rcClient);
+    m_nPageSize = rcClient.bottom / cyLine - 1;
+
+    WORD address = m_wBaseAddress;
+    int y = 1 * cyLine;
+    for (;;)    // Draw lines
+    {
+        DrawOctalValue(hdc, 5 * cxChar, y, address);
+
+        int x = 13 * cxChar;
+        TCHAR wchars[16];
+        for (int j = 0; j < 8; j++)    // Draw words as octal value
+        {
+            // Get word from memory
+            int addrtype;
+            bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
+            WORD word = g_pBoard->GetWordView(address, okHalt, FALSE, &addrtype);
+            bool okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
+            WORD wChanged = Emulator_GetChangeRamStatus(address);
+
+            ::SetBkColor(hdc, (address == m_wCurrentAddress) ? colorHighlight : colorBack);
+
+            if (okValid)
+            {
+                if (addrtype == ADDRTYPE_ROM)
+                    ::SetTextColor(hdc, colorMemoryRom);
+                else
+                    ::SetTextColor(hdc, (wChanged != 0) ? colorChanged : colorText);
+                if (m_okMemoryByteMode)
+                {
+                    PrintOctalValue(buffer, (word & 0xff));
+                    TextOut(hdc, x, y, buffer + 3, 3);
+                    PrintOctalValue(buffer, (word >> 8));
+                    TextOut(hdc, x + 3 * cxChar + 3, y, buffer + 3, 3);
+                }
+                else
+                    DrawOctalValue(hdc, x, y, word);
+            }
+            else  // !okValid
+            {
+                if (addrtype == ADDRTYPE_IO)
+                {
+                    ::SetTextColor(hdc, colorMemoryIO);
+                    TextOut(hdc, x, y, _T("  IO  "), 6);
+                }
+                else
+                {
+                    ::SetTextColor(hdc, colorMemoryNA);
+                    TextOut(hdc, x, y, _T("  NA  "), 6);
+                }
+            }
+
+            // Prepare characters to draw at right
+            BYTE ch1 = LOBYTE(word);
+            TCHAR wch1 = Translate_BK_Unicode(ch1);
+            if (ch1 < 32) wch1 = _T('·');
+            wchars[j * 2] = wch1;
+            BYTE ch2 = HIBYTE(word);
+            TCHAR wch2 = Translate_BK_Unicode(ch2);
+            if (ch2 < 32) wch2 = _T('·');
+            wchars[j * 2 + 1] = wch2;
+
+            address += 2;
+            x += 7 * cxChar;
+        }
+        ::SetTextColor(hdc, colorText);
+        ::SetBkColor(hdc, colorBack);
+
+        // Draw characters at right
+        int xch = x + cxChar;
+        TextOut(hdc, xch, y, wchars, 16);
+
+        y += cyLine;
+        if (y > rcClip.bottom) break;
+    }
+
+    SetTextColor(hdc, colorOld);
+    SetBkColor(hdc, colorBkOld);
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
+
+    if (::GetFocus() == m_hwndMemoryViewer)
+    {
+        RECT rcFocus;
+        MemoryView_GetCurrentValueRect(&rcFocus, cxChar, cyLine);
+        DrawFocusRect(hdc, &rcFocus);
+    }
 }
 
 
