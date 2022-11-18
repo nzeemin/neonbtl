@@ -26,6 +26,7 @@ BOOL ShowSaveDialog(HWND hwndOwner, LPCTSTR strTitle, LPCTSTR strFilter, LPCTSTR
 BOOL ShowOpenDialog(HWND hwndOwner, LPCTSTR strTitle, LPCTSTR strFilter, TCHAR* bufFileName);
 
 void ShowSettingsDialog();
+BOOL ShowSettingsColorsDialog();
 
 
 //////////////////////////////////////////////////////////////////////
