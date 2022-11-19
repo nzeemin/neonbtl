@@ -174,7 +174,7 @@ BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
     if (!Emulator_InitConfiguration((NeonConfiguration)conf))
         return FALSE;
 
-    Emulator_SetSound(Settings_GetSound());
+    Emulator_SetSound(Settings_GetSound() != 0);
 
     if (!CreateMainWindow())
         return FALSE;

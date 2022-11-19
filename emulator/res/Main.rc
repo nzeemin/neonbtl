@@ -87,8 +87,9 @@ BEGIN
         MENUITEM "Load State…",                 ID_FILE_LOADSTATE, INACTIVE
         MENUITEM "Save State…",                 ID_FILE_SAVESTATE, INACTIVE
         MENUITEM SEPARATOR
-        MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT
-        MENUITEM "Save Screenshot As...",       ID_FILE_SAVESCREENSHOTAS
+        MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT, INACTIVE
+        MENUITEM "Screenshot to Clipboard",     ID_FILE_SCREENSHOTTOCLIPBOARD
+        MENUITEM "Save Screenshot as...",       ID_FILE_SAVESCREENSHOTAS, INACTIVE
         MENUITEM SEPARATOR
         MENUITEM "Settings General",            ID_FILE_SETTINGS
         MENUITEM "Settings Fonts and Colors",   ID_FILE_SETTINGS_COLORS

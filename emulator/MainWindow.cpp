@@ -201,6 +201,7 @@ BOOL MainWindow_InitToolbar()
     buttons[7].idCommand = ID_FILE_SCREENSHOT;
     buttons[7].iBitmap = ToolbarImageScreenshot;
     buttons[7].fsStyle = BTNS_BUTTON;
+    buttons[7].fsState = 0; // disabled
 
     SendMessage(m_hwndToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -841,14 +842,14 @@ void MainWindow_DoFileScreenshot()
 
 void MainWindow_DoFileScreenshotToClipboard()
 {
-    //HGLOBAL hDIB = ScreenView_GetScreenshotAsDIB();
-    //if (hDIB != NULL)
-    //{
-    //    ::OpenClipboard(g_hwnd);
-    //    ::EmptyClipboard();
-    //    ::SetClipboardData(CF_DIB, hDIB);
-    //    ::CloseClipboard();
-    //}
+    HGLOBAL hDIB = ScreenView_GetScreenshotAsDIB();
+    if (hDIB != NULL)
+    {
+        ::OpenClipboard(g_hwnd);
+        ::EmptyClipboard();
+        ::SetClipboardData(CF_DIB, hDIB);
+        ::CloseClipboard();
+    }
 }
 
 void MainWindow_DoFileScreenshotSaveAs()
