@@ -43,7 +43,6 @@
     <ClCompile Include="ScreenView.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="TapeView.cpp" />
     <ClCompile Include="ToolWindow.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -256,12 +256,12 @@ void MainWindow_RestoreSettings()
 
 void MainWindow_SavePosition()
 {
-        WINDOWPLACEMENT placement;
-        placement.length = sizeof(WINDOWPLACEMENT);
-        ::GetWindowPlacement(g_hwnd, &placement);
+    WINDOWPLACEMENT placement;
+    placement.length = sizeof(WINDOWPLACEMENT);
+    ::GetWindowPlacement(g_hwnd, &placement);
 
-        Settings_SetWindowRect(&(placement.rcNormalPosition));
-        Settings_SetWindowMaximized(placement.showCmd == SW_SHOWMAXIMIZED);
+    Settings_SetWindowRect(&(placement.rcNormalPosition));
+    Settings_SetWindowMaximized(placement.showCmd == SW_SHOWMAXIMIZED);
 }
 void MainWindow_RestorePositionAndShow()
 {
