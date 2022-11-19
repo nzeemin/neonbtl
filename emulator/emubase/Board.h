@@ -74,6 +74,7 @@ typedef void (CALLBACK* TELETYPECALLBACK)(unsigned char value);
 
 class CFloppyController;
 
+
 //////////////////////////////////////////////////////////////////////
 
 // Souz-Neon computer
@@ -118,17 +119,14 @@ public:  // System control
     void        LoadRAM(int startbank, const uint8_t* pBuffer, int length);  // Load data into the RAM
     void        Tick50();           // Tick 50 Hz - goes to CPU EVNT line
     void        TimerTick();        // Timer Tick, 31250 Hz, 32uS -- dividers are within timer routine
-    void        DCLO_Signal() { }   // DCLO signal
     void        ResetDevices();     // INIT signal
 
 public:
     void        ExecuteCPU();  // Execute one CPU instruction
     bool        SystemFrame();  // Do one frame -- use for normal run
     void        KeyboardEvent(uint8_t scancode, bool okPressed, bool okAr2);  // Key pressed or released
-    uint16_t    GetKeyboardRegister(void);
     uint16_t    GetPrinterOutPort() const { return m_PortDLBUFout; }
     void        SetPrinterInPort(uint8_t data);
-    bool        IsTapeMotorOn() const { return (m_Port177716tap & 0200) == 0; }
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
@@ -136,11 +134,11 @@ public:  // Floppy
     bool        IsFloppyReadOnly(int slot);
 
 public:  // Callbacks
-    /// \brief Assign tape read callback function.
+    //f Assign tape read callback function.
     void        SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate);
-    /// \brief Assign write read callback function.
+    // Assign write read callback function.
     void        SetTapeWriteCallback(TAPEWRITECALLBACK callback, int sampleRate);
-    /// \brief Assign sound output callback function.
+    // Assign sound output callback function.
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetTeletypeCallback(TELETYPECALLBACK callback);
 public:  // Memory
@@ -166,7 +164,7 @@ public:  // Memory
 private:
     void        TapeInput(bool inputBit);  // Tape input bit received
 private:
-    // Determite memory type for given address - see ADDRTYPE_Xxx constants
+    // Determine memory type for the given address - see ADDRTYPE_Xxx constants
     //   okHaltMode - processor mode (USER/HALT)
     //   okExec - true: read instruction for execution; false: read memory
     //   pOffset - result - offset in memory plane

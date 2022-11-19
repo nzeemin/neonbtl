@@ -498,7 +498,6 @@ void CProcessor::SetDCLOPin(bool value)
         m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = false;
         memset(m_virq, 0, sizeof(m_virq));
         m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
-        m_pBoard->DCLO_Signal();
         m_pBoard->ResetDevices();
     }
 }

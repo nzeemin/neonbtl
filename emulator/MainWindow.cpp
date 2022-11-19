@@ -14,8 +14,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include <commdlg.h>
 #include <crtdbg.h>
 #include <mmintrin.h>
-#include <vfw.h>
-#include <commctrl.h>
+#include <Vfw.h>
+#include <CommCtrl.h>
 
 #include "Main.h"
 #include "Emulator.h"
@@ -49,10 +49,10 @@ LRESULT CALLBACK MainWindow_WndProc(HWND, UINT, WPARAM, LPARAM);
 void MainWindow_AdjustWindowLayout();
 bool MainWindow_DoCommand(int commandId);
 void MainWindow_DoViewDebug();
+//void MainWindow_DoDebugMemoryMap();
 void MainWindow_DoViewToolbar();
 void MainWindow_DoViewKeyboard();
 void MainWindow_DoViewTape();
-void MainWindow_DoViewScreenColor();
 void MainWindow_DoViewScreenMode(int newMode);
 void MainWindow_DoEmulatorRun();
 void MainWindow_DoEmulatorAutostart();
@@ -64,6 +64,7 @@ void MainWindow_DoFileLoadState();
 void MainWindow_DoEmulatorFloppy(int slot);
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
 void MainWindow_DoFileScreenshot();
+void MainWindow_DoFileScreenshotToClipboard();
 void MainWindow_DoFileScreenshotSaveAs();
 void MainWindow_DoFileSettings();
 void MainWindow_DoFileSettingsColors();
@@ -101,6 +102,7 @@ void MainWindow_RegisterClass()
     KeyboardView_RegisterClass();
     MemoryView_RegisterClass();
     DebugView_RegisterClass();
+    //MemoryMapView_RegisterClass();
     DisasmView_RegisterClass();
     ConsoleView_RegisterClass();
     TapeView_RegisterClass();
@@ -129,13 +131,12 @@ BOOL CreateMainWindow()
     KeyboardView_Init();
 
     // Create screen window as a child of the main window
-    ScreenView_Create(g_hwnd, 4, 4, 576);
+    ScreenView_Create(g_hwnd, 0, 0);
 
     MainWindow_RestoreSettings();
 
     MainWindow_ShowHideToolbar();
     MainWindow_ShowHideKeyboard();
-    MainWindow_ShowHideTape();
     MainWindow_ShowHideDebug();
 
     MainWindow_RestorePositionAndShow();
@@ -171,7 +172,7 @@ BOOL MainWindow_InitToolbar()
     addbitmap.nID = IDB_TOOLBAR;
     SendMessage(m_hwndToolbar, TB_ADDBITMAP, 2, (LPARAM) &addbitmap);
 
-    TBBUTTON buttons[10];
+    TBBUTTON buttons[8];
     ZeroMemory(buttons, sizeof(buttons));
     for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -190,26 +191,18 @@ BOOL MainWindow_InitToolbar()
     buttons[3].idCommand = ID_EMULATOR_FLOPPY0;
     buttons[3].iBitmap = ToolbarImageFloppySlot;
     buttons[3].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[3].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("A"));
+    buttons[3].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("0"));
     buttons[4].idCommand = ID_EMULATOR_FLOPPY1;
     buttons[4].iBitmap = ToolbarImageFloppySlot;
     buttons[4].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[4].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("B"));
-    buttons[5].idCommand = ID_EMULATOR_FLOPPY2;
-    buttons[5].iBitmap = ToolbarImageFloppySlot;
-    buttons[5].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[5].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("C"));
-    buttons[6].idCommand = ID_EMULATOR_FLOPPY3;
-    buttons[6].iBitmap = ToolbarImageFloppySlot;
+    buttons[4].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("1"));
+    buttons[5].fsStyle = BTNS_SEP;
+    buttons[6].idCommand = ID_EMULATOR_SOUND;
+    buttons[6].iBitmap = 8;
     buttons[6].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[6].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("D"));
-    buttons[7].fsStyle = BTNS_SEP;
-    buttons[8].idCommand = ID_EMULATOR_SOUND;
-    buttons[8].iBitmap = 8;
-    buttons[8].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[9].idCommand = ID_FILE_SCREENSHOT;
-    buttons[9].iBitmap = ToolbarImageScreenshot;
-    buttons[9].fsStyle = BTNS_BUTTON;
+    buttons[7].idCommand = ID_FILE_SCREENSHOT;
+    buttons[7].iBitmap = ToolbarImageScreenshot;
+    buttons[7].fsStyle = BTNS_BUTTON;
 
     SendMessage(m_hwndToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -246,7 +239,7 @@ void MainWindow_RestoreSettings()
     TCHAR buf[MAX_PATH];
 
     // Reattach floppy images
-    for (int slot = 0; slot < 4; slot++)
+    for (int slot = 0; slot < 2; slot++)
     {
         buf[0] = _T('\0');
         Settings_GetFloppyFilePath(slot, buf);
@@ -264,21 +257,12 @@ void MainWindow_RestoreSettings()
 
 void MainWindow_SavePosition()
 {
-    if (m_MainWindow_Fullscreen)
-    {
-        Settings_SetWindowRect(&m_MainWindow_FullscreenOldRect);
-        Settings_SetWindowMaximized(m_MainWindow_FullscreenOldMaximized);
-    }
-    else
-    {
         WINDOWPLACEMENT placement;
         placement.length = sizeof(WINDOWPLACEMENT);
         ::GetWindowPlacement(g_hwnd, &placement);
 
         Settings_SetWindowRect(&(placement.rcNormalPosition));
         Settings_SetWindowMaximized(placement.showCmd == SW_SHOWMAXIMIZED);
-    }
-    Settings_SetWindowFullscreen(m_MainWindow_Fullscreen);
 }
 void MainWindow_RestorePositionAndShow()
 {
@@ -422,8 +406,6 @@ void MainWindow_AdjustWindowLayout()
 {
     RECT rcStatus;  GetWindowRect(m_hwndStatusbar, &rcStatus);
     int cyStatus = rcStatus.bottom - rcStatus.top;
-    if (m_MainWindow_Fullscreen)
-        cyStatus = 0;
 
     int yScreen = 0;
     int cxScreen = 0, cyScreen = 0;
@@ -476,8 +458,8 @@ void MainWindow_AdjustWindowLayout()
     }
     if (Settings_GetDebug())  // Debug views shown -- keyboard/tape snapped to top
     {
-        cxScreen = 690;
-        cyScreen = NEON_SCREEN_HEIGHT;
+        cxScreen = 640;
+        cyScreen = NEON_SCREEN_HEIGHT + 8;
 
         int yKeyboard = yScreen + cyScreen + 4;
         int yTape = yKeyboard;
@@ -523,11 +505,10 @@ void MainWindow_AdjustWindowLayout()
 
     SetWindowPos(m_hwndToolbar, NULL, 4, 4, cxScreen, cyToolbar, SWP_NOZORDER);
 
-    SetWindowPos(g_hwndScreen, NULL, 0, yScreen, cxScreen, cyScreen, SWP_NOZORDER /*| SWP_NOCOPYBITS*/);
+    SetWindowPos(g_hwndScreen, NULL, 0, yScreen, cxScreen, cyScreen, SWP_NOZORDER);
 
     int cyStatusReal = rcStatus.bottom - rcStatus.top;
-    SetWindowPos(m_hwndStatusbar, NULL, 0, rc.bottom - cyStatusReal, cxScreen, cyStatusReal,
-            SWP_NOZORDER | (m_MainWindow_Fullscreen ? SWP_HIDEWINDOW : SWP_SHOWWINDOW));
+    SetWindowPos(m_hwndStatusbar, NULL, 0, rc.bottom - cyStatusReal, cxScreen, cyStatusReal, SWP_NOZORDER | SWP_SHOWWINDOW);
 }
 
 void MainWindow_ShowHideDebug()
@@ -545,6 +526,8 @@ void MainWindow_ShowHideDebug()
             DestroyWindow(g_hwndDisasm);
         if (g_hwndMemory != INVALID_HANDLE_VALUE)
             DestroyWindow(g_hwndMemory);
+        //if (g_hwndMemoryMap != INVALID_HANDLE_VALUE)
+        //    DestroyWindow(g_hwndMemoryMap);
 
         MainWindow_AdjustWindowSize();
     }
@@ -668,12 +651,8 @@ void MainWindow_UpdateMenu()
     //MainWindow_SetToolbarImage(ID_EMULATOR_RUN, g_okEmulatorRunning ? ToolbarImageRun : ToolbarImagePause);
     // View|Debug check
     CheckMenuItem(hMenu, ID_VIEW_TOOLBAR, (Settings_GetToolbar() ? MF_CHECKED : MF_UNCHECKED));
-    CheckMenuItem(hMenu, ID_VIEW_DEBUG, (Settings_GetDebug() ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_VIEW_KEYBOARD, (Settings_GetKeyboard() ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_VIEW_TAPE, (Settings_GetTape() ? MF_CHECKED : MF_UNCHECKED));
-    // View|Color Screen
-    MainWindow_SetToolbarImage(ID_VIEW_RGBSCREEN,
-            (ScreenView_GetScreenMode() & 1) ? ToolbarImageColorScreen : ToolbarImageBWScreen);
     // View|Screen Mode
     UINT scrmodecmd = 0;
     switch (ScreenView_GetScreenMode())
@@ -687,7 +666,6 @@ void MainWindow_UpdateMenu()
 
     // Emulator menu options
     CheckMenuItem(hMenu, ID_EMULATOR_AUTOSTART, (Settings_GetAutostart() ? MF_CHECKED : MF_UNCHECKED));
-    //CheckMenuItem(hMenu, ID_EMULATOR_REALSPEED, (Settings_GetRealSpeed() ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_EMULATOR_SOUND, (Settings_GetSound() ? MF_CHECKED : MF_UNCHECKED));
 
     MainWindow_SetToolbarImage(ID_EMULATOR_SOUND, (Settings_GetSound() ? ToolbarImageSoundOn : ToolbarImageSoundOff));
@@ -698,14 +676,6 @@ void MainWindow_UpdateMenu()
     CheckMenuItem(hMenu, ID_EMULATOR_FLOPPY1, (g_pBoard->IsFloppyImageAttached(1) ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_EMULATOR_FLOPPY2, (g_pBoard->IsFloppyImageAttached(2) ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_EMULATOR_FLOPPY3, (g_pBoard->IsFloppyImageAttached(3) ? MF_CHECKED : MF_UNCHECKED));
-    //MainWindow_SetStatusbarBitmap(StatusbarPartMZ0,
-    //        g_pBoard->IsFloppyImageAttached(0) ? ((g_pBoard->IsFloppyReadOnly(0)) ? IDI_DISKETTEWP : IDI_DISKETTE) : 0);
-    //MainWindow_SetStatusbarBitmap(StatusbarPartMZ1,
-    //        g_pBoard->IsFloppyImageAttached(1) ? ((g_pBoard->IsFloppyReadOnly(1)) ? IDI_DISKETTEWP : IDI_DISKETTE) : 0);
-    //MainWindow_SetStatusbarBitmap(StatusbarPartMZ2,
-    //        g_pBoard->IsFloppyImageAttached(2) ? ((g_pBoard->IsFloppyReadOnly(2)) ? IDI_DISKETTEWP : IDI_DISKETTE) : 0);
-    //MainWindow_SetStatusbarBitmap(StatusbarPartMZ3,
-    //        g_pBoard->IsFloppyImageAttached(3) ? ((g_pBoard->IsFloppyReadOnly(3)) ? IDI_DISKETTEWP : IDI_DISKETTE) : 0);
     MainWindow_SetToolbarImage(ID_EMULATOR_FLOPPY0,
             g_pBoard->IsFloppyImageAttached(0) ? (g_pBoard->IsFloppyReadOnly(0) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
     MainWindow_SetToolbarImage(ID_EMULATOR_FLOPPY1,
@@ -714,6 +684,10 @@ void MainWindow_UpdateMenu()
             g_pBoard->IsFloppyImageAttached(2) ? (g_pBoard->IsFloppyReadOnly(2) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
     MainWindow_SetToolbarImage(ID_EMULATOR_FLOPPY3,
             g_pBoard->IsFloppyImageAttached(3) ? (g_pBoard->IsFloppyReadOnly(3) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
+
+    // Debug menu
+    BOOL okDebug = Settings_GetDebug();
+    CheckMenuItem(hMenu, ID_VIEW_DEBUG, (okDebug ? MF_CHECKED : MF_UNCHECKED));
 }
 
 // Process menu command
@@ -730,6 +704,9 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_FILE_SCREENSHOT:
         MainWindow_DoFileScreenshot();
+        break;
+    case ID_FILE_SCREENSHOTTOCLIPBOARD:
+        MainWindow_DoFileScreenshotToClipboard();
         break;
     case ID_FILE_SAVESCREENSHOTAS:
         MainWindow_DoFileScreenshotSaveAs();
@@ -749,17 +726,23 @@ bool MainWindow_DoCommand(int commandId)
     case ID_VIEW_KEYBOARD:
         MainWindow_DoViewKeyboard();
         break;
+    case ID_VIEW_SCREENMODE0:
+        MainWindow_DoViewScreenMode(0);
+        break;
+    case ID_VIEW_SCREENMODE1:
+        MainWindow_DoViewScreenMode(1);
+        break;
     case ID_VIEW_TAPE:
         MainWindow_DoViewTape();
         break;
     case ID_EMULATOR_RUN:
         MainWindow_DoEmulatorRun();
         break;
-    case ID_EMULATOR_AUTOSTART:
-        MainWindow_DoEmulatorAutostart();
-        break;
     case ID_EMULATOR_RESET:
         MainWindow_DoEmulatorReset();
+        break;
+    case ID_EMULATOR_AUTOSTART:
+        MainWindow_DoEmulatorAutostart();
         break;
     case ID_EMULATOR_REALSPEED:
         MainWindow_DoEmulatorRealSpeed();
@@ -818,7 +801,7 @@ bool MainWindow_DoCommand(int commandId)
 
 void MainWindow_DoViewDebug()
 {
-    //MainWindow_DoViewScreenMode(1);  // Switch to Normal Height mode
+    MainWindow_DoViewScreenMode(0);  // Switch to Normal Height mode
 
     Settings_SetDebug(!Settings_GetDebug());
     MainWindow_ShowHideDebug();
@@ -839,20 +822,9 @@ void MainWindow_DoViewTape()
     MainWindow_ShowHideTape();
 }
 
-void MainWindow_DoViewScreenColor()
-{
-    int mode = ScreenView_GetScreenMode();
-    int newmode = mode ^ 1;
-
-    ScreenView_SetScreenMode(newmode);
-    MainWindow_UpdateMenu();
-
-    Settings_SetScreenViewMode(newmode);
-}
-
 void MainWindow_DoViewScreenMode(int newMode)
 {
-    //if (Settings_GetDebug() && newMode == 2) return;  // Deny switching to Double Height in Debug mode
+    if (Settings_GetDebug() && newMode > 0) return;  // Deny switching in Debug mode
 
     ScreenView_SetScreenMode(newMode);
 
@@ -904,7 +876,7 @@ void MainWindow_DoFileLoadState()
     TCHAR bufFileName[MAX_PATH];
     BOOL okResult = ShowOpenDialog(g_hwnd,
             _T("Open state image to load"),
-            _T("NEONBTL state images (*.neon)\0*.neon\0All Files (*.*)\0*.*\0\0"),
+            _T("NEONBTL state images (*.neonst)\0*.neonst\0All Files (*.*)\0*.*\0\0"),
             bufFileName);
     if (! okResult) return;
 
@@ -916,8 +888,8 @@ void MainWindow_DoFileSaveState()
     TCHAR bufFileName[MAX_PATH];
     BOOL okResult = ShowSaveDialog(g_hwnd,
             _T("Save state image as"),
-            _T("NEONBTL state images (*.neon)\0*.neon\0All Files (*.*)\0*.*\0\0"),
-            _T("neon"),
+            _T("NEONBTL state images (*.neonst)\0*.neonst\0All Files (*.*)\0*.*\0\0"),
+            _T("neonst"),
             bufFileName);
     if (! okResult) return;
 
@@ -929,13 +901,26 @@ void MainWindow_DoFileScreenshot()
     TCHAR bufFileName[MAX_PATH];
     SYSTEMTIME st;
     ::GetSystemTime(&st);
-    wsprintf(bufFileName, _T("%04d%02d%02d%02d%02d%02d%03d.png"),
+    _sntprintf(bufFileName, sizeof(bufFileName) / sizeof(TCHAR) - 1,
+            _T("%04d%02d%02d%02d%02d%02d%03d.png"),
             st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 
     if (!ScreenView_SaveScreenshot(bufFileName))
     {
         AlertWarning(_T("Failed to save screenshot bitmap."));
     }
+}
+
+void MainWindow_DoFileScreenshotToClipboard()
+{
+    //HGLOBAL hDIB = ScreenView_GetScreenshotAsDIB();
+    //if (hDIB != NULL)
+    //{
+    //    ::OpenClipboard(g_hwnd);
+    //    ::EmptyClipboard();
+    //    ::SetClipboardData(CF_DIB, hDIB);
+    //    ::CloseClipboard();
+    //}
 }
 
 void MainWindow_DoFileScreenshotSaveAs()
@@ -1073,6 +1058,8 @@ void MainWindow_UpdateAllViews()
         InvalidateRect(g_hwndDisasm, NULL, TRUE);
     if (g_hwndMemory != NULL)
         InvalidateRect(g_hwndMemory, NULL, TRUE);
+    //if (g_hwndMemoryMap != NULL)
+    //    InvalidateRect(g_hwndMemoryMap, NULL, TRUE);
 }
 
 void MainWindow_SetToolbarImage(int commandId, int imageIndex)

@@ -51,10 +51,10 @@ void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();
 bool Emulator_SystemFrame();
-void Emulator_ProcessJoystick();
 DWORD Emulator_GetUptime();  // BK uptime, in seconds
 
-void Emulator_PrepareScreenRGB32(void* pBits, int screenMode);
+void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
+void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
 
 // Update cached values after Run or Step
 void Emulator_OnUpdate();

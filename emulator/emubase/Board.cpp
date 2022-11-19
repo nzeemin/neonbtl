@@ -144,7 +144,7 @@ void CMotherboard::LoadROM(int bank, const uint8_t* pBuffer)
 
 bool CMotherboard::IsFloppyImageAttached(int slot)
 {
-    ASSERT(slot >= 0 && slot < 4);
+    ASSERT(slot >= 0 && slot < 2);
     if (m_pFloppyCtl == nullptr)
         return false;
     return m_pFloppyCtl->IsAttached(slot);
@@ -152,7 +152,7 @@ bool CMotherboard::IsFloppyImageAttached(int slot)
 
 bool CMotherboard::IsFloppyReadOnly(int slot)
 {
-    ASSERT(slot >= 0 && slot < 4);
+    ASSERT(slot >= 0 && slot < 2);
     if (m_pFloppyCtl == nullptr)
         return false;
     return m_pFloppyCtl->IsReadOnly(slot);
@@ -160,7 +160,7 @@ bool CMotherboard::IsFloppyReadOnly(int slot)
 
 bool CMotherboard::AttachFloppyImage(int slot, LPCTSTR sFileName)
 {
-    ASSERT(slot >= 0 && slot < 4);
+    ASSERT(slot >= 0 && slot < 2);
     if (m_pFloppyCtl == nullptr)
         return false;
     return m_pFloppyCtl->AttachImage(slot, sFileName);
@@ -168,7 +168,7 @@ bool CMotherboard::AttachFloppyImage(int slot, LPCTSTR sFileName)
 
 void CMotherboard::DetachFloppyImage(int slot)
 {
-    ASSERT(slot >= 0 && slot < 4);
+    ASSERT(slot >= 0 && slot < 2);
     if (m_pFloppyCtl == nullptr)
         return;
     m_pFloppyCtl->DetachImage(slot);

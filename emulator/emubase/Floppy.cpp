@@ -67,7 +67,7 @@ CFloppyController::CFloppyController()
 
 CFloppyController::~CFloppyController()
 {
-    for (int drive = 0; drive < 4; drive++)
+    for (int drive = 0; drive < 2; drive++)
         DetachImage(drive);
 }
 
@@ -299,7 +299,7 @@ void CFloppyController::Periodic()
     if (!IsEngineOn()) return;  // Вращаем дискеты только если включен мотор
 
     // Вращаем дискеты во всех драйвах сразу
-    for (int drive = 0; drive < 4; drive++)
+    for (int drive = 0; drive < 2; drive++)
     {
         m_drivedata[drive].dataptr += 2;
         if (m_drivedata[drive].dataptr >= FLOPPY_RAWTRACKSIZE)

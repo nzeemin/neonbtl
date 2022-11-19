@@ -75,13 +75,27 @@
     <ClInclude Include="res\resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\diskette.ico" />
-    <Image Include="res\diskettewp.ico" />
-    <Image Include="res\keyboard.bmp" />
-    <Image Include="res\keyboardmask.bmp" />
-    <Image Include="res\NEONBTL.ico" />
-    <Image Include="res\small.ico" />
-    <Image Include="res\Toolbar.bmp" />
+    <Image Include="res\diskette.ico">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\diskettewp.ico">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\NEONBTL.ico">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\small.ico">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\keyboard.bmp">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\keyboardmask.bmp">
+      <Filter>res</Filter>
+    </Image>
+    <Image Include="res\Toolbar.bmp">
+      <Filter>res</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="manifest.xml">
@@ -89,9 +103,11 @@
     </Xml>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="res\Main.rc" />
+    <None Include="Version.tpl" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Version.tpl" />
+    <ResourceCompile Include="res\Main.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

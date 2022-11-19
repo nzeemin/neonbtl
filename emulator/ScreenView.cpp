@@ -11,6 +11,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 // ScreenView.cpp
 
 #include "stdafx.h"
+#include <windowsx.h>
 #include <mmintrin.h>
 #include <vfw.h>
 #include "Main.h"
@@ -30,14 +31,17 @@ HDRAWDIB m_hdd = NULL;
 BITMAPINFO m_bmpinfo;
 HBITMAP m_hbmp = NULL;
 DWORD * m_bits = NULL;
-int m_cxScreenWidth = NEON_SCREEN_WIDTH;
+int m_cxScreenWidth = NEON_SCREEN_WIDTH / 2;
 int m_cyScreenHeight = NEON_SCREEN_HEIGHT;
+int m_xScreenOffset = 0;
+int m_yScreenOffset = 0;
 BYTE m_ScreenKeyState[256];
 int m_ScreenMode = 0;
 
 void ScreenView_CreateDisplay();
 void ScreenView_OnDraw(HDC hdc);
 //BOOL ScreenView_OnKeyEvent(WPARAM vkey, BOOL okExtKey, BOOL okPressed);
+void ScreenView_OnRButtonDown(int mousex, int mousey);
 
 const int KEYEVENT_QUEUE_SIZE = 32;
 WORD m_ScreenKeyQueue[KEYEVENT_QUEUE_SIZE];
@@ -80,11 +84,11 @@ void ScreenView_Done()
 {
     if (m_hbmp != NULL)
     {
-        DeleteObject(m_hbmp);
+        VERIFY(::DeleteObject(m_hbmp));
         m_hbmp = NULL;
     }
 
-    DrawDibClose( m_hdd );
+    DrawDibClose(m_hdd);
 }
 
 void ScreenView_CreateDisplay()
@@ -93,14 +97,14 @@ void ScreenView_CreateDisplay()
 
     if (m_hbmp != NULL)
     {
-        DeleteObject(m_hbmp);
+        VERIFY(::DeleteObject(m_hbmp));
         m_hbmp = NULL;
     }
 
-    HDC hdc = GetDC( g_hwnd );
+    HDC hdc = ::GetDC(g_hwnd);
 
-    m_bmpinfo.bmiHeader.biSize = sizeof( BITMAPINFOHEADER );
-    m_bmpinfo.bmiHeader.biWidth = NEON_SCREEN_WIDTH;
+    m_bmpinfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    m_bmpinfo.bmiHeader.biWidth = m_cxScreenWidth;
     m_bmpinfo.bmiHeader.biHeight = m_cyScreenHeight;
     m_bmpinfo.bmiHeader.biPlanes = 1;
     m_bmpinfo.bmiHeader.biBitCount = 32;
@@ -111,20 +115,20 @@ void ScreenView_CreateDisplay()
     m_bmpinfo.bmiHeader.biClrUsed = 0;
     m_bmpinfo.bmiHeader.biClrImportant = 0;
 
-    m_hbmp = CreateDIBSection( hdc, &m_bmpinfo, DIB_RGB_COLORS, (void **) &m_bits, NULL, 0 );
+    m_hbmp = CreateDIBSection(hdc, &m_bmpinfo, DIB_RGB_COLORS, (void **) &m_bits, NULL, 0);
 
-    ReleaseDC( g_hwnd, hdc );
+    VERIFY(::ReleaseDC(g_hwnd, hdc));
 }
 
 // Create Screen View as child of Main Window
-void ScreenView_Create(HWND hwndParent, int x, int y, int cxWidth)
+void ScreenView_Create(HWND hwndParent, int x, int y)
 {
     ASSERT(hwndParent != NULL);
 
     int xLeft = x;
     int yTop = y;
-    int cyScreenHeight = 4 + m_cyScreenHeight + 4;
-    int cyHeight = cyScreenHeight;
+    int cxWidth = 4 + NEON_SCREEN_HEIGHT / 2 + 4;
+    int cyHeight = 4 + NEON_SCREEN_HEIGHT + 4;
 
     g_hwndScreen = CreateWindow(
             CLASSNAME_SCREENVIEW, NULL,
@@ -141,6 +145,9 @@ LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
+    case WM_COMMAND:
+        ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
+        break;
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -154,6 +161,9 @@ LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         break;
     case WM_LBUTTONDOWN:
         SetFocus(hWnd);
+        break;
+    case WM_RBUTTONDOWN:
+        ScreenView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
         //case WM_KEYDOWN:
         //    //if ((lParam & (1 << 30)) != 0)  // Auto-repeats should be ignored
@@ -177,6 +187,21 @@ LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     return (LRESULT)FALSE;
 }
 
+void ScreenView_OnRButtonDown(int mousex, int mousey)
+{
+    ::SetFocus(g_hwndScreen);
+
+    HMENU hMenu = ::CreatePopupMenu();
+    ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
+    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
+
+    POINT pt = { mousex, mousey };
+    ::ClientToScreen(g_hwndScreen, &pt);
+    ::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, g_hwndScreen, NULL);
+
+    VERIFY(::DestroyMenu(hMenu));
+}
+
 int ScreenView_GetScreenMode()
 {
     return m_ScreenMode;
@@ -188,48 +213,56 @@ void ScreenView_SetScreenMode(int newMode)
     m_ScreenMode = newMode;
 
     // Ask Emulator module for screen width and height
-    int cxWidth = NEON_SCREEN_WIDTH;
-    int cyHeight = NEON_SCREEN_HEIGHT;
-
+    int cxWidth, cyHeight;
+    Emulator_GetScreenSize(newMode, &cxWidth, &cyHeight);
+    m_cxScreenWidth = cxWidth;
     m_cyScreenHeight = cyHeight;
     ScreenView_CreateDisplay();
 
-    RECT rc;  ::GetWindowRect(g_hwndScreen, &rc);
-    ::SetWindowPos(g_hwndScreen, NULL, 0, 0, rc.right - rc.left, 4 + cyHeight + 4, SWP_NOZORDER | SWP_NOMOVE);
+    ScreenView_RedrawScreen();
 }
 
 void ScreenView_OnDraw(HDC hdc)
 {
     if (m_bits == NULL) return;
 
+    HBRUSH hBrush = ::CreateSolidBrush(COLOR_BK_BACKGROUND);
+    HGDIOBJ hOldBrush = ::SelectObject(hdc, hBrush);
+
     RECT rc;  ::GetClientRect(g_hwndScreen, &rc);
-    int x = (rc.right - NEON_SCREEN_WIDTH) / 2;
+    m_xScreenOffset = 0;
+    m_yScreenOffset = 0;
+    if (rc.right > m_cxScreenWidth)
+    {
+        m_xScreenOffset = (rc.right - m_cxScreenWidth) / 2;
+        ::PatBlt(hdc, 0, 0, m_xScreenOffset, rc.bottom, PATCOPY);
+        ::PatBlt(hdc, rc.right, 0, m_cxScreenWidth + m_xScreenOffset - rc.right, rc.bottom, PATCOPY);
+    }
+    if (rc.bottom > m_cyScreenHeight)
+    {
+        m_yScreenOffset = (rc.bottom - m_cyScreenHeight) / 2;
+        ::PatBlt(hdc, m_xScreenOffset, 0, m_cxScreenWidth, m_yScreenOffset, PATCOPY);
+        int frombottom = rc.bottom - m_yScreenOffset - m_cyScreenHeight;
+        ::PatBlt(hdc, m_xScreenOffset, rc.bottom, m_cxScreenWidth, -frombottom, PATCOPY);
+    }
+
+    ::SelectObject(hdc, hOldBrush);
+    VERIFY(::DeleteObject(hBrush));
 
     DrawDibDraw(m_hdd, hdc,
-            x, 4, -1, -1,
+            m_xScreenOffset, m_yScreenOffset, -1, -1,
             &m_bmpinfo.bmiHeader, m_bits, 0, 0,
             m_cxScreenWidth, m_cyScreenHeight,
             0);
-
-    // Empty border
-    HBRUSH hBrush = ::CreateSolidBrush(COLOR_BK_BACKGROUND);
-    //HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR__BTNFACE));
-    HGDIOBJ hOldBrush = ::SelectObject(hdc, hBrush);
-    PatBlt(hdc, 0, 0, rc.right, 4, PATCOPY);
-    PatBlt(hdc, 0, 0, x, rc.bottom, PATCOPY);
-    PatBlt(hdc, x + NEON_SCREEN_WIDTH, 0, rc.right - x - NEON_SCREEN_WIDTH, rc.bottom, PATCOPY);
-    PatBlt(hdc, 0, rc.bottom, rc.right, -4, PATCOPY);
-    ::SelectObject(hdc, hOldBrush);
-    ::DeleteObject(hBrush);
 }
 
 void ScreenView_RedrawScreen()
 {
     ScreenView_PrepareScreen();
 
-    HDC hdc = GetDC(g_hwndScreen);
+    HDC hdc = ::GetDC(g_hwndScreen);
     ScreenView_OnDraw(hdc);
-    ::ReleaseDC(g_hwndScreen, hdc);
+    VERIFY(::ReleaseDC(g_hwndScreen, hdc));
 }
 
 void ScreenView_PrepareScreen()
@@ -378,8 +411,8 @@ void ScreenView_KeyEvent(BYTE keyscan, BOOL pressed)
 
 BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)
 {
-    //ASSERT(sFileName != NULL);
-    //ASSERT(m_bits != NULL);
+    ASSERT(sFileName != NULL);
+    ASSERT(m_bits != NULL);
 
     //DWORD* pBits = (DWORD*) ::malloc(NEON_SCREEN_WIDTH * NEON_SCREEN_HEIGHT * 4);
     //const DWORD* colors = Emulator_GetPalette(m_ScreenMode);

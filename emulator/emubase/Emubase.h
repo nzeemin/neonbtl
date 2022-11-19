@@ -93,9 +93,9 @@ public:
 class CFloppyController
 {
 protected:
-    CFloppyDrive m_drivedata[4];  // Floppy drives
-    CFloppyDrive* m_pDrive; // Current drive; NULL if not selected
-    uint16_t m_drive;      // Drive number: from 0 to 3; -1 if not selected
+    CFloppyDrive m_drivedata[2];  // Floppy drives
+    CFloppyDrive* m_pDrive; // Current drive; nullptr if not selected
+    uint16_t m_drive;       // Drive number: from 0 to 3; -1 if not selected
     uint16_t m_track;       // Track number: from 0 to 79
     uint16_t m_side;        // Disk side: 0 or 1
     uint16_t m_status;      // See FLOPPY_STATUS_XXX defines
@@ -119,14 +119,14 @@ public:
     void Reset();           // Reset the device
 
 public:
-    // Attach the image to the drive -- insert disk
+    // Attach the image to the drive - insert disk
     bool AttachImage(int drive, LPCTSTR sFileName);
-    // Detach image from the drive -- remove disk
+    // Detach image from the drive - remove disk
     void DetachImage(int drive);
     // Check if the drive has an image attached
-    bool IsAttached(int drive) const { return (m_drivedata[drive].fpFile != NULL); }
+    bool IsAttached(int drive) const { return (m_drivedata[drive].fpFile != nullptr); }
     // Check if the drive's attached image is read-only
-    bool IsReadOnly(int drive) { return m_drivedata[drive].okReadOnly; } // return (m_status & FLOPPY_STATUS_WRITEPROTECT) != 0; }
+    bool IsReadOnly(int drive) { return m_drivedata[drive].okReadOnly; }
     // Check if floppy engine now rotates
     bool IsEngineOn() { return (m_flags & FLOPPY_CMD_ENGINESTART) != 0; }
     uint16_t GetData(void);         // Reading port 177132 - data

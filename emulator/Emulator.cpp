@@ -44,14 +44,6 @@ uint16_t g_wEmulatorPrevCpuPC = 0177777;  // Previous PC value
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R);
 
-enum
-{
-    TAPEMODE_STOPPED = 0,
-    TAPEMODE_STARTED = 1,
-    TAPEMODE_READING = 2,
-    TAPEMODE_FINISHED = -1
-} m_EmulatorTapeMode = TAPEMODE_STOPPED;
-int m_EmulatorTapeCount = 0;
 
 //////////////////////////////////////////////////////////////////////
 
@@ -113,10 +105,6 @@ bool Emulator_Init()
         //SoundGen_Initialize(Settings_GetSoundVolume());
         g_pBoard->SetSoundGenCallback(Emulator_SoundGenCallback);
     }
-
-    //g_pBoard->SetTeletypeCallback(Emulator_TeletypeCallback);
-
-    m_EmulatorTapeMode = TAPEMODE_STOPPED;
 
     return true;
 }
@@ -210,8 +198,6 @@ void Emulator_Reset()
 
     m_nUptimeFrameCount = 0;
     m_dwEmulatorUptime = 0;
-
-    m_EmulatorTapeMode = TAPEMODE_STOPPED;
 
     MainWindow_UpdateAllViews();
 }
@@ -372,42 +358,6 @@ bool Emulator_SystemFrame()
         MainWindow_SetStatusbarText(StatusbarPartUptime, buffer);
     }
 
-    bool okTapeMotor = g_pBoard->IsTapeMotorOn();
-    if (Settings_GetTape())
-    {
-        m_EmulatorTapeMode = okTapeMotor ? TAPEMODE_FINISHED : TAPEMODE_STOPPED;
-    }
-    else  // Fake tape mode
-    {
-        switch (m_EmulatorTapeMode)
-        {
-        case TAPEMODE_STOPPED:
-            if (okTapeMotor)
-            {
-                m_EmulatorTapeMode = TAPEMODE_STARTED;
-                m_EmulatorTapeCount = 10;  // wait 2/5 sec
-            }
-            break;
-        case TAPEMODE_STARTED:
-            if (!okTapeMotor)
-                m_EmulatorTapeMode = TAPEMODE_STOPPED;
-            else
-            {
-                m_EmulatorTapeCount--;
-                if (m_EmulatorTapeCount <= 0)
-                {
-                    uint16_t pc = g_pBoard->GetCPU()->GetPC();
-                    //
-                }
-            }
-            break;
-        case TAPEMODE_FINISHED:
-            if (!okTapeMotor)
-                m_EmulatorTapeMode = TAPEMODE_STOPPED;
-            break;
-        }
-    }
-
     return true;
 }
 
@@ -457,9 +407,51 @@ uint16_t Emulator_GetChangeRamStatus(uint16_t address)
     return *((uint16_t*)(g_pEmulatorChangedRam + address));
 }
 
+// Прототип функции, вызываемой для каждой сформированной строки экрана
+typedef void (CALLBACK* SCREEN_LINE_CALLBACK)(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+
+void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+
+struct ScreenModeStruct
+{
+    int width;
+    int height;
+    SCREEN_LINE_CALLBACK lineCallback;
+}
+static ScreenModeReference[] =
+{
+    // wid  hei  callback                                 size   scaleX  scaleY  notes
+    { 416, 300, PrepareScreenLine416x300 },  //  416x300   0.5     1      Debug mode
+    { 832, 600, PrepareScreenLine832x600 },  //  832x600   1       2
+};
+
+void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)
+{
+    if (scrmode < 0 || scrmode >= sizeof(ScreenModeReference) / sizeof(ScreenModeStruct))
+        return;
+    ScreenModeStruct* pinfo = ScreenModeReference + scrmode;
+    *pwid = pinfo->width;
+    *phei = pinfo->height;
+}
+
+void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCallback);
+
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 {
     if (pImageBits == nullptr) return;
+
+    // Render to bitmap
+    SCREEN_LINE_CALLBACK lineCallback = ScreenModeReference[screenMode].lineCallback;
+    Emulator_PrepareScreenLines(pImageBits, lineCallback);
+}
+
+// Формирует 300 строк экрана; для каждой сформированной строки вызывает функцию lineCallback
+void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCallback)
+{
+    if (pImageBits == nullptr || lineCallback == nullptr) return;
+
+    uint32_t linebits[NEON_SCREEN_WIDTH];
 
     const CMotherboard* pBoard = g_pBoard;
 
@@ -472,7 +464,7 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
     //tasaddr += 4 * 16;  //DEBUG: Skip first lines
     for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам
     {
-        uint32_t* plinebits = ((uint32_t*)pImageBits + NEON_SCREEN_WIDTH * (NEON_SCREEN_HEIGHT - 1 - line));
+        uint32_t* plinebits = linebits;
 
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
@@ -485,7 +477,7 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
 
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 017)) << 18);
         int x = 0;
-        while (true)  // Цикл по видеоотрезкам строки, до полного заполнения строки
+        for (;;)  // Цикл по видеоотрезкам строки, до полного заполнения строки
         {
             uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
             uint16_t otrhi = pBoard->GetRAMWordView(lineaddr + 2);
@@ -528,7 +520,32 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
             }
             if (x >= 832) break;
         }
+
+        (*lineCallback)((uint32_t*)pImageBits, linebits, line);
     }
+}
+
+// 1/2 part of "a" plus 1/2 part of "b"
+#define AVERAGERGB(a, b)  ( (((a) & 0xfefefeffUL) + ((b) & 0xfefefeffUL)) >> 1 )
+
+void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    uint32_t* pBits = pImageBits + (300 - 1 - line) * 416;
+    for (int x = 0; x < 832; x += 2)
+    {
+        uint32_t color1 = *pLineBits++;
+        uint32_t color2 = *pLineBits++;
+        uint32_t color = AVERAGERGB(color1, color2);
+        *pBits++ = color;
+    }
+}
+
+void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    uint32_t* pBits = pImageBits + (300 - 1 - line) * 832 * 2;
+    memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
+    pBits += 832;
+    memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
 }
 
 
