@@ -54,23 +54,8 @@ enum NeonConfiguration
 //////////////////////////////////////////////////////////////////////
 // Special key codes
 
-// Tape emulator callback used to read a tape recorded data.
-// Input:
-//   samples    Number of samples to play.
-// Output:
-//   result     Bit to put in tape input port.
-typedef bool (CALLBACK* TAPEREADCALLBACK)(unsigned int samples);
-
-// Tape emulator callback used to write a data to tape.
-// Input:
-//   value      Sample value to write.
-typedef void (CALLBACK* TAPEWRITECALLBACK)(int value, unsigned int samples);
-
 // Sound generator callback function type
 typedef void (CALLBACK* SOUNDGENCALLBACK)(unsigned short L, unsigned short R);
-
-// Teletype callback function type - board calls it if symbol ready to transmit
-typedef void (CALLBACK* TELETYPECALLBACK)(unsigned char value);
 
 class CFloppyController;
 
@@ -134,13 +119,8 @@ public:  // Floppy
     bool        IsFloppyReadOnly(int slot);
 
 public:  // Callbacks
-    //f Assign tape read callback function.
-    void        SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate);
-    // Assign write read callback function.
-    void        SetTapeWriteCallback(TAPEWRITECALLBACK callback, int sampleRate);
     // Assign sound output callback function.
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
-    void        SetTeletypeCallback(TELETYPECALLBACK callback);
 public:  // Memory
     // Read command for execution
     uint16_t GetWordExec(uint16_t address, bool okHaltMode) { return GetWord(address, okHaltMode, true); }
@@ -161,8 +141,6 @@ public:  // Memory
     uint16_t GetPortView(uint16_t address) const;
     // Read SEL register
     uint16_t GetSelRegister() const { return 0; }
-private:
-    void        TapeInput(bool inputBit);  // Tape input bit received
 private:
     // Determine memory type for the given address - see ADDRTYPE_Xxx constants
     //   okHaltMode - processor mode (USER/HALT)
@@ -189,7 +167,6 @@ private:  // Ports: implementation
     uint16_t    m_PortDLBUFout;     // Parallel port, output register
     uint16_t    m_Port177716;       // System register (read only)
     uint16_t    m_Port177716mem;    // System register (memory)
-    uint16_t    m_Port177716tap;    // System register (tape)
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags
@@ -202,11 +179,7 @@ private:  // Timer implementation
     void        SetTimerState(uint16_t val);    //sets timer state
 
 private:
-    TAPEREADCALLBACK m_TapeReadCallback;
-    TAPEWRITECALLBACK m_TapeWriteCallback;
-    int         m_nTapeSampleRate;
     SOUNDGENCALLBACK m_SoundGenCallback;
-    TELETYPECALLBACK m_TeletypeCallback;
 private:
     void        DoSound(void);
 

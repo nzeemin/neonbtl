@@ -26,11 +26,7 @@ CMotherboard::CMotherboard ()
     m_pFloppyCtl = nullptr;
 
     m_dwTrace = 0;
-    m_TapeReadCallback = nullptr;
-    m_TapeWriteCallback = nullptr;
-    m_nTapeSampleRate = 0;
     m_SoundGenCallback = nullptr;
-    m_TeletypeCallback = nullptr;
 
     ::memset(m_HR, 0, sizeof(m_HR));
     ::memset(m_UR, 0, sizeof(m_UR));
@@ -109,7 +105,6 @@ void CMotherboard::Reset ()
     m_PortDLBUFin = m_PortDLBUFout = 0;
     m_Port177716 = 0300;
     m_Port177716mem = 0000002;
-    m_Port177716tap = 0200;
 
     m_timer = 0177777;
     m_timerdivider = 0;
@@ -323,16 +318,7 @@ bool CMotherboard::SystemFrame()
 {
     const int frameProcTicks = 16;
     const int audioticks = 20286 / (SOUNDSAMPLERATE / 25);
-    const int teletypeTicks = 20000 / (9600 / 25);
     int floppyTicks = 32;
-    int teletypeTxCount = 0;
-
-    int frameTapeTicks = 0, tapeSamplesPerFrame = 0, tapeReadError = 0;
-    if (m_TapeReadCallback != nullptr || m_TapeWriteCallback != nullptr)
-    {
-        tapeSamplesPerFrame = m_nTapeSampleRate / 25;
-        frameTapeTicks = 20000 / tapeSamplesPerFrame;
-    }
 
     int timerTicks = 0;
 
@@ -372,63 +358,6 @@ bool CMotherboard::SystemFrame()
 
         if (frameticks % audioticks == 0)  // AUDIO tick
             DoSound();
-
-        if ((m_TapeReadCallback != nullptr || m_TapeWriteCallback != nullptr) && frameticks % frameTapeTicks == 0)
-        {
-            int tapeSamples = 0;
-            const int readsTotal = 20000 / frameTapeTicks;
-            for (;;)
-            {
-                tapeSamples++;
-                tapeReadError += readsTotal;
-                if (2 * tapeReadError >= tapeSamples)
-                {
-                    tapeReadError -= tapeSamplesPerFrame;
-                    break;
-                }
-            }
-
-            // Reading the tape
-            if (m_TapeReadCallback != nullptr)
-            {
-                bool tapeBit = (*m_TapeReadCallback)(tapeSamples);
-                TapeInput(tapeBit);
-            }
-            else if (m_TapeWriteCallback != nullptr)
-            {
-                unsigned int value = 0;
-                switch (m_Port177716tap & 0140)
-                {
-                case 0000: value = 0;                  break;
-                case 0040: value = 0xffffffff / 4;     break;
-                case 0100: value = 0xffffffff / 4 * 3; break;
-                case 0140: value = 0xffffffff;         break;
-                }
-                (*m_TapeWriteCallback)(value, tapeSamples);
-            }
-        }
-
-        if (frameticks % teletypeTicks)
-        {
-            if (teletypeTxCount > 0)
-            {
-                teletypeTxCount--;
-                if (teletypeTxCount == 0)  // Translation countdown finished - the byte translated
-                {
-                    if (m_TeletypeCallback != nullptr)
-                        (*m_TeletypeCallback)(m_Port177566 & 0xff);
-                    m_Port177564 |= 0200;
-                    if (m_Port177564 & 0100)
-                    {
-                        m_pCPU->InterruptVIRQ(1, 064);
-                    }
-                }
-            }
-            else if ((m_Port177564 & 0200) == 0)
-            {
-                teletypeTxCount = 8;  // Start translation countdown
-            }
-        }
     }
 
     return true;
@@ -464,17 +393,6 @@ void CMotherboard::KeyboardEvent(uint8_t scancode, bool okPressed, bool okAr2)
         {
             m_pCPU->InterruptVIRQ(1, (okAr2 ? 0274 : 060));
         }
-    }
-}
-
-void CMotherboard::TapeInput(bool inputBit)
-{
-    uint16_t tapeBitOld = (m_Port177716 & 040);
-    uint16_t tapeBitNew = inputBit ? 0 : 040;
-    if (tapeBitNew != tapeBitOld)
-    {
-        m_Port177716 = (m_Port177716 & ~040) | tapeBitNew;  // Write new tape bit
-        m_Port177716 |= 4;  // Set "ready" flag
     }
 }
 
@@ -915,42 +833,12 @@ void CMotherboard::DoSound(void)
     if (m_SoundGenCallback == nullptr)
         return;
 
-    bool bSoundBit = (m_Port177716tap & 0100) != 0;
+    bool bSoundBit = 0;//TODO
 
     if (bSoundBit)
         (*m_SoundGenCallback)(0x1fff, 0x1fff);
     else
         (*m_SoundGenCallback)(0x0000, 0x0000);
-}
-
-void CMotherboard::SetTapeReadCallback(TAPEREADCALLBACK callback, int sampleRate)
-{
-    if (callback == nullptr)  // Reset callback
-    {
-        m_TapeReadCallback = nullptr;
-        m_nTapeSampleRate = 0;
-    }
-    else
-    {
-        m_TapeReadCallback = callback;
-        m_nTapeSampleRate = sampleRate;
-        m_TapeWriteCallback = nullptr;
-    }
-}
-
-void CMotherboard::SetTapeWriteCallback(TAPEWRITECALLBACK callback, int sampleRate)
-{
-    if (callback == nullptr)  // Reset callback
-    {
-        m_TapeWriteCallback = nullptr;
-        m_nTapeSampleRate = 0;
-    }
-    else
-    {
-        m_TapeWriteCallback = callback;
-        m_nTapeSampleRate = sampleRate;
-        m_TapeReadCallback = nullptr;
-    }
 }
 
 void CMotherboard::SetSoundGenCallback(SOUNDGENCALLBACK callback)
@@ -962,18 +850,6 @@ void CMotherboard::SetSoundGenCallback(SOUNDGENCALLBACK callback)
     else
     {
         m_SoundGenCallback = callback;
-    }
-}
-
-void CMotherboard::SetTeletypeCallback(TELETYPECALLBACK callback)
-{
-    if (callback == nullptr)  // Reset callback
-    {
-        m_TeletypeCallback = nullptr;
-    }
-    else
-    {
-        m_TeletypeCallback = callback;
     }
 }
 

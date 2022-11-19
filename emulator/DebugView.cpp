@@ -293,7 +293,7 @@ void DebugView_DoDraw(HDC hdc)
     ::PatBlt(hdc, x, 0, 4, cyHeight, PATCOPY);
     x += 4;
     int xPorts = x;
-    x += cxChar * 24 + cxChar / 2;
+    x += cxChar * 25;
     ::PatBlt(hdc, x, 0, 4, cyHeight, PATCOPY);
     x += 4;
     int xBreaks = x;

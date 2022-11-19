@@ -39,7 +39,6 @@ BOOL MainWindow_InitStatusbar();
 void MainWindow_ShowHideDebug();
 void MainWindow_ShowHideToolbar();
 void MainWindow_ShowHideKeyboard();
-void MainWindow_ShowHideTape();
 void MainWindow_AdjustWindowSize();
 
 void MainWindow_SetToolbarImage(int commandId, int imageIndex);
@@ -152,8 +151,6 @@ void Settings_SetToolbar(BOOL flag);
 BOOL Settings_GetToolbar();
 void Settings_SetKeyboard(BOOL flag);
 BOOL Settings_GetKeyboard();
-void Settings_SetTape(BOOL flag);
-BOOL Settings_GetTape();
 
 LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex);
 COLORREF Settings_GetColor(ColorIndices colorIndex);

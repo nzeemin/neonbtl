@@ -26,7 +26,6 @@ const LPCTSTR CLASSNAME_MEMORYVIEW      = CLASSNAMEPREFIX _T("MEMORY");
 const LPCTSTR CLASSNAME_MEMORYMAPVIEW   = CLASSNAMEPREFIX _T("MEMORYMAP");
 const LPCTSTR CLASSNAME_SPRITEVIEW      = CLASSNAMEPREFIX _T("SPRITE");
 const LPCTSTR CLASSNAME_CONSOLEVIEW     = CLASSNAMEPREFIX _T("CONSOLE");
-const LPCTSTR CLASSNAME_TAPEVIEW        = CLASSNAMEPREFIX _T("TAPE");
 
 
 //////////////////////////////////////////////////////////////////////
@@ -120,16 +119,6 @@ void ConsoleView_StepInto();
 void ConsoleView_StepOver();
 void ConsoleView_ClearConsole();
 void ConsoleView_DeleteAllBreakpoints();
-
-
-//////////////////////////////////////////////////////////////////////
-// TapeView
-
-extern HWND g_hwndTape;  // Tape View window handle
-
-void TapeView_RegisterClass();
-void TapeView_Create(HWND hwndParent, int x, int y, int width, int height);
-LRESULT CALLBACK TapeViewWndProc(HWND, UINT, WPARAM, LPARAM);
 
 
 //////////////////////////////////////////////////////////////////////
