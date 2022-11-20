@@ -47,6 +47,8 @@ void Emulator_RemoveAllBreakpoints();
 
 void Emulator_SetSound(bool soundOnOff);
 void Emulator_SetCovox(bool covoxOnOff);
+void Emulator_SetSerial(bool onOff);
+
 void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();

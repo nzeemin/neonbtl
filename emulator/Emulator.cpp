@@ -32,6 +32,9 @@ uint16_t m_wEmulatorTempCPUBreakpoint = 0177777;
 bool m_okEmulatorSound = false;
 bool m_okEmulatorCovox = false;
 
+bool m_okEmulatorSerial = false;
+FILE* m_fpEmulatorSerialOut = nullptr;
+
 long m_nFrameCount = 0;
 uint32_t m_dwTickCount = 0;
 uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
@@ -106,6 +109,8 @@ bool Emulator_Init()
         g_pBoard->SetSoundGenCallback(Emulator_SoundGenCallback);
     }
 
+    Emulator_SetSerial(true);  //DEBUG
+
     return true;
 }
 
@@ -179,6 +184,9 @@ void Emulator_Stop()
     g_okEmulatorRunning = false;
 
     Emulator_SetTempCPUBreakpoint(0177777);
+
+    if (m_fpEmulatorSerialOut != nullptr)
+        ::fflush(m_fpEmulatorSerialOut);
 
     // Reset title bar message
     MainWindow_UpdateWindowTitle();
@@ -314,6 +322,37 @@ void Emulator_SetSound(bool soundOnOff)
 void Emulator_SetCovox(bool covoxOnOff)
 {
     m_okEmulatorCovox = covoxOnOff;
+}
+
+void CALLBACK Emulator_SerialOut_Callback(uint8_t byte)
+{
+    if (m_fpEmulatorSerialOut != nullptr)
+    {
+        ::fwrite(&byte, 1, 1, m_fpEmulatorSerialOut);
+    }
+}
+
+void Emulator_SetSerial(bool onOff)
+{
+    if (m_okEmulatorSerial == onOff)
+        return;
+
+    if (!onOff)
+    {
+        g_pBoard->SetSerialOutCallback(nullptr);
+        if (m_fpEmulatorSerialOut != nullptr)
+        {
+            ::fflush(m_fpEmulatorSerialOut);
+            ::fclose(m_fpEmulatorSerialOut);
+        }
+    }
+    else
+    {
+        g_pBoard->SetSerialOutCallback(Emulator_SerialOut_Callback);
+        m_fpEmulatorSerialOut = ::_tfopen(_T("serial.log"), _T("wb"));
+    }
+
+    m_okEmulatorSerial = onOff;
 }
 
 bool Emulator_SystemFrame()

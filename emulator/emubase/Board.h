@@ -57,6 +57,9 @@ enum NeonConfiguration
 // Sound generator callback function type
 typedef void (CALLBACK* SOUNDGENCALLBACK)(unsigned short L, unsigned short R);
 
+// Serial port output callback
+typedef void (CALLBACK* SERIALOUTCALLBACK)(uint8_t byte);
+
 class CFloppyController;
 
 
@@ -121,6 +124,7 @@ public:  // Floppy
 public:  // Callbacks
     // Assign sound output callback function.
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
+    void        SetSerialOutCallback(SERIALOUTCALLBACK outcallback);
 public:  // Memory
     // Read command for execution
     uint16_t GetWordExec(uint16_t address, bool okHaltMode) { return GetWord(address, okHaltMode, true); }
@@ -181,8 +185,9 @@ private:  // Timer implementation
 
 private:
     SOUNDGENCALLBACK m_SoundGenCallback;
+    SERIALOUTCALLBACK m_SerialOutCallback;
 private:
-    void        DoSound(void);
+    void        DoSound();
 
 };
 

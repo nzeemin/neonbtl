@@ -805,7 +805,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 
     case 0161060:
         DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o) DLBUF\n"), m_pCPU->GetInstructionPC(), word, address);
-        //TODO: DLBUF -- Programmable Parallel port buffer
+        if (m_SerialOutCallback != nullptr)
+            (*m_SerialOutCallback)(word & 0xff);
         break;
     case 0161062:
         DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o) DLCSR\n"), m_pCPU->GetInstructionPC(), word, address);
@@ -884,6 +885,11 @@ void CMotherboard::SetSoundGenCallback(SOUNDGENCALLBACK callback)
     {
         m_SoundGenCallback = callback;
     }
+}
+
+void CMotherboard::SetSerialOutCallback(SERIALOUTCALLBACK outcallback)
+{
+    m_SerialOutCallback = outcallback;
 }
 
 
