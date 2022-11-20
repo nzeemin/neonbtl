@@ -156,7 +156,8 @@ public:  // Saving/loading emulator status
     //void        SaveToImage(uint8_t* pImage);
     //void        LoadFromImage(const uint8_t* pImage);
 private:  // Ports: implementation
-    uint16_t    m_PortPPIB;
+    uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
+    uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_Port177560;       // Serial port input state register
     uint16_t    m_Port177562;       // Serial port input data register
     uint16_t    m_Port177564;       // Serial port output state register

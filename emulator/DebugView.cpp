@@ -28,10 +28,10 @@ WNDPROC m_wndprocDebugToolWindow = NULL;  // Old window proc address of the Tool
 HWND m_hwndDebugViewer = (HWND)INVALID_HANDLE_VALUE;
 HWND m_hwndDebugToolbar = (HWND)INVALID_HANDLE_VALUE;
 
-WORD m_wDebugCpuR[9];  // Old register values - R0..R7, PSW
-BOOL m_okDebugCpuRChanged[9];  // Register change flags
-WORD m_wDebugCpuPswOld;  // PSW value on previous step
-WORD m_wDebugCpuR6Old;  // SP value on previous step
+WORD m_wDebugCpuR[11];  // Old register values - R0..R7, PSW
+BOOL m_okDebugCpuRChanged[11];  // Register change flags
+WORD m_wDebugCpuPswOld = 0;  // PSW value on previous step
+WORD m_wDebugCpuR6Old = 0;  // SP value on previous step
 
 void DebugView_OnRButtonDown(int mousex, int mousey);
 void DebugView_DoDraw(HDC hdc);
@@ -70,8 +70,8 @@ void DebugView_RegisterClass()
 
 void DebugView_Init()
 {
-    memset(m_wDebugCpuR, 255, sizeof(m_wDebugCpuR));
-    memset(m_okDebugCpuRChanged, 1, sizeof(m_okDebugCpuRChanged));
+    memset(m_wDebugCpuR, 0, sizeof(m_wDebugCpuR));
+    memset(m_okDebugCpuRChanged, 0, sizeof(m_okDebugCpuRChanged));
     m_wDebugCpuPswOld = 0;
     m_wDebugCpuR6Old = 0;
 }
@@ -255,6 +255,12 @@ void DebugView_OnUpdate()
     m_okDebugCpuRChanged[8] = (m_wDebugCpuR[8] != pswCPU);
     m_wDebugCpuPswOld = m_wDebugCpuR[8];
     m_wDebugCpuR[8] = pswCPU;
+    WORD cpcCPU = pCPU->GetCPC();
+    m_okDebugCpuRChanged[9] = (m_wDebugCpuR[9] != cpcCPU);
+    m_wDebugCpuR[9] = cpcCPU;
+    WORD cpswCPU = pCPU->GetCPSW();
+    m_okDebugCpuRChanged[10] = (m_wDebugCpuR[10] != cpswCPU);
+    m_wDebugCpuR[10] = cpswCPU;
 }
 
 

@@ -39,8 +39,8 @@ long m_nUptimeFrameCount = 0;
 
 uint8_t* g_pEmulatorRam = nullptr;  // RAM values - for change tracking
 uint8_t* g_pEmulatorChangedRam = nullptr;  // RAM change flags
-uint16_t g_wEmulatorCpuPC = 0177777;      // Current PC value
-uint16_t g_wEmulatorPrevCpuPC = 0177777;  // Previous PC value
+uint16_t g_wEmulatorCpuPC = 0;      // Current PC value
+uint16_t g_wEmulatorPrevCpuPC = 0;  // Previous PC value
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R);
 

@@ -76,8 +76,9 @@ protected:  // Interrupt processing
     bool        m_EMT_rq;           // EMT command interrupt pending
     bool        m_TRAPrq;           // TRAP command interrupt pending
     uint16_t    m_virq[16];         // VIRQ vector
+    bool        m_haltpinreset;        // HALT interrupt request reset
     bool        m_ACLOreset;        // Power fail interrupt request reset
-    bool        m_EVNTreset;        // EVNT interrupt request reset;
+    bool        m_EVNTreset;        // EVNT interrupt request reset
     uint8_t     m_VIRQreset;        // VIRQ request reset for given device
 protected:
     CMotherboard* m_pBoard;

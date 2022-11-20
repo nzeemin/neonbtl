@@ -127,6 +127,9 @@ uint16_t RESET_TIMING = 105 + 968;  // ТО КМ1801ВМ2 стр. 134
 
 CProcessor::ExecuteMethodRef* CProcessor::m_pExecuteMethodMap = nullptr;
 
+#define RegisterMethodOpc(/*uint16_t*/ opcode, /*CProcessor::ExecuteMethodRef*/ methodref) \
+    { m_pExecuteMethodMap[opcode] = (methodref); }
+
 #define RegisterMethodRef(/*uint16_t*/ opstart, /*uint16_t*/ opend, /*CProcessor::ExecuteMethodRef*/ methodref) \
     { \
         for (uint32_t opcode = (opstart); opcode <= (opend); opcode++) \
@@ -136,114 +139,114 @@ CProcessor::ExecuteMethodRef* CProcessor::m_pExecuteMethodMap = nullptr;
 void CProcessor::Init()
 {
     ASSERT(m_pExecuteMethodMap == nullptr);
-    m_pExecuteMethodMap = (CProcessor::ExecuteMethodRef*) ::calloc(65536, sizeof(CProcessor::ExecuteMethodRef));
+    m_pExecuteMethodMap = static_cast<CProcessor::ExecuteMethodRef*>(::calloc(65536, sizeof(CProcessor::ExecuteMethodRef)));
 
     // Сначала заполняем таблицу ссылками на метод ExecuteUNKNOWN, выполняющий TRAP 10
-    RegisterMethodRef( 0000000, 0177777, &CProcessor::ExecuteUNKNOWN );
+    RegisterMethodRef( 0000000, 0177777, &CProcessor::ExecuteUNKNOWN )
 
-    RegisterMethodRef( 0000000, 0000000, &CProcessor::ExecuteHALT );
-    RegisterMethodRef( 0000001, 0000001, &CProcessor::ExecuteWAIT );
-    RegisterMethodRef( 0000002, 0000002, &CProcessor::ExecuteRTI );
-    RegisterMethodRef( 0000003, 0000003, &CProcessor::ExecuteBPT );
-    RegisterMethodRef( 0000004, 0000004, &CProcessor::ExecuteIOT );
-    RegisterMethodRef( 0000005, 0000005, &CProcessor::ExecuteRESET );
-    RegisterMethodRef( 0000006, 0000006, &CProcessor::ExecuteRTT );
+    RegisterMethodOpc( 0000000, &CProcessor::ExecuteHALT )
+    RegisterMethodOpc( 0000001, &CProcessor::ExecuteWAIT )
+    RegisterMethodOpc( 0000002, &CProcessor::ExecuteRTI )
+    RegisterMethodOpc( 0000003, &CProcessor::ExecuteBPT )
+    RegisterMethodOpc( 0000004, &CProcessor::ExecuteIOT )
+    RegisterMethodOpc( 0000005, &CProcessor::ExecuteRESET )
+    RegisterMethodOpc( 0000006, &CProcessor::ExecuteRTT )
 
-    RegisterMethodRef( 0000010, 0000013, &CProcessor::ExecuteRUN );
-    RegisterMethodRef( 0000014, 0000017, &CProcessor::ExecuteSTEP );
-    RegisterMethodRef( 0000020, 0000020, &CProcessor::ExecuteRSEL );
-    RegisterMethodRef( 0000021, 0000021, &CProcessor::ExecuteMFUS );
-    RegisterMethodRef( 0000022, 0000023, &CProcessor::ExecuteRCPC );
-    RegisterMethodRef( 0000024, 0000027, &CProcessor::ExecuteRCPS );
-    RegisterMethodRef( 0000030, 0000030, &CProcessor::Execute000030 );
-    RegisterMethodRef( 0000031, 0000031, &CProcessor::ExecuteMTUS );
-    RegisterMethodRef( 0000032, 0000033, &CProcessor::ExecuteWCPC );
-    RegisterMethodRef( 0000034, 0000037, &CProcessor::ExecuteWCPS );
+    RegisterMethodRef( 0000010, 0000013, &CProcessor::ExecuteRUN )
+    RegisterMethodRef( 0000014, 0000017, &CProcessor::ExecuteSTEP )
+    RegisterMethodOpc( 0000020,          &CProcessor::ExecuteRSEL)
+    RegisterMethodOpc( 0000021,          &CProcessor::ExecuteMFUS)
+    RegisterMethodRef( 0000022, 0000023, &CProcessor::ExecuteRCPC)
+    RegisterMethodRef( 0000024, 0000027, &CProcessor::ExecuteRCPS)
+    RegisterMethodOpc( 0000030,          &CProcessor::Execute000030)
+    RegisterMethodOpc( 0000031,          &CProcessor::ExecuteMTUS)
+    RegisterMethodRef( 0000032, 0000033, &CProcessor::ExecuteWCPC)
+    RegisterMethodRef( 0000034, 0000037, &CProcessor::ExecuteWCPS)
 
-    RegisterMethodRef( 0000100, 0000177, &CProcessor::ExecuteJMP );
-    RegisterMethodRef( 0000200, 0000207, &CProcessor::ExecuteRTS );  // RTS / RETURN
+    RegisterMethodRef( 0000100, 0000177, &CProcessor::ExecuteJMP)
+    RegisterMethodRef( 0000200, 0000207, &CProcessor::ExecuteRTS)  // RTS / RETURN
 
-    RegisterMethodRef( 0000240, 0000257, &CProcessor::ExecuteCCC );
+    RegisterMethodRef( 0000240, 0000257, &CProcessor::ExecuteCCC)
 
-    RegisterMethodRef( 0000260, 0000277, &CProcessor::ExecuteSCC );
+    RegisterMethodRef( 0000260, 0000277, &CProcessor::ExecuteSCC)
 
-    RegisterMethodRef( 0000300, 0000377, &CProcessor::ExecuteSWAB );
+    RegisterMethodRef( 0000300, 0000377, &CProcessor::ExecuteSWAB)
 
-    RegisterMethodRef( 0000400, 0000777, &CProcessor::ExecuteBR );
-    RegisterMethodRef( 0001000, 0001377, &CProcessor::ExecuteBNE );
-    RegisterMethodRef( 0001400, 0001777, &CProcessor::ExecuteBEQ );
-    RegisterMethodRef( 0002000, 0002377, &CProcessor::ExecuteBGE );
-    RegisterMethodRef( 0002400, 0002777, &CProcessor::ExecuteBLT );
-    RegisterMethodRef( 0003000, 0003377, &CProcessor::ExecuteBGT );
-    RegisterMethodRef( 0003400, 0003777, &CProcessor::ExecuteBLE );
+    RegisterMethodRef( 0000400, 0000777, &CProcessor::ExecuteBR)
+    RegisterMethodRef( 0001000, 0001377, &CProcessor::ExecuteBNE)
+    RegisterMethodRef( 0001400, 0001777, &CProcessor::ExecuteBEQ)
+    RegisterMethodRef( 0002000, 0002377, &CProcessor::ExecuteBGE)
+    RegisterMethodRef( 0002400, 0002777, &CProcessor::ExecuteBLT)
+    RegisterMethodRef( 0003000, 0003377, &CProcessor::ExecuteBGT)
+    RegisterMethodRef( 0003400, 0003777, &CProcessor::ExecuteBLE)
 
-    RegisterMethodRef( 0004000, 0004777, &CProcessor::ExecuteJSR );  // JSR / CALL
+    RegisterMethodRef( 0004000, 0004777, &CProcessor::ExecuteJSR)  // JSR / CALL
 
-    RegisterMethodRef( 0005000, 0005077, &CProcessor::ExecuteCLR );
-    RegisterMethodRef( 0005100, 0005177, &CProcessor::ExecuteCOM );
-    RegisterMethodRef( 0005200, 0005277, &CProcessor::ExecuteINC );
-    RegisterMethodRef( 0005300, 0005377, &CProcessor::ExecuteDEC );
-    RegisterMethodRef( 0005400, 0005477, &CProcessor::ExecuteNEG );
-    RegisterMethodRef( 0005500, 0005577, &CProcessor::ExecuteADC );
-    RegisterMethodRef( 0005600, 0005677, &CProcessor::ExecuteSBC );
-    RegisterMethodRef( 0005700, 0005777, &CProcessor::ExecuteTST );
-    RegisterMethodRef( 0006000, 0006077, &CProcessor::ExecuteROR );
-    RegisterMethodRef( 0006100, 0006177, &CProcessor::ExecuteROL );
-    RegisterMethodRef( 0006200, 0006277, &CProcessor::ExecuteASR );
-    RegisterMethodRef( 0006300, 0006377, &CProcessor::ExecuteASL );
+    RegisterMethodRef( 0005000, 0005077, &CProcessor::ExecuteCLR)
+    RegisterMethodRef( 0005100, 0005177, &CProcessor::ExecuteCOM)
+    RegisterMethodRef( 0005200, 0005277, &CProcessor::ExecuteINC)
+    RegisterMethodRef( 0005300, 0005377, &CProcessor::ExecuteDEC)
+    RegisterMethodRef( 0005400, 0005477, &CProcessor::ExecuteNEG)
+    RegisterMethodRef( 0005500, 0005577, &CProcessor::ExecuteADC)
+    RegisterMethodRef( 0005600, 0005677, &CProcessor::ExecuteSBC)
+    RegisterMethodRef( 0005700, 0005777, &CProcessor::ExecuteTST)
+    RegisterMethodRef( 0006000, 0006077, &CProcessor::ExecuteROR)
+    RegisterMethodRef( 0006100, 0006177, &CProcessor::ExecuteROL)
+    RegisterMethodRef( 0006200, 0006277, &CProcessor::ExecuteASR)
+    RegisterMethodRef( 0006300, 0006377, &CProcessor::ExecuteASL)
 
-    RegisterMethodRef( 0006400, 0006477, &CProcessor::ExecuteMARK );
-    RegisterMethodRef( 0006700, 0006777, &CProcessor::ExecuteSXT );
+    RegisterMethodRef( 0006400, 0006477, &CProcessor::ExecuteMARK)
+    RegisterMethodRef( 0006700, 0006777, &CProcessor::ExecuteSXT)
 
-    RegisterMethodRef( 0010000, 0017777, &CProcessor::ExecuteMOV );
-    RegisterMethodRef( 0020000, 0027777, &CProcessor::ExecuteCMP );
-    RegisterMethodRef( 0030000, 0037777, &CProcessor::ExecuteBIT );
-    RegisterMethodRef( 0040000, 0047777, &CProcessor::ExecuteBIC );
-    RegisterMethodRef( 0050000, 0057777, &CProcessor::ExecuteBIS );
-    RegisterMethodRef( 0060000, 0067777, &CProcessor::ExecuteADD );
+    RegisterMethodRef( 0010000, 0017777, &CProcessor::ExecuteMOV)
+    RegisterMethodRef( 0020000, 0027777, &CProcessor::ExecuteCMP)
+    RegisterMethodRef( 0030000, 0037777, &CProcessor::ExecuteBIT)
+    RegisterMethodRef( 0040000, 0047777, &CProcessor::ExecuteBIC)
+    RegisterMethodRef( 0050000, 0057777, &CProcessor::ExecuteBIS)
+    RegisterMethodRef( 0060000, 0067777, &CProcessor::ExecuteADD)
 
-    RegisterMethodRef( 0070000, 0070777, &CProcessor::ExecuteMUL );
-    RegisterMethodRef( 0071000, 0071777, &CProcessor::ExecuteDIV );
-    RegisterMethodRef( 0072000, 0072777, &CProcessor::ExecuteASH );
-    RegisterMethodRef( 0073000, 0073777, &CProcessor::ExecuteASHC );
-    RegisterMethodRef( 0074000, 0074777, &CProcessor::ExecuteXOR );
-    RegisterMethodRef( 0075000, 0075037, &CProcessor::ExecuteFIS );
-    RegisterMethodRef( 0077000, 0077777, &CProcessor::ExecuteSOB );
+    RegisterMethodRef( 0070000, 0070777, &CProcessor::ExecuteMUL)
+    RegisterMethodRef( 0071000, 0071777, &CProcessor::ExecuteDIV)
+    RegisterMethodRef( 0072000, 0072777, &CProcessor::ExecuteASH)
+    RegisterMethodRef( 0073000, 0073777, &CProcessor::ExecuteASHC)
+    RegisterMethodRef( 0074000, 0074777, &CProcessor::ExecuteXOR)
+    RegisterMethodRef( 0075000, 0075037, &CProcessor::ExecuteFIS)
+    RegisterMethodRef( 0077000, 0077777, &CProcessor::ExecuteSOB)
 
-    RegisterMethodRef( 0100000, 0100377, &CProcessor::ExecuteBPL );
-    RegisterMethodRef( 0100400, 0100777, &CProcessor::ExecuteBMI );
-    RegisterMethodRef( 0101000, 0101377, &CProcessor::ExecuteBHI );
-    RegisterMethodRef( 0101400, 0101777, &CProcessor::ExecuteBLOS );
-    RegisterMethodRef( 0102000, 0102377, &CProcessor::ExecuteBVC );
-    RegisterMethodRef( 0102400, 0102777, &CProcessor::ExecuteBVS );
-    RegisterMethodRef( 0103000, 0103377, &CProcessor::ExecuteBHIS );  // BCC
-    RegisterMethodRef( 0103400, 0103777, &CProcessor::ExecuteBLO );   // BCS
+    RegisterMethodRef( 0100000, 0100377, &CProcessor::ExecuteBPL)
+    RegisterMethodRef( 0100400, 0100777, &CProcessor::ExecuteBMI)
+    RegisterMethodRef( 0101000, 0101377, &CProcessor::ExecuteBHI)
+    RegisterMethodRef( 0101400, 0101777, &CProcessor::ExecuteBLOS)
+    RegisterMethodRef( 0102000, 0102377, &CProcessor::ExecuteBVC)
+    RegisterMethodRef( 0102400, 0102777, &CProcessor::ExecuteBVS)
+    RegisterMethodRef( 0103000, 0103377, &CProcessor::ExecuteBHIS)  // BCC
+    RegisterMethodRef( 0103400, 0103777, &CProcessor::ExecuteBLO)   // BCS
 
-    RegisterMethodRef( 0104000, 0104377, &CProcessor::ExecuteEMT );
-    RegisterMethodRef( 0104400, 0104777, &CProcessor::ExecuteTRAP );
+    RegisterMethodRef( 0104000, 0104377, &CProcessor::ExecuteEMT)
+    RegisterMethodRef( 0104400, 0104777, &CProcessor::ExecuteTRAP)
 
-    RegisterMethodRef( 0105000, 0105077, &CProcessor::ExecuteCLRB );
-    RegisterMethodRef( 0105100, 0105177, &CProcessor::ExecuteCOMB );
-    RegisterMethodRef( 0105200, 0105277, &CProcessor::ExecuteINCB );
-    RegisterMethodRef( 0105300, 0105377, &CProcessor::ExecuteDECB );
-    RegisterMethodRef( 0105400, 0105477, &CProcessor::ExecuteNEGB );
-    RegisterMethodRef( 0105500, 0105577, &CProcessor::ExecuteADCB );
-    RegisterMethodRef( 0105600, 0105677, &CProcessor::ExecuteSBCB );
-    RegisterMethodRef( 0105700, 0105777, &CProcessor::ExecuteTSTB );
-    RegisterMethodRef( 0106000, 0106077, &CProcessor::ExecuteRORB );
-    RegisterMethodRef( 0106100, 0106177, &CProcessor::ExecuteROLB );
-    RegisterMethodRef( 0106200, 0106277, &CProcessor::ExecuteASRB );
-    RegisterMethodRef( 0106300, 0106377, &CProcessor::ExecuteASLB );
+    RegisterMethodRef( 0105000, 0105077, &CProcessor::ExecuteCLRB)
+    RegisterMethodRef( 0105100, 0105177, &CProcessor::ExecuteCOMB)
+    RegisterMethodRef( 0105200, 0105277, &CProcessor::ExecuteINCB)
+    RegisterMethodRef( 0105300, 0105377, &CProcessor::ExecuteDECB)
+    RegisterMethodRef( 0105400, 0105477, &CProcessor::ExecuteNEGB)
+    RegisterMethodRef( 0105500, 0105577, &CProcessor::ExecuteADCB)
+    RegisterMethodRef( 0105600, 0105677, &CProcessor::ExecuteSBCB)
+    RegisterMethodRef( 0105700, 0105777, &CProcessor::ExecuteTSTB)
+    RegisterMethodRef( 0106000, 0106077, &CProcessor::ExecuteRORB)
+    RegisterMethodRef( 0106100, 0106177, &CProcessor::ExecuteROLB)
+    RegisterMethodRef( 0106200, 0106277, &CProcessor::ExecuteASRB)
+    RegisterMethodRef( 0106300, 0106377, &CProcessor::ExecuteASLB)
 
-    RegisterMethodRef( 0106400, 0106477, &CProcessor::ExecuteMTPS );
-    RegisterMethodRef( 0106700, 0106777, &CProcessor::ExecuteMFPS );
+    RegisterMethodRef( 0106400, 0106477, &CProcessor::ExecuteMTPS)
+    RegisterMethodRef( 0106700, 0106777, &CProcessor::ExecuteMFPS)
 
-    RegisterMethodRef( 0110000, 0117777, &CProcessor::ExecuteMOVB );
-    RegisterMethodRef( 0120000, 0127777, &CProcessor::ExecuteCMPB );
-    RegisterMethodRef( 0130000, 0137777, &CProcessor::ExecuteBITB );
-    RegisterMethodRef( 0140000, 0147777, &CProcessor::ExecuteBICB );
-    RegisterMethodRef( 0150000, 0157777, &CProcessor::ExecuteBISB );
-    RegisterMethodRef( 0160000, 0167777, &CProcessor::ExecuteSUB );
+    RegisterMethodRef( 0110000, 0117777, &CProcessor::ExecuteMOVB)
+    RegisterMethodRef( 0120000, 0127777, &CProcessor::ExecuteCMPB)
+    RegisterMethodRef( 0130000, 0137777, &CProcessor::ExecuteBITB)
+    RegisterMethodRef( 0140000, 0147777, &CProcessor::ExecuteBICB)
+    RegisterMethodRef( 0150000, 0157777, &CProcessor::ExecuteBISB)
+    RegisterMethodRef( 0160000, 0167777, &CProcessor::ExecuteSUB)
 }
 
 void CProcessor::Done()
@@ -269,11 +272,11 @@ CProcessor::CProcessor(CMotherboard* pBoard)
     m_buserror = false;
     m_STRTrq = m_RPLYrq = m_RSVDrq = m_TBITrq = m_ACLOrq = m_HALTrq = m_EVNTrq = false;
     m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = false;
-    m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+    m_haltpinreset = m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
     m_DCLOpin = m_ACLOpin = true;
     m_haltpin = false;
 
-    m_instruction = 0;
+    m_instruction = m_instructionpc = 0;
     m_regsrc = m_methsrc = 0;
     m_regdest = m_methdest = 0;
     m_addrsrc = m_addrdest = 0;
@@ -290,10 +293,8 @@ void CProcessor::Execute()
         return;
     }
 
-    m_internalTick = 0;  //ANYTHING UNKNOWN WILL CAUSE EXCEPTION (EMT)
-
-    if (!CProcessor::InterruptProcessing())
-        CProcessor::CommandExecution();
+    if (!InterruptProcessing())
+        CommandExecution();
 }
 
 bool CProcessor::InterruptProcessing ()
@@ -306,7 +307,7 @@ bool CProcessor::InterruptProcessing ()
         m_stepmode = false;
     else
     {
-        m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+        m_haltpinreset = m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
         m_TBITrq = (m_psw & 020) != 0;  // T-bit
 
         if (m_STRTrq)
@@ -384,6 +385,7 @@ bool CProcessor::InterruptProcessing ()
         else if (m_haltpin && (m_psw & 0400) != 0400)  // HALT signal in USER mode, priority 5
         {
             intrVector = 0170;  intrMode = true;
+            m_haltpinreset = true;
         }
         else if (m_EVNTrq && (m_psw & 0200) != 0200)  // EVNT signal, priority 6
         {
@@ -412,25 +414,25 @@ bool CProcessor::InterruptProcessing ()
             if (intrMode)  // HALT mode interrupt
             {
                 uint16_t selVector = m_pBoard->GetSelRegister() & 0x0ff00;
-                uint16_t new_pc, new_psw;
                 intrVector |= selVector;
+                DebugLogFormat(_T("CPU HALT INT vector=%06o PC=%06o PSW=%06o\r\n"), intrVector, GetPC(), GetPSW());
                 // Save PC/PSW to CPC/CPSW
-                //m_savepc = GetPC();
-                //m_savepsw = GetPSW();
-                //m_psw |= 0400;
+                m_savepc = GetPC();
+                m_savepsw = GetPSW();
+                m_psw |= 0400;
                 SetHALT(true);
-                new_pc = GetWord(intrVector);
-                new_psw = GetWord(intrVector + 2);
+                uint16_t new_pc = GetWord(intrVector);
+                uint16_t new_psw = GetWord(intrVector + 2);
                 if (!m_RPLYrq)
                 {
+                    if (m_haltpinreset) m_haltpin = false;
                     SetPSW(new_psw);
                     SetPC(new_pc);
                 }
             }
             else  // USER mode interrupt
             {
-                uint16_t new_pc, new_psw;
-
+                DebugLogFormat(_T("CPU USER INT vector=%06o PC=%06o PSW=%06o\r\n"), intrVector, GetPC(), GetPSW());
                 SetHALT(false);
                 // Save PC/PSW to stack
                 SetSP(GetSP() - 2);
@@ -444,8 +446,8 @@ bool CProcessor::InterruptProcessing ()
                         if (m_ACLOreset) m_ACLOrq = false;
                         if (m_EVNTreset) m_EVNTrq = false;
                         if (m_VIRQreset) m_virq[m_VIRQreset] = 0;
-                        new_pc = GetWord(intrVector);
-                        new_psw = GetWord(intrVector + 2);
+                        uint16_t new_pc = GetWord(intrVector);
+                        uint16_t new_psw = GetWord(intrVector + 2);
                         if (!m_RPLYrq)
                         {
                             SetLPSW((uint8_t)(new_psw & 0xff));
@@ -465,6 +467,7 @@ void CProcessor::CommandExecution()
 {
     if (!m_waitmode)
     {
+        m_instructionpc = m_R[7];  // Store address of the current instruction
         FetchInstruction();  // Read next instruction from memory
         if (!m_RPLYrq)
         {
@@ -473,7 +476,7 @@ void CProcessor::CommandExecution()
         }
     }
     if (m_HALTrq || m_BPT_rq || m_IOT_rq || m_EMT_rq || m_TRAPrq || m_FIS_rq)
-        CProcessor::InterruptProcessing ();
+        InterruptProcessing();
 }
 
 void CProcessor::TickEVNT()
@@ -540,14 +543,12 @@ void CProcessor::FetchInstruction()
     // Считываем очередную инструкцию
     uint16_t pc = GetPC();
     //ASSERT((pc & 1) == 0); // it have to be word aligned
-    m_instructionpc = pc;  // Store address of the current instruction
-    pc = pc & ~1;
 
     m_instruction = GetWordExec(pc);
     SetPC(GetPC() + 2);
 }
 
-void CProcessor::TranslateInstruction ()
+void CProcessor::TranslateInstruction()
 {
     // Prepare values to help decode the command
     m_regdest  = GetDigit(m_instruction, 0);
@@ -899,7 +900,7 @@ void CProcessor::ExecuteCLRB ()  // CLRB
     m_internalTick = CLR_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteCOM ()  // COM
+void CProcessor::ExecuteCOM()  // COM
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -929,7 +930,7 @@ void CProcessor::ExecuteCOM ()  // COM
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
-void CProcessor::ExecuteCOMB ()  // COM
+void CProcessor::ExecuteCOMB()  // COM
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -1021,7 +1022,7 @@ void CProcessor::ExecuteINCB ()  // INCB - Инкремент
     m_internalTick = CLR_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteDEC ()  // DEC - Декремент
+void CProcessor::ExecuteDEC()  // DEC - Декремент
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -1051,7 +1052,8 @@ void CProcessor::ExecuteDEC ()  // DEC - Декремент
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
-void CProcessor::ExecuteDECB ()  // DEC - Декремент
+
+void CProcessor::ExecuteDECB ()  // DECB - Декремент
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -1082,7 +1084,7 @@ void CProcessor::ExecuteDECB ()  // DEC - Декремент
     m_internalTick = CLR_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteNEG ()
+void CProcessor::ExecuteNEG()
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -1113,6 +1115,7 @@ void CProcessor::ExecuteNEG ()
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
+
 void CProcessor::ExecuteNEGB ()
 {
     uint16_t ea = 0;
@@ -1176,7 +1179,8 @@ void CProcessor::ExecuteADC ()
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
-void CProcessor::ExecuteADCB ()  // ADCB
+
+void CProcessor::ExecuteADCB()  // ADCB
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -1239,6 +1243,7 @@ void CProcessor::ExecuteSBC ()
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
+
 void CProcessor::ExecuteSBCB ()
 {
     uint16_t ea = 0;
@@ -1271,7 +1276,7 @@ void CProcessor::ExecuteSBCB ()
     m_internalTick = CLR_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteTST ()  // TST only, see also ExecuteTSTB()
+void CProcessor::ExecuteTST()  // TST
 {
     uint8_t new_psw = GetLPSW() & 0xF0;
     uint16_t dst;
@@ -1292,7 +1297,7 @@ void CProcessor::ExecuteTST ()  // TST only, see also ExecuteTSTB()
     m_internalTick = TST_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteTSTB ()  // TSTB only, see also ExecuteTST()
+void CProcessor::ExecuteTSTB()  // TSTB
 {
     uint8_t new_psw = GetLPSW() & 0xF0;
     uint8_t dst;
@@ -1344,6 +1349,7 @@ void CProcessor::ExecuteROR ()  // ROR
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
+
 void CProcessor::ExecuteRORB ()  // RORB
 {
     uint16_t ea = 0;
@@ -1407,7 +1413,8 @@ void CProcessor::ExecuteROL ()  // ROL
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
-void CProcessor::ExecuteROLB ()  // ROLB
+
+void CProcessor::ExecuteROLB()  // ROLB
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -1470,7 +1477,8 @@ void CProcessor::ExecuteASR ()  // ASR
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
-void CProcessor::ExecuteASRB ()  // ASRB
+
+void CProcessor::ExecuteASRB()  // ASRB
 {
     uint16_t ea = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -1533,6 +1541,7 @@ void CProcessor::ExecuteASL ()  // ASL
     SetLPSW(new_psw);
     m_internalTick = CLR_TIMING[m_methdest];
 }
+
 void CProcessor::ExecuteASLB ()  // ASLB
 {
     uint16_t ea = 0;
@@ -1814,7 +1823,7 @@ void CProcessor::ExecuteXOR ()  // XOR
     m_internalTick = XOR_TIMING[m_methdest];
 }
 
-void CProcessor::ExecuteMUL ()  // MUL
+void CProcessor::ExecuteMUL()  // MUL - multiply
 {
     uint16_t dst = GetReg(m_regsrc);
     uint16_t src, ea = 0;
@@ -1837,7 +1846,8 @@ void CProcessor::ExecuteMUL ()  // MUL
     SetLPSW(new_psw);
     m_internalTick = MUL_TIMING[m_methdest];
 }
-void CProcessor::ExecuteDIV ()  // DIV
+
+void CProcessor::ExecuteDIV()  // DIV - divide
 {
     uint16_t ea = 0;
     int32_t longsrc;
@@ -1859,7 +1869,7 @@ void CProcessor::ExecuteDIV ()  // DIV
         SetLPSW(new_psw);
         return;
     }
-    if ((longsrc == 020000000000) && (src2 == -1))
+    if ((longsrc == (int32_t)020000000000) && (src2 == -1))
     {
         new_psw |= PSW_V; // переполняемся, товарищи
         SetLPSW(new_psw);
@@ -1883,7 +1893,8 @@ void CProcessor::ExecuteDIV ()  // DIV
     if (res == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 }
-void CProcessor::ExecuteASH ()  // ASH
+
+void CProcessor::ExecuteASH()  // ASH - arithmetic shift
 {
     uint16_t ea = 0;
     short src;
@@ -1926,7 +1937,8 @@ void CProcessor::ExecuteASH ()  // ASH
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 }
-void CProcessor::ExecuteASHC ()  // ASHC
+
+void CProcessor::ExecuteASHC()  // ASHC - arithmetic shift combined
 {
     uint16_t ea = 0;
     int16_t src;
@@ -1971,7 +1983,7 @@ void CProcessor::ExecuteASHC ()  // ASHC
     SetLPSW(new_psw);
 }
 
-void CProcessor::ExecuteSOB ()  // SOB - subtract one: R = R - 1 ; if R != 0 : PC = PC - 2*nn
+void CProcessor::ExecuteSOB()  // SOB - subtract one: R = R - 1 ; if R != 0 : PC = PC - 2*nn
 {
     uint16_t dst = GetReg(m_regsrc);
 
@@ -1986,7 +1998,7 @@ void CProcessor::ExecuteSOB ()  // SOB - subtract one: R = R - 1 ; if R != 0 : P
     }
 }
 
-void CProcessor::ExecuteMOV ()  // MOV only, see also ExecuteMOVB()
+void CProcessor::ExecuteMOV()  // MOV - move
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2018,7 +2030,7 @@ void CProcessor::ExecuteMOV ()  // MOV only, see also ExecuteMOVB()
     m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteMOVB ()  // MOVB only, see also ExecuteMOV()
+void CProcessor::ExecuteMOVB()  // MOVB - move byte
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2052,7 +2064,7 @@ void CProcessor::ExecuteMOVB ()  // MOVB only, see also ExecuteMOV()
     m_internalTick = MOVB_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteCMP ()
+void CProcessor::ExecuteCMP()  // CMP - compare
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -2083,10 +2095,6 @@ void CProcessor::ExecuteCMP ()
 
     dst = src - src2;
 
-    //SetN( CheckForNegative ((uint16_t)(src - src2)) );
-    //SetZ( CheckForZero ((uint16_t)(src - src2)) );
-    //SetV( CheckSubForOverflow (src, src2) );
-    //SetC( CheckSubForCarry (src, src2) );
     if (dst & 0100000) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     if (((src ^ src2) & ~(dst ^ src2)) & 0100000) new_psw |= PSW_V;
@@ -2095,7 +2103,7 @@ void CProcessor::ExecuteCMP ()
     m_internalTick = CMP_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteCMPB ()
+void CProcessor::ExecuteCMPB()  // CMPB - compare byte
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -2125,10 +2133,7 @@ void CProcessor::ExecuteCMPB ()
         src2 = GetLReg(m_regdest);
 
     dst = src - src2;
-    //SetN( CheckForNegative((uint8_t)(src - src2)) );
-    //SetZ( CheckForZero((uint8_t)(src - src2)) );
-    //SetV( CheckSubForOverflow (src, src2) );
-    //SetC( CheckSubForCarry (src, src2) );
+
     if (dst & 0200) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     if (((src ^ src2) & ~(dst ^ src2)) & 0200) new_psw |= PSW_V;
@@ -2137,7 +2142,7 @@ void CProcessor::ExecuteCMPB ()
     m_internalTick = CMP_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteBIT ()  // BIT - bit test
+void CProcessor::ExecuteBIT()  // BIT - bit test
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2172,7 +2177,8 @@ void CProcessor::ExecuteBIT ()  // BIT - bit test
     SetLPSW(new_psw);
     m_internalTick = CMP_TIMING[m_methsrc][m_methdest];
 }
-void CProcessor::ExecuteBITB ()  // BITB - bit test
+
+void CProcessor::ExecuteBITB()  // BITB - bit test on byte
 {
     uint16_t src_addr, dst_addr;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2249,7 +2255,8 @@ void CProcessor::ExecuteBIC()  // BIC - bit clear
     SetLPSW(new_psw);
     m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
 }
-void CProcessor::ExecuteBICB ()  // BICB - bit clear
+
+void CProcessor::ExecuteBICB()  // BICB - bit clear
 {
     uint16_t src_addr, dst_addr = 0;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2333,7 +2340,8 @@ void CProcessor::ExecuteBIS()  // BIS - bit set
     SetLPSW(new_psw);
     m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
 }
-void CProcessor::ExecuteBISB ()  // BISB - bit set
+
+void CProcessor::ExecuteBISB()  // BISB - bit set on byte
 {
     uint16_t src_addr, dst_addr = 0;
     uint8_t new_psw = GetLPSW() & 0xF1;
@@ -2417,7 +2425,7 @@ void CProcessor::ExecuteADD ()  // ADD
     m_internalTick = MOVB_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteSUB ()
+void CProcessor::ExecuteSUB()  // SUB
 {
     uint16_t src_addr, dst_addr = 0;
     uint8_t new_psw = GetLPSW() & 0xF0;
@@ -2459,19 +2467,19 @@ void CProcessor::ExecuteSUB ()
     m_internalTick = MOVB_TIMING[m_methsrc][m_methdest];
 }
 
-void CProcessor::ExecuteEMT ()  // EMT - emulator trap
+void CProcessor::ExecuteEMT()  // EMT - emulator trap
 {
     m_EMT_rq = true;
     m_internalTick = EMT_TIMING;
 }
 
-void CProcessor::ExecuteTRAP ()
+void CProcessor::ExecuteTRAP()
 {
     m_TRAPrq = true;
     m_internalTick = EMT_TIMING;
 }
 
-void CProcessor::ExecuteJSR ()  // JSR - Jump subroutine: *--SP = R; R = PC; PC = &d (a-mode > 0)
+void CProcessor::ExecuteJSR()  // JSR - jump subroutine: *--SP = R; R = PC; PC = &d (a-mode > 0)
 {
     if (m_methdest == 0)
     {
@@ -2506,6 +2514,7 @@ void CProcessor::ExecuteMARK ()  // MARK
     m_internalTick = MARK_TIMING;
 }
 
+
 //////////////////////////////////////////////////////////////////////
 //
 // CPU image format (64 bytes):
@@ -2522,7 +2531,7 @@ void CProcessor::ExecuteMARK ()  // MARK
 void CProcessor::SaveToImage(uint8_t* pImage) const
 {
     // Processor data                               // Offset Size
-    uint16_t* pwImage = (uint16_t*) pImage;                 //    0    --
+    uint16_t* pwImage = (uint16_t*) pImage;         //    0    --
     *pwImage++ = m_psw;                             //    0     2   PSW
     memcpy(pwImage, m_R, 2 * 8);  pwImage += 8;     //    2    16   Registers R0-R7
     *pwImage++ = m_savepc;                          //   18     2   PC'
@@ -2557,14 +2566,14 @@ void CProcessor::SaveToImage(uint8_t* pImage) const
     flags2 |= (m_ACLOreset ? 32 : 0);
     flags2 |= (m_EVNTreset ? 64 : 0);
     *pbImage++ = flags2;                            //   28     1   Flags
-    *pbImage++ = (uint8_t)m_VIRQreset;                 //   29     1   VIRQ reset request
+    *pbImage++ = m_VIRQreset;                       //   29     1   VIRQ reset request
     //                                              //   30     2   Reserved
     memcpy(pImage + 32, m_virq, 2 * 16);            //   32    32   VIRQ vectors
 }
 
 void CProcessor::LoadFromImage(const uint8_t* pImage)
 {
-    const uint16_t* pwImage = (const uint16_t*) pImage;     //    0    --
+    const uint16_t* pwImage = (const uint16_t*) pImage;  //    0    --
     m_psw = *pwImage++;                             //    0     2   PSW
     memcpy(m_R, pwImage, 2 * 8);  pwImage += 8;     //    2    16   Registers R0-R7
     m_savepc    = *pwImage++;                       //   18     2   PC'
@@ -2572,14 +2581,14 @@ void CProcessor::LoadFromImage(const uint8_t* pImage)
     m_okStopped = (*pwImage++ != 0);                //   22     2   Stopped
     m_internalTick = *pwImage++;                    //   24     2   Internal tick count
     const uint8_t* pbImage = (const uint8_t*) pwImage;
-    uint8_t flags0 = *pbImage++;                       //   26     1   Flags
+    uint8_t flags0 = *pbImage++;                    //   26     1   Flags
     m_stepmode  = ((flags0 &  1) != 0);
     m_buserror  = ((flags0 &  2) != 0);
     m_haltpin   = ((flags0 &  4) != 0);
     m_DCLOpin   = ((flags0 &  8) != 0);
     m_ACLOpin   = ((flags0 & 16) != 0);
     m_waitmode  = ((flags0 & 32) != 0);
-    uint8_t flags1 = *pbImage++;                       //   27     1   Flags
+    uint8_t flags1 = *pbImage++;                    //   27     1   Flags
     m_STRTrq    = ((flags1 &   1) != 0);
     m_RPLYrq    = ((flags1 &   2) != 0);
     m_ILLGrq    = ((flags1 &   4) != 0);
@@ -2588,7 +2597,7 @@ void CProcessor::LoadFromImage(const uint8_t* pImage)
     m_ACLOrq    = ((flags1 &  32) != 0);
     m_HALTrq    = ((flags1 &  64) != 0);
     m_EVNTrq    = ((flags1 & 128) != 0);
-    uint8_t flags2 = *pbImage++;                       //   28     1   Flags
+    uint8_t flags2 = *pbImage++;                    //   28     1   Flags
     m_FIS_rq    = ((flags2 &  1) != 0);
     m_BPT_rq    = ((flags2 &  2) != 0);
     m_IOT_rq    = ((flags2 &  4) != 0);
@@ -2596,53 +2605,55 @@ void CProcessor::LoadFromImage(const uint8_t* pImage)
     m_TRAPrq    = ((flags2 & 16) != 0);
     m_ACLOreset = ((flags2 & 32) != 0);
     m_EVNTreset = ((flags2 & 64) != 0);
-    m_VIRQreset = (int) * pbImage++;                //   29     1   VIRQ reset request
+    m_VIRQreset = *pbImage++;                       //   29     1   VIRQ reset request
     //                                              //   30     2   Reserved
     memcpy(m_virq, pImage + 32, 2 * 16);            //   32    32   VIRQ vectors
 }
 
 uint16_t CProcessor::GetWordAddr (uint8_t meth, uint8_t reg)
 {
-    uint16_t addr;
-
-    addr = 0;
-
     switch (meth)
     {
     case 1:   //(R)
-        addr = GetReg(reg);
-        break;
+        return GetReg(reg);
     case 2:   //(R)+
-        addr = GetReg(reg);
-        SetReg(reg, addr + 2);
-        break;
+        {
+            uint16_t addr = GetReg(reg);
+            SetReg(reg, addr + 2);
+            return addr;
+        }
     case 3:  //@(R)+
-        addr = GetReg(reg);
-        SetReg(reg, addr + 2);
-        addr = GetWord(addr);
-        break;
+        {
+            uint16_t addr = GetReg(reg);
+            SetReg(reg, addr + 2);
+            return GetWord(addr);
+        }
     case 4: //-(R)
         SetReg(reg, GetReg(reg) - 2);
-        addr = GetReg(reg);
-        break;
+        return GetReg(reg);
     case 5: //@-(R)
-        SetReg(reg, GetReg(reg) - 2);
-        addr = GetReg(reg);
-        addr = GetWord(addr);
-        break;
+        {
+            SetReg(reg, GetReg(reg) - 2);
+            uint16_t addr = GetReg(reg);
+            return GetWord(addr);
+        }
     case 6: //d(R)
-        addr = GetWord(GetPC());
-        SetPC(GetPC() + 2);
-        addr = GetReg(reg) + addr;
-        break;
+        {
+            uint16_t addr = GetWord(GetPC());
+            SetPC(GetPC() + 2);
+            return GetReg(reg) + addr;
+        }
     case 7: //@d(r)
-        addr = GetWord(GetPC());
-        SetPC(GetPC() + 2);
-        addr = GetReg(reg) + addr;
-        if (!m_RPLYrq) addr = GetWord(addr);
-        break;
+        {
+            uint16_t addr = GetWord(GetPC());
+            SetPC(GetPC() + 2);
+            addr = GetReg(reg) + addr;
+            if (!m_RPLYrq)
+                return GetWord(addr);
+            return addr;
+        }
     }
-    return addr;
+    return 0;
 }
 
 uint16_t CProcessor::GetByteAddr (uint8_t meth, uint8_t reg)
