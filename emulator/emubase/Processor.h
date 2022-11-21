@@ -21,15 +21,12 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 // KM1801VM2 processor
 class CProcessor
 {
-
 public:  // Constructor / initialization
     CProcessor(CMotherboard* pBoard);
     void        SetHALTPin(bool value) { m_haltpin = value; }
     void        SetDCLOPin(bool value);
     void        SetACLOPin(bool value);
     void        MemoryError();
-    int         GetInternalTick() const { return m_internalTick; }
-    void        ClearInternalTick() { m_internalTick = 0; }
 
 public:
     static void Init();  // Initialize static tables
@@ -87,13 +84,11 @@ public:  // Register control
     uint16_t    GetPSW() const { return m_psw; }  // Get the processor status word register value
     uint16_t    GetCPSW() const { return m_savepsw; }
     uint8_t     GetLPSW() const { return (uint8_t)(m_psw & 0xff); }  // Get PSW lower byte
-    // Set the processor status word register value
-    void        SetPSW(uint16_t word);
-    void        SetCPSW(uint16_t word) {m_savepsw = word; }
+    void        SetPSW(uint16_t word);  // Set the processor status word register value
+    void        SetCPSW(uint16_t word) { m_savepsw = word; }
     void        SetLPSW(uint8_t byte);
     uint16_t    GetReg(int regno) const { return m_R[regno]; }  // Get register value, regno=0..7
-    /// \brief Set register value
-    void        SetReg(int regno, uint16_t word);
+    void        SetReg(int regno, uint16_t word);  // Set register value
     uint8_t     GetLReg(int regno) const { return (uint8_t)(m_R[regno] & 0xff); }
     void        SetLReg(int regno, uint8_t byte);
     uint16_t    GetSP() const { return m_R[6]; }
@@ -101,8 +96,7 @@ public:  // Register control
     uint16_t    GetPC() const { return m_R[7]; }
     uint16_t    GetCPC() const { return m_savepc; }
     void        SetPC(uint16_t word);
-    void        SetCPC(uint16_t word) {m_savepc = word; }
-    uint16_t    GetInstructionPC() const { return m_instructionpc; }  // Address of the current instruction
+    void        SetCPC(uint16_t word) { m_savepc = word; }
 
 public:  // PSW bits control
     void        SetC(bool bFlag);
@@ -132,6 +126,9 @@ public:  // Processor control
     bool        InterruptProcessing();
     // Execute next command and process interrupts
     void        CommandExecution();
+    int         GetInternalTick() const { return m_internalTick; }
+    void        ClearInternalTick() { m_internalTick = 0; }
+    uint16_t    GetInstructionPC() const { return m_instructionpc; }  // Address of the current instruction
 
 public:  // Saving/loading emulator status (pImage addresses up to 32 bytes)
     void        SaveToImage(uint8_t* pImage) const;
@@ -268,7 +265,6 @@ protected:  // Implementation - instruction execution
 
     void        ExecuteADD ();
     void        ExecuteSUB ();
-
 };
 
 inline void CProcessor::SetPSW(uint16_t word)

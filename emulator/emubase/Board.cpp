@@ -225,7 +225,7 @@ void CMotherboard::Tick50()  // 50 Hz timer
 {
     //if ((m_Port177662wr & 040000) == 0)
     //{
-    //    m_pCPU->TickEVNT();
+        m_pCPU->TickEVNT();
     //}
 }
 
@@ -308,23 +308,20 @@ void CMotherboard::DebugTicks()
  аждый фрейм равен 1/25 секунды = 40 мс = 20000 тиков, 1 тик = 2 мкс.
 12 ћ√ц = 1 / 12000000 = 0.83(3) мкс
 ¬ каждый фрейм происходит:
-* 320000 тиков ÷ѕ - 16 раз за тик (8 ћ√ц)
-* программируемый таймер - на каждый 128-й тик процессора; 42.6(6) мкс либо 32 мкс
+* 320000 тиков ÷ѕ - 16 раз за тик - 8 ћ√ц
+* программируемый таймер - на каждый 4-й тик процессора - 2 ћ√ц
 * 2 тика IRQ2 50 √ц, в 0-й и 10000-й тик фрейма
 * 625 тиков FDD - каждый 32-й тик (300 RPM = 5 оборотов в секунду)
-* 68571 тиков AY-3-891x: 1.714275 ћ√ц (12ћ√ц / 7 = 1.714 ћ√ц, 5.83(3) мкс)
+* 882 тиков звука (дл€ частоты 22050 √ц)
 */
 bool CMotherboard::SystemFrame()
 {
-    const int frameProcTicks = 16;
-    const int audioticks = 20286 / (SOUNDSAMPLERATE / 25);
-    int floppyTicks = 32;
-
-    int timerTicks = 0;
+    const int soundSamplesPerFrame = SOUNDSAMPLERATE / 25;
+    int soundBrasErr = 0;
 
     for (int frameticks = 0; frameticks < 20000; frameticks++)
     {
-        for (int procticks = 0; procticks < frameProcTicks; procticks++)  // CPU ticks
+        for (int procticks = 0; procticks < 16; procticks++)  // CPU ticks
         {
 #if !defined(PRODUCT)
             if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
@@ -337,27 +334,25 @@ bool CMotherboard::SystemFrame()
                 while (*pbps != 0177777) { if (m_pCPU->GetPC() == *pbps++) return false; }
             }
 
-            timerTicks++;
-            if (timerTicks >= 128)
-            {
-                TimerTick();  // System timer tick: 31250 Hz = 32uS (BK-0011), 23437.5 Hz = 42.67 uS (BK-0010)
-                timerTicks = 0;
-            }
+            if ((procticks & 3) == 3)
+                TimerTick();
         }
 
         if (frameticks % 10000 == 0)
-        {
             Tick50();  // 1/50 timer event
-        }
 
-        if ((m_Configuration & NEON_COPT_FDD) && (frameticks % floppyTicks == 0))  // FDD tick
+        if ((m_Configuration & NEON_COPT_FDD) && (frameticks % 32 == 0))  // FDD tick
         {
             if (m_pFloppyCtl != nullptr)
                 m_pFloppyCtl->Periodic();
         }
 
-        if (frameticks % audioticks == 0)  // AUDIO tick
+        soundBrasErr += soundSamplesPerFrame;
+        if (2 * soundBrasErr >= 20000)
+        {
+            soundBrasErr -= 20000;
             DoSound();
+        }
     }
 
     return true;
@@ -603,7 +598,7 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
 
     if (address >= 0160000)
     {
-        if (address < 0170000)  // Port
+        if (address < 0174000 || address >= 0177700)  // Port
         {
             *pOffset = address;
             return ADDRTYPE_IO;
@@ -643,15 +638,26 @@ uint8_t CMotherboard::GetPortByte(uint16_t address)
 
 uint16_t CMotherboard::GetPortWord(uint16_t address)
 {
+    uint16_t result;
+
     switch (address)
     {
+    case 0161000:  // PICCSR
+        DebugLogFormat(_T("%06o\tGETPORT PICCSR = %06o\n"), m_pCPU->GetInstructionPC(), 0);
+        return 0;//TODO
+
+    case 0161002:  // PICMR
+        DebugLogFormat(_T("%06o\tGETPORT PICMR = %06o\n"), m_pCPU->GetInstructionPC(), 0);
+        return 0;//TODO
+
     case 0161014:
         DebugLogFormat(_T("%06o\tGETPORT SND—2R = %06o\n"), m_pCPU->GetInstructionPC(), 0);
         return 0;//TODO
 
     case 0161032:  // PPIB
-        DebugLogFormat(_T("%06o\tGETPORT PPIB = %06o\n"), m_pCPU->GetInstructionPC(), m_PortPPIB);
-        return m_PortPPIB;
+        result = 0xfffc | m_PortPPIB;
+        DebugLogFormat(_T("%06o\tGETPORT PPIB = %06o\n"), m_pCPU->GetInstructionPC(), result);
+        return result;
 
     case 0161034:  // PPIC
         DebugLogFormat(_T("%06o\tGETPORT PPIC = %06o\n"), m_pCPU->GetInstructionPC(), m_PortPPIC);
@@ -661,10 +667,10 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%06o\tGETPORT DLBUF\n"), m_pCPU->GetInstructionPC(), address);
         //TODO: DLBUF -- Programmable parallel port
         return 0;
-    case 0161062:
+    case 0161062:  // DLCSR
         //TODO: DLCSR -- Programmable parallel port
         DebugLogFormat(_T("%06o\tGETPORT DLCSR\n"), m_pCPU->GetInstructionPC(), address);
-        return 0x0f;
+        return 0;
 
     case 0161200:
     case 0161202:
@@ -760,6 +766,8 @@ void CMotherboard::SetPortByte(uint16_t address, uint8_t byte)
 //void DebugPrintFormat(LPCTSTR pszFormat, ...);  //DEBUG
 void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 {
+    TCHAR buffer[17];
+
     switch (address)
     {
     case 0161000:  // PICCSR
@@ -795,7 +803,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         //TODO: PPIB -- Parallel port data
         break;
     case 0161034:  // PPIC
-        DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o) PPIC\n"), m_pCPU->GetInstructionPC(), word, address);
+        PrintBinaryValue(buffer, word);
+        DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o) PPIC %s\n"), m_pCPU->GetInstructionPC(), word, address, buffer + 12);
         m_PortPPIC = word;
         break;
     case 0161036:
@@ -808,7 +817,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         if (m_SerialOutCallback != nullptr)
             (*m_SerialOutCallback)(word & 0xff);
         break;
-    case 0161062:
+    case 0161062:  // DLCSR
         DebugLogFormat(_T("%06o\tSETPORT %06o -> (%06o) DLCSR\n"), m_pCPU->GetInstructionPC(), word, address);
         //TODO: DLCSR -- Programmable Parallel port control
         break;
@@ -906,11 +915,9 @@ void TraceInstruction(CProcessor* pProc, CMotherboard* pBoard, uint16_t address)
     for (uint16_t i = 0; i < 4; i++)
         memory[i] = pBoard->GetWordView(address + i * 2, okHaltMode, true, &addrtype);
 
-    //if (addrtype != ADDRTYPE_RAM)
-    //    return;
-
-    TCHAR bufaddr[7];
-    PrintOctalValue(bufaddr, address);
+    TCHAR bufaddr[8];
+    bufaddr[0] = okHaltMode ? 'H' : 'U';
+    PrintOctalValue(bufaddr + 1, address);
 
     TCHAR instr[8];
     TCHAR args[32];
