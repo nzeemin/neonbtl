@@ -150,9 +150,9 @@ HBITMAP BitmapFile_LoadPngFromResource(LPCTSTR lpName)
 //////////////////////////////////////////////////////////////////////
 
 
-bool BitmapFile_SavePngFile(
+bool BitmapFile_SaveImageFile(
     const uint32_t* pBits,
-    LPCTSTR sFileName,
+    LPCTSTR sFileName, BitmapFileFormat format,
     int width, int height)
 {
     ASSERT(pBits != NULL);
@@ -160,6 +160,17 @@ bool BitmapFile_SavePngFile(
 
     IWICImagingFactory * piFactory = BitmapFile_pIWICFactory;
     ASSERT(piFactory != NULL);
+
+    GUID containerFormatGuid = GUID_ContainerFormatPng;
+    switch (format)
+    {
+    case BitmapFileFormatBmp:
+        containerFormatGuid = GUID_ContainerFormatBmp; break;
+    case BitmapFileFormatTiff:
+        containerFormatGuid = GUID_ContainerFormatTiff; break;
+    default:
+        containerFormatGuid = GUID_ContainerFormatPng;
+    }
 
     bool result = false;
     HRESULT hr = NULL;
@@ -169,7 +180,7 @@ bool BitmapFile_SavePngFile(
     WICPixelFormatGUID formatGUID = GUID_WICPixelFormat24bppBGR;
 
     IWICBitmapEncoder *piEncoder = NULL;
-    hr = piFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, &piEncoder);
+    hr = piFactory->CreateEncoder(containerFormatGuid, NULL, &piEncoder);
     if (hr != S_OK) goto Cleanup;
 
     hr = piFactory->CreateStream(&piStream);

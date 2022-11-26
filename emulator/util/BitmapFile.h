@@ -18,12 +18,19 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 void BitmapFile_Init();
 void BitmapFile_Done();
 
+enum BitmapFileFormat
+{
+    BitmapFileFormatBmp = 1,
+    BitmapFileFormatPng = 2,
+    BitmapFileFormatTiff = 3,
+};
+
 HBITMAP BitmapFile_LoadPngFromResource(LPCTSTR lpName);
 
 // Save the image as .PNG file
-bool BitmapFile_SavePngFile(
+bool BitmapFile_SaveImageFile(
     const uint32_t* pBits,
-    LPCTSTR sFileName,
+    LPCTSTR sFileName, BitmapFileFormat format,
     int screenWidth, int screenHeight);
 
 

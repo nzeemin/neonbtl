@@ -414,12 +414,17 @@ BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)
     ASSERT(sFileName != NULL);
     ASSERT(m_bits != NULL);
 
-    uint32_t* pBits = (uint32_t*) ::calloc(m_cxScreenWidth * m_cyScreenHeight, 4);
+    uint32_t* pBits = (uint32_t*) ::calloc(m_cxScreenWidth * m_cyScreenHeight, sizeof(uint32_t));
     Emulator_PrepareScreenRGB32(pBits, m_ScreenMode);
 
-    //LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
-    BOOL result = FALSE;
-    result = BitmapFile_SavePngFile((uint32_t*)pBits, sFileName, m_cxScreenWidth, m_cyScreenHeight);
+    LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
+    BitmapFileFormat format = BitmapFileFormatPng;
+    if (sFileNameExt != NULL && _tcsicmp(sFileNameExt, _T(".bmp")) == 0)
+        format = BitmapFileFormatBmp;
+    else if (sFileNameExt != NULL && (_tcsicmp(sFileNameExt, _T(".tif")) == 0 || _tcsicmp(sFileNameExt, _T(".tiff")) == 0))
+        format = BitmapFileFormatTiff;
+    bool result = BitmapFile_SaveImageFile(
+            (const uint32_t *)pBits, sFileName, format, m_cxScreenWidth, m_cyScreenHeight);
 
     ::free(pBits);
 
@@ -448,7 +453,7 @@ HGLOBAL ScreenView_GetScreenshotAsDIB()
         return NULL;
     }
 
-    LPBYTE p = (LPBYTE) ::GlobalLock(hDIB);
+    LPBYTE p = (LPBYTE)::GlobalLock(hDIB);
     ::CopyMemory(p, &bi, sizeof(BITMAPINFOHEADER));
     p += sizeof(BITMAPINFOHEADER);
     for (int line = 0; line < m_cyScreenHeight; line++)
