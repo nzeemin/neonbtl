@@ -400,17 +400,8 @@ bool Emulator_SystemFrame()
     return true;
 }
 
-void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)
+void CALLBACK Emulator_SoundGenCallback(unsigned short /*L*/, unsigned short /*R*/)
 {
-    if (m_okEmulatorCovox)
-    {
-        // Get lower byte from printer port output register
-        unsigned short data = g_pBoard->GetPrinterOutPort() & 0xff;
-        // Merge with channel data
-        L += (data << 7);
-        R += (data << 7);
-    }
-
     //SoundGen_FeedDAC(L, R);
 }
 

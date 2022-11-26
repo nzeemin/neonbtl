@@ -14,17 +14,17 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
-// Save screenshot as .BMP file
-BOOL BmpFile_SaveScreenshot(
-    const DWORD* bits,
-    const DWORD* colors,
-    LPCTSTR sFileName);
 
-// Save screenshot as .PNG file
-BOOL PngFile_SaveScreenshot(
-    const DWORD* bits,
-    const DWORD* colors,
-    LPCTSTR sFileName);
+void BitmapFile_Init();
+void BitmapFile_Done();
+
+HBITMAP BitmapFile_LoadPngFromResource(LPCTSTR lpName);
+
+// Save the image as .PNG file
+bool BitmapFile_SavePngFile(
+    const uint32_t* pBits,
+    LPCTSTR sFileName,
+    int screenWidth, int screenHeight);
 
 
 //////////////////////////////////////////////////////////////////////

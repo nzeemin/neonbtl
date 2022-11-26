@@ -102,9 +102,6 @@ void CMotherboard::Reset ()
     m_Port177566 = 0;
     m_PortKBDCSR = 0100;
     m_PortKBDBUF = 0;
-    m_PortDLBUFin = m_PortDLBUFout = 0;
-    m_Port177716 = 0300;
-    m_Port177716mem = 0000002;
 
     m_timer = 0177777;
     m_timerdivider = 0;
@@ -225,7 +222,7 @@ void CMotherboard::Tick50()  // 50 Hz timer
 {
     //if ((m_Port177662wr & 040000) == 0)
     //{
-        m_pCPU->TickEVNT();
+    //    m_pCPU->TickEVNT();
     //}
 }
 
@@ -359,41 +356,9 @@ bool CMotherboard::SystemFrame()
 }
 
 // Key pressed or released
-void CMotherboard::KeyboardEvent(uint8_t scancode, bool okPressed, bool okAr2)
+void CMotherboard::KeyboardEvent(uint8_t scancode, bool okPressed)
 {
-    //if (scancode == BK_KEY_STOP)
-    //{
-    //    if (okPressed)
-    //    {
-    //        m_pCPU->AssertHALT();
-    //    }
-    //    return;
-    //}
-
-    if (!okPressed)  // Key released
-    {
-        m_Port177716 |= 0100;  // Reset "Key pressed" flag in system register
-        m_Port177716 |= 4;  // Set "ready" flag
-        return;
-    }
-
-    m_Port177716 &= ~0100;  // Set "Key pressed" flag in system register
-    m_Port177716 |= 4;  // Set "ready" flag
-
-    if ((m_PortKBDCSR & 0200) == 0)
-    {
-        m_PortKBDBUF = scancode & 0177;
-        m_PortKBDCSR |= 0200;  // "Key ready" flag in keyboard state register
-        if ((m_PortKBDCSR & 0100) == 0100)  // Keyboard interrupt enabled
-        {
-            m_pCPU->InterruptVIRQ(1, (okAr2 ? 0274 : 060));
-        }
-    }
-}
-
-void CMotherboard::SetPrinterInPort(uint8_t data)
-{
-    m_PortDLBUFin = data;
+    //TODO
 }
 
 

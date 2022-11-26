@@ -201,7 +201,6 @@ BOOL MainWindow_InitToolbar()
     buttons[7].idCommand = ID_FILE_SCREENSHOT;
     buttons[7].iBitmap = ToolbarImageScreenshot;
     buttons[7].fsStyle = BTNS_BUTTON;
-    buttons[7].fsState = 0; // disabled
 
     SendMessage(m_hwndToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -857,14 +856,14 @@ void MainWindow_DoFileScreenshotSaveAs()
     TCHAR bufFileName[MAX_PATH];
     BOOL okResult = ShowSaveDialog(g_hwnd,
             _T("Save screenshot as"),
-            _T("PNG bitmaps (*.png)\0*.png\0BMP bitmaps (*.bmp)\0*.bmp\0All Files (*.*)\0*.*\0\0"),
+            _T("PNG images (*.png)\0*.png\0All Files (*.*)\0*.*\0\0"),
             _T("png"),
             bufFileName);
     if (! okResult) return;
 
     if (!ScreenView_SaveScreenshot(bufFileName))
     {
-        AlertWarning(_T("Failed to save screenshot bitmap."));
+        AlertWarning(_T("Failed to save screenshot image."));
     }
 }
 

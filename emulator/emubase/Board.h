@@ -112,9 +112,7 @@ public:  // System control
 public:
     void        ExecuteCPU();  // Execute one CPU instruction
     bool        SystemFrame();  // Do one frame -- use for normal run
-    void        KeyboardEvent(uint8_t scancode, bool okPressed, bool okAr2);  // Key pressed or released
-    uint16_t    GetPrinterOutPort() const { return m_PortDLBUFout; }
-    void        SetPrinterInPort(uint8_t data);
+    void        KeyboardEvent(uint8_t scancode, bool okPressed);  // Key pressed or released
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
@@ -168,10 +166,6 @@ private:  // Ports: implementation
     uint16_t    m_Port177566;       // Serial port output data register
     uint16_t    m_PortKBDCSR;       // Keyboard status register
     uint16_t    m_PortKBDBUF;       // Keyboard register
-    uint16_t    m_PortDLBUFin;      // Parallel port, input register
-    uint16_t    m_PortDLBUFout;     // Parallel port, output register
-    uint16_t    m_Port177716;       // System register (read only)
-    uint16_t    m_Port177716mem;    // System register (memory)
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags

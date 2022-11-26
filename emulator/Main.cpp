@@ -22,6 +22,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Emulator.h"
 #include "Dialogs.h"
 #include "Views.h"
+#include "util/BitmapFile.h"
 
 //////////////////////////////////////////////////////////////////////
 // Global Variables
@@ -159,6 +160,8 @@ BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
     ics.dwICC = ICC_WIN95_CLASSES;
     InitCommonControlsEx(&ics);
 
+    BitmapFile_Init();
+
 #if !defined(PRODUCT)
     DebugLogClear();
 #endif
@@ -189,6 +192,8 @@ void DoneInstance()
     DisasmView_Done();
 
     Emulator_Done();
+
+    BitmapFile_Done();
 
     Settings_Done();
 }

@@ -87,9 +87,9 @@ BEGIN
         MENUITEM "Load State…",                 ID_FILE_LOADSTATE, INACTIVE
         MENUITEM "Save State…",                 ID_FILE_SAVESTATE, INACTIVE
         MENUITEM SEPARATOR
-        MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT, INACTIVE
+        MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT
         MENUITEM "Screenshot to Clipboard",     ID_FILE_SCREENSHOTTOCLIPBOARD
-        MENUITEM "Save Screenshot as...",       ID_FILE_SAVESCREENSHOTAS, INACTIVE
+        MENUITEM "Save Screenshot as...",       ID_FILE_SAVESCREENSHOTAS
         MENUITEM SEPARATOR
         MENUITEM "Settings General",            ID_FILE_SETTINGS
         MENUITEM "Settings Fonts and Colors",   ID_FILE_SETTINGS_COLORS
@@ -114,8 +114,8 @@ BEGIN
     END
     POPUP "&Drives"
     BEGIN
-        MENUITEM "Floppy 0",                   ID_EMULATOR_FLOPPY0, INACTIVE
-        MENUITEM "Floppy 1",                   ID_EMULATOR_FLOPPY1, INACTIVE
+        MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0, INACTIVE
+        MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1, INACTIVE
     END
     POPUP "Debug"
     BEGIN

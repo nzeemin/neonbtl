@@ -192,7 +192,7 @@ void ScreenView_OnRButtonDown(int mousex, int mousey)
     ::SetFocus(g_hwndScreen);
 
     HMENU hMenu = ::CreatePopupMenu();
-    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
+    ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
     ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
 
     POINT pt = { mousex, mousey };
@@ -393,13 +393,13 @@ void ScreenView_ProcessKeyboard()
     if (keyevent != 0)
     {
         bool pressed = ((keyevent & 0x8000) != 0);
-        bool ctrl = ((keyevent & 0x4000) != 0);
+        //bool ctrl = ((keyevent & 0x4000) != 0);
         BYTE bkscan = LOBYTE(keyevent);
 
 //        TCHAR bufoct[7];  PrintOctalValue(bufoct, bkscan);
 //        DebugPrintFormat(_T("KeyEvent: %s %d %d\r\n"), bufoct, pressed, ctrl);
 
-        g_pBoard->KeyboardEvent(bkscan, pressed, ctrl);
+        g_pBoard->KeyboardEvent(bkscan, pressed);
     }
 }
 
@@ -417,12 +417,9 @@ BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)
     uint32_t* pBits = (uint32_t*) ::calloc(m_cxScreenWidth * m_cyScreenHeight, 4);
     Emulator_PrepareScreenRGB32(pBits, m_ScreenMode);
 
-    LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
+    //LPCTSTR sFileNameExt = _tcsrchr(sFileName, _T('.'));
     BOOL result = FALSE;
-    //if (sFileNameExt != NULL && _tcsicmp(sFileNameExt, _T(".png")) == 0)
-    //    result = PngFile_SaveScreenshot(pBits, (uint32_t*)colors, sFileName, m_cxScreenWidth, m_cyScreenHeight);
-    //else
-    //    result = BmpFile_SaveScreenshot(pBits, (uint32_t*)colors, sFileName, m_cxScreenWidth, m_cyScreenHeight);
+    result = BitmapFile_SavePngFile((uint32_t*)pBits, sFileName, m_cxScreenWidth, m_cyScreenHeight);
 
     ::free(pBits);
 
