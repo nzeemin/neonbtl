@@ -483,7 +483,7 @@ void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine)
     int line = addroffset / 16;
     int pos = addroffset & 15;
 
-    pRect->left = cxChar * (13 + 7 * (pos / 2)) - cxChar / 2;
+    pRect->left = 32 + 4 + cxChar * (9 + 7 * (pos / 2)) - cxChar / 2;
     pRect->right = pRect->left + cxChar * 7;
     pRect->top = (line + 1) * cyLine - 1;
     pRect->bottom = pRect->top + cyLine + 1;
@@ -504,6 +504,7 @@ void MemoryView_OnDraw(HDC hdc)
     COLORREF colorHighlight = Settings_GetColor(ColorDebugHighlight);
     HBRUSH hbrHighlight = ::CreateSolidBrush(colorHighlight);
     HGDIOBJ hOldBrush = ::SelectObject(hdc, hbrHighlight);
+    ::SetBkMode(hdc, TRANSPARENT);
 
     m_cxChar = cxChar;
     m_cyLineMemory = cyLine;

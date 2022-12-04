@@ -71,7 +71,9 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="ToolWindow.h" />
     <ClInclude Include="Views.h" />
-    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="res\resource.h">
+      <Filter>res</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\diskette.ico">
@@ -103,7 +105,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Version.tpl" />
-    <None Include="res\pk11.rom" />
+    <None Include="res\pk11.rom">
+      <Filter>res</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\Main.rc">
