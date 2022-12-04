@@ -114,12 +114,10 @@ void CMotherboard::Reset ()
     m_pCPU->SetACLOPin(false);
 }
 
-// Load 8 KB ROM image from the buffer
-//   bank - number of 8k ROM bank, 0..1
-void CMotherboard::LoadROM(int bank, const uint8_t* pBuffer)
+// Load 16 KB ROM image from the buffer
+void CMotherboard::LoadROM(const uint8_t* pBuffer)
 {
-    ASSERT(bank >= 0 && bank <= 1);
-    ::memcpy(m_pROM + 8192 * bank, pBuffer, 8192);
+    ::memcpy(m_pROM, pBuffer, 16384);
 }
 
 //void CMotherboard::LoadRAM(int startbank, const uint8_t* pBuffer, int length)

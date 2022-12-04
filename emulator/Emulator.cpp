@@ -51,34 +51,44 @@ void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R);
 //////////////////////////////////////////////////////////////////////
 
 
-const LPCTSTR FILENAME_ROM0 = _T("rom0.rr1");
-const LPCTSTR FILENAME_ROM1 = _T("rom1.rr1");
+const LPCTSTR NEON_ROM_FILENAME = _T("pk11.rom");
+const size_t NEON_ROM_SIZE = 16384;
 
-
-//////////////////////////////////////////////////////////////////////
-
-bool Emulator_LoadRomFile(LPCTSTR strFileName, uint8_t* buffer, uint32_t fileOffset, uint32_t bytesToRead)
+bool Emulator_LoadNeonRom()
 {
-    FILE* fpRomFile = ::_tfsopen(strFileName, _T("rb"), _SH_DENYWR);
-    if (fpRomFile == nullptr)
+    void * pData = ::calloc(NEON_ROM_SIZE, 1);
+    if (pData == nullptr)
         return false;
 
-    ASSERT(bytesToRead <= 8192);
-    ::memset(buffer, 0, 8192);
-
-    if (fileOffset > 0)
+    FILE* fpFile = ::_tfsopen(NEON_ROM_FILENAME, _T("rb"), _SH_DENYWR);
+    if (fpFile != nullptr)
     {
-        ::fseek(fpRomFile, fileOffset, SEEK_SET);
+        size_t dwBytesRead = ::fread(pData, 1, NEON_ROM_SIZE, fpFile);
+        ::fclose(fpFile);
+        if (dwBytesRead != NEON_ROM_SIZE)
+        {
+            ::free(pData);
+            return false;
+        }
+    }
+    else
+    {
+        HRSRC hRes = NULL;
+        DWORD dwDataSize = 0;
+        HGLOBAL hResLoaded = NULL;
+        void * pResData = nullptr;
+        if ((hRes = ::FindResource(NULL, MAKEINTRESOURCE(IDR_NEON_ROM), _T("BIN"))) == NULL ||
+            (dwDataSize = ::SizeofResource(NULL, hRes)) < NEON_ROM_SIZE ||
+            (hResLoaded = ::LoadResource(NULL, hRes)) == NULL ||
+            (pResData = ::LockResource(hResLoaded)) == NULL)
+        {
+            ::free(pData);
+            return false;
+        }
+        ::memcpy(pData, pResData, NEON_ROM_SIZE);
     }
 
-    size_t dwBytesRead = ::fread(buffer, 1, bytesToRead, fpRomFile);
-    if (dwBytesRead != bytesToRead)
-    {
-        ::fclose(fpRomFile);
-        return false;
-    }
-
-    ::fclose(fpRomFile);
+    g_pBoard->LoadROM((const uint8_t *)pData);
 
     return true;
 }
@@ -135,22 +145,11 @@ bool Emulator_InitConfiguration(NeonConfiguration configuration)
 {
     g_pBoard->SetConfiguration((uint16_t)configuration);
 
-    uint8_t buffer[8192];
-
-    // Load ROM file
-    if (!Emulator_LoadRomFile(FILENAME_ROM0, buffer, 0, 8192))
+    if (!Emulator_LoadNeonRom())
     {
-        AlertWarning(_T("Failed to load ROM0 file."));
+        AlertWarning(_T("Failed to load ROM file."));
         return false;
     }
-    g_pBoard->LoadROM(0, buffer);
-
-    if (!Emulator_LoadRomFile(FILENAME_ROM1, buffer, 0, 8192))
-    {
-        AlertWarning(_T("Failed to load ROM1 file."));
-        return false;
-    }
-    g_pBoard->LoadROM(1, buffer);
 
     g_nEmulatorConfiguration = configuration;
 

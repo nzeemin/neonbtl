@@ -88,9 +88,10 @@
     </Xml>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="res\Main.rc" />
+    <None Include="Version.tpl" />
+    <None Include="res\pk11.rom" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Version.tpl" />
+    <ResourceCompile Include="res\Main.rc" />
   </ItemGroup>
 </Project>

@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Version.tpl" />
+    <None Include="res\pk11.rom" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\Main.rc">

@@ -9,9 +9,9 @@
 #define IDM_ABOUT                       104
 #define IDS_WELCOME                     104
 #define IDM_EXIT                        105
-#define IDI_NEONBTL                     107
+#define IDI_APPICON                     107
 #define IDI_SMALL                       108
-#define IDC_NEONBTL                     109
+#define IDC_APPLICATION                 109
 #define IDR_MAINFRAME                   128
 #define IDD_INPUTBOX                    129
 #define IDI_DISKETTE                    138
@@ -21,6 +21,7 @@
 #define IDD_CREATEDISK                  144
 #define IDD_SETTINGS                    145
 #define IDD_SETTINGS_COLORS             146
+#define IDR_NEON_ROM                    148
 #define IDB_KEYBOARDMASK                150
 #define IDD_COMMANDLINEHELP             152
 #define IDC_EDIT1                       1000
