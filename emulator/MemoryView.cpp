@@ -501,10 +501,9 @@ void MemoryView_OnDraw(HDC hdc)
     COLORREF colorMemoryRom = Settings_GetColor(ColorDebugMemoryRom);
     COLORREF colorMemoryIO = Settings_GetColor(ColorDebugMemoryIO);
     COLORREF colorMemoryNA = Settings_GetColor(ColorDebugMemoryNA);
-    COLORREF colorOld = ::SetTextColor(hdc, colorText);
     COLORREF colorHighlight = Settings_GetColor(ColorDebugHighlight);
-    COLORREF colorBack = ::GetSysColor(COLOR_WINDOW);
-    COLORREF colorBkOld = SetBkColor(hdc, colorBack);
+    HBRUSH hbrHighlight = ::CreateSolidBrush(colorHighlight);
+    HGDIOBJ hOldBrush = ::SelectObject(hdc, hbrHighlight);
 
     m_cxChar = cxChar;
     m_cyLineMemory = cyLine;
@@ -523,6 +522,8 @@ void MemoryView_OnDraw(HDC hdc)
     int y = 1 * cyLine;
     for (;;)    // Draw lines
     {
+        uint16_t lineAddress = address;
+
         DrawOctalValue(hdc, 5 * cxChar, y, address);
 
         int x = 13 * cxChar;
@@ -536,7 +537,8 @@ void MemoryView_OnDraw(HDC hdc)
             bool okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
             WORD wChanged = Emulator_GetChangeRamStatus(address);
 
-            ::SetBkColor(hdc, (address == m_wCurrentAddress) ? colorHighlight : colorBack);
+            if (address == m_wCurrentAddress)
+                ::PatBlt(hdc, x - cxChar / 2, y, cxChar * 7, cyLine, PATCOPY);
 
             if (okValid)
             {
@@ -581,10 +583,17 @@ void MemoryView_OnDraw(HDC hdc)
             address += 2;
             x += 7 * cxChar;
         }
-        ::SetTextColor(hdc, colorText);
-        ::SetBkColor(hdc, colorBack);
+
+        // Highlight characters at right
+        if (lineAddress <= m_wCurrentAddress && m_wCurrentAddress < lineAddress + 16)
+        {
+            int xHighlight = x + cxChar + (m_wCurrentAddress - lineAddress) * cxChar;
+            ::PatBlt(hdc, xHighlight, y, cxChar * 2, cyLine, PATCOPY);
+        }
 
         // Draw characters at right
+        ::SetTextColor(hdc, colorText);
+        ::SetBkMode(hdc, TRANSPARENT);
         int xch = x + cxChar;
         TextOut(hdc, xch, y, wchars, 16);
 
@@ -592,8 +601,8 @@ void MemoryView_OnDraw(HDC hdc)
         if (y > rcClip.bottom) break;
     }
 
-    SetTextColor(hdc, colorOld);
-    SetBkColor(hdc, colorBkOld);
+    ::SelectObject(hdc, hOldBrush);
+    VERIFY(::DeleteObject(hbrHighlight));
     SelectObject(hdc, hOldFont);
     VERIFY(::DeleteObject(hFont));
 
