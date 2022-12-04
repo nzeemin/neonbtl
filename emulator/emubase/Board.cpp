@@ -679,6 +679,11 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
 {
     switch (address)
     {
+    case 0161032:  // PPIB
+        return m_PortPPIB;
+    case 0161034:  // PPIC
+        return m_PortPPIC;
+
     case 0161200:
     case 0161202:
     case 0161204:

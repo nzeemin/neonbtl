@@ -161,18 +161,18 @@ BOOL MainWindow_InitToolbar()
     if (!m_hwndToolbar)
         return FALSE;
 
-    SendMessage(m_hwndToolbar, TB_SETEXTENDEDSTYLE, 0, (LPARAM) (DWORD) TBSTYLE_EX_MIXEDBUTTONS);
-    SendMessage(m_hwndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
-    SendMessage(m_hwndToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
+    SendMessage(m_hwndToolbar, TB_SETEXTENDEDSTYLE, 0, (LPARAM)(DWORD)TBSTYLE_EX_MIXEDBUTTONS);
+    SendMessage(m_hwndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+    SendMessage(m_hwndToolbar, TB_SETBUTTONSIZE, 0, (LPARAM)MAKELONG(26, 26));
 
     TBADDBITMAP addbitmap;
     addbitmap.hInst = g_hInst;
     addbitmap.nID = IDB_TOOLBAR;
-    SendMessage(m_hwndToolbar, TB_ADDBITMAP, 2, (LPARAM) &addbitmap);
+    SendMessage(m_hwndToolbar, TB_ADDBITMAP, 2, (LPARAM)&addbitmap);
 
     TBBUTTON buttons[8];
     ZeroMemory(buttons, sizeof(buttons));
-    for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
+    for (size_t i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
         buttons[i].fsState = TBSTATE_ENABLED;
         buttons[i].iString = -1;

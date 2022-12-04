@@ -251,9 +251,9 @@ uint16_t DisassembleInstruction(const uint16_t* pMemory, uint16_t addr, TCHAR* s
     }
 
     length = 1;
-    _sntprintf(strDst, strDstSize - 1, _T("%06o"), addr + ((short)(char)(uint8_t)(instr & 0xff) * 2) + 2);
+    _sntprintf(strDst, strDstSize - 1, _T("%06ho"), (uint16_t)(addr + ((short)(char)(uint8_t)(instr & 0xff) * 2) + 2));
 
-    // Branchs & interrupts
+    // Branches & interrupts
     switch (instr & ~(uint16_t)0377)
     {
     case PI_BR:   _tcscpy(strInstr, _T("BR"));   _tcscpy(strArg, strDst);  return 1;

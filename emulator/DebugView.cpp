@@ -111,12 +111,12 @@ void DebugView_Create(HWND hwndParent, int x, int y, int width, int height)
     addbitmap.nID = IDB_TOOLBAR;
     SendMessage(m_hwndDebugToolbar, TB_ADDBITMAP, 2, (LPARAM)&addbitmap);
 
-    SendMessage(m_hwndDebugToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
-    SendMessage(m_hwndDebugToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
+    SendMessage(m_hwndDebugToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
+    SendMessage(m_hwndDebugToolbar, TB_SETBUTTONSIZE, 0, (LPARAM)MAKELONG(26, 26));
 
     TBBUTTON buttons[3];
     ZeroMemory(buttons, sizeof(buttons));
-    for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
+    for (size_t i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
         buttons[i].fsState = TBSTATE_ENABLED | TBSTATE_WRAP;
         buttons[i].fsStyle = BTNS_BUTTON;
@@ -503,16 +503,9 @@ struct DebugViewPortWatch
 }
 m_DebugViewPorts[] =
 {
-    { 0177660, _T("kb state") },
-    { 0177662, _T("kb data") },
-    { 0177664, _T("scroll") },
-    { 0177706, _T("timer rel") },
-    { 0177710, _T("timer val") },
-    { 0177712, _T("timer ctl") },
-    { 0177714, _T("parallel") },
-    { 0177716, _T("system") },
-    { 0177130, _T("fdd state") },
-    { 0177132, _T("fdd data") },
+    //{ 0161030, _T("PPIA") },
+    { 0161032, _T("PPIB") },
+    { 0161034, _T("PPIC") },
 };
 
 void DebugView_DrawPorts(HDC hdc, int x, int y)
@@ -569,6 +562,9 @@ void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc)
     PatBlt(hdc, x2, y1, 1, y2 - y1 + 1, PATCOPY);
     PatBlt(hdc, x1, y1, x2 - x1, 1, PATCOPY);
     PatBlt(hdc, x1, y2, x2 - x1, 1, PATCOPY);
+
+    BOOL okHaltMode = pProc->IsHaltMode();
+    TextOut(hdc, x, y + cyLine / 2, okHaltMode ? _T("HALT") : _T("USER"), 4);
 
     uint16_t portBaseAddr = pProc->IsHaltMode() ? 0161200 : 0161220;
     for (int i = 0; i < 8; i++)

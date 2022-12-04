@@ -509,7 +509,7 @@ void MemoryView_OnDraw(HDC hdc)
     m_cyLineMemory = cyLine;
 
     TCHAR buffer[7];
-    const TCHAR* ADDRESS_LINE = _T(" addr   0      2      4      6      10     12     14     16");
+    const TCHAR* ADDRESS_LINE = _T("  addr   0      2      4      6      10     12     14     16");
     TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE, (int)_tcslen(ADDRESS_LINE));
 
     RECT rcClip;
@@ -524,9 +524,9 @@ void MemoryView_OnDraw(HDC hdc)
     {
         uint16_t lineAddress = address;
 
-        DrawOctalValue(hdc, 5 * cxChar, y, address);
+        DrawOctalValue(hdc, 6 * cxChar, y, address);
 
-        int x = 13 * cxChar;
+        int x = 14 * cxChar;
         TCHAR wchars[16];
         for (int j = 0; j < 8; j++)    // Draw words as octal value
         {
