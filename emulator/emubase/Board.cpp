@@ -196,6 +196,13 @@ uint8_t CMotherboard::GetROMByte(uint16_t offset) const
     return m_pROM[offset];
 }
 
+void CMotherboard::SetRAMBank(int bank, const void* buffer)
+{
+    if (bank < 0 || bank > (int)(m_nRamSizeBytes / 8192))
+        return;
+    memcpy(m_pRAM + bank * 8192, buffer, 8192);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 

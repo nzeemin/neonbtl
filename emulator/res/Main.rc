@@ -86,6 +86,7 @@ BEGIN
     BEGIN
         MENUITEM "Load State…",                 ID_FILE_LOADSTATE, INACTIVE
         MENUITEM "Save State…",                 ID_FILE_SAVESTATE, INACTIVE
+        MENUITEM "Load Memory",                 ID_FILE_LOADMEMORY
         MENUITEM SEPARATOR
         MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT
         MENUITEM "Screenshot to Clipboard",     ID_FILE_SCREENSHOTTOCLIPBOARD

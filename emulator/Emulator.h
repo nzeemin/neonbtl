@@ -64,6 +64,7 @@ uint16_t Emulator_GetChangeRamStatus(uint16_t address);
 
 bool Emulator_SaveImage(LPCTSTR sFilePath);
 bool Emulator_LoadImage(LPCTSTR sFilePath);
+void Emulator_LoadMemory();
 
 
 //////////////////////////////////////////////////////////////////////

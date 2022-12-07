@@ -100,6 +100,7 @@ public:  // Debug
     void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
     void        SetTrace(uint32_t dwTraceCPU) { m_dwTrace = dwTraceCPU; }
+    void        SetRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     void        Reset();  // Reset computer
@@ -135,7 +136,7 @@ public:  // Memory
     uint8_t GetByte(uint16_t address, bool okHaltMode);
     // Write byte
     void SetByte(uint16_t address, bool okHaltMode, uint8_t byte);
-    // Read word from memory for debugger
+    // Read word from memory for video renderer and debugger
     uint16_t GetRAMWordView(uint32_t address) const;
     uint16_t GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pValid) const;
     // Read word from port for debugger

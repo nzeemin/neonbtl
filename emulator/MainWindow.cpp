@@ -60,6 +60,7 @@ void MainWindow_DoEmulatorRealSpeed();
 void MainWindow_DoEmulatorSound();
 void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
+void MainWindow_DoFileLoadMemory();
 void MainWindow_DoEmulatorFloppy(int slot);
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
 void MainWindow_DoEmulatorConfRam(int command);
@@ -648,6 +649,9 @@ bool MainWindow_DoCommand(int commandId)
     case ID_FILE_SAVESTATE:
         MainWindow_DoFileSaveState();
         break;
+    case ID_FILE_LOADMEMORY:
+        MainWindow_DoFileLoadMemory();
+        break;
     case ID_FILE_SCREENSHOT:
         MainWindow_DoFileScreenshot();
         break;
@@ -838,6 +842,13 @@ void MainWindow_DoFileSaveState()
     if (! okResult) return;
 
     Emulator_SaveImage(bufFileName);
+}
+
+void MainWindow_DoFileLoadMemory()
+{
+    Emulator_LoadMemory();
+
+    MainWindow_UpdateAllViews();
 }
 
 void MainWindow_DoFileScreenshot()

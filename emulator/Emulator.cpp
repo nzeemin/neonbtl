@@ -481,45 +481,55 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode)
     Emulator_PrepareScreenLines(pImageBits, lineCallback);
 }
 
+uint32_t Color16Convert(uint16_t color)
+{
+    return RGB(
+        (color & 0x0300) >> 2 | (color & 0x0007) << 3 | (color & 0x0300) >> 7,
+        (color & 0xe000) >> 8 | (color & 0x00e0) >> 3 | (color & 0xC000) >> 14,
+        (color & 0x1C00) >> 5 | (color & 0x0018) | (color & 0x1C00) >> 10);
+}
+
 // Формирует 300 строк экрана; для каждой сформированной строки вызывает функцию lineCallback
 void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCallback)
 {
     if (pImageBits == nullptr || lineCallback == nullptr) return;
 
-    uint32_t linebits[NEON_SCREEN_WIDTH];
+    uint32_t linebits[NEON_SCREEN_WIDTH];  // буфер под строку
 
     const CMotherboard* pBoard = g_pBoard;
+
+    const uint16_t otrvd2scale[] = { 16, 16, 8, 4 };
 
     uint16_t vdptaslo = pBoard->GetRAMWordView(0170010);  // VDPTAS
     uint16_t vdptashi = pBoard->GetRAMWordView(0170012);  // VDPTAS
     uint16_t vdptaplo = pBoard->GetRAMWordView(0170004);  // VDPTAP
     uint16_t vdptaphi = pBoard->GetRAMWordView(0170006);  // VDPTAP
 
-    uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 017)) << 18);
-    //tasaddr += 4 * 16;  //DEBUG: Skip first lines
-    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам
-    {
-        uint32_t* plinebits = linebits;
+    uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 0x000f)) << 18);
+    uint32_t tapaddr = (((uint32_t)vdptaplo) << 2) | (((uint32_t)(vdptaphi & 0x000f)) << 18);
 
+    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам 0..299
+    {
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
         tasaddr += 4;
         if (linelo == 0 && linehi == 0)
         {
-            ::memset(plinebits, 0, NEON_SCREEN_WIDTH * 4);
+            ::memset(linebits, 0, sizeof(linebits));
             continue;
         }
 
-        uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 017)) << 18);
+        uint32_t* plinebits = linebits;
+        uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
         int x = 0;
         for (;;)  // Цикл по видеоотрезкам строки, до полного заполнения строки
         {
             uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
             uint16_t otrhi = pBoard->GetRAMWordView(lineaddr + 2);
             lineaddr += 4;
-            int otrcount = (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
+            int otrcount = 31 - (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
             if (otrcount == 0) otrcount = 32;
-            uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 017) << 18);
+            uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 0x000f) << 18);
             if (otraddr == 0)
             {
                 int otrlen = otrcount * 16 * 2;
@@ -530,23 +540,41 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 if (x >= 832) break;
                 continue;
             }
-            uint16_t otrvn = (otrhi >> 6) & 03;  // VN1 и VN0 определяют бит/точку
-            uint16_t otrvd = (otrhi >> 8) & 03;  // VD1 и VD0 определяют инф.плотность
+            uint16_t otrvn = (otrhi >> 6) & 3;  // VN1, VN0 - бит/точку
+            if ((otrhi & 0x80C0) == 0x00C0) otrvn = 2;  // если PB = 0, то бит/точку не больше 4
+            uint16_t otrvd = (otrhi >> 8) & 3;  // VD1, VD0 - инф.плотность
+            uint16_t baseScale = otrvd2scale[otrvd];  // 4 / 8 / 16 - базовый масштаб
+            uint16_t scale = baseScale >> (3 - otrvn);  // 0 / 1 / 2 / 4 / 8 / 16
+            if (scale == 0) scale = 1;  // 1 / 2 / 4 / 8 / 16 - итоговый масштаб
+            // Получить палитру
+            uint32_t paladdr = tapaddr + otrvn * 64;
+            if (otrhi & 0x8000) paladdr += 512;
+            uint16_t otrpn = (otrhi >> 4) & 3;  // PN1, PN0 - номер палитры
+            paladdr += otrpn * 16;
+            uint16_t palhi = pBoard->GetRAMWordView(paladdr + 14);
+            uint16_t pallo = pBoard->GetRAMWordView(paladdr + 14 + 256);
+            uint32_t color0 = Color16Convert((uint16_t)((palhi & 0xff) << 8 | (pallo & 0xff)));
+            uint32_t color1 = Color16Convert((uint16_t)((palhi & 0xff00) | (pallo & 0xff00) >> 8));
+            //TODO: Бордюр в начале отрезка
             for (int i = 0; i < otrcount; i++)  // Цикл по 32-разрядным словам отрезка
             {
                 uint16_t bitslo = pBoard->GetRAMWordView(otraddr);
                 uint16_t bitshi = pBoard->GetRAMWordView(otraddr + 2);
                 uint32_t bits = MAKELONG(bitslo, bitshi);
-
-                for (int i = 0; i < 32; i++)
+                for (int j = 0; j < 32; j++)  // 1 бит/точку
                 {
-                    uint32_t color = (bits & 1) ? 0x00ffffff : 0/*0x00222222*/;
+                    uint32_t color = (bits & 1) ? color1 : color0;
                     *plinebits = color;  plinebits++;
-                    x++;
-                    if (x >= 832) break;
-                    *plinebits = color;  plinebits++;
-                    x++;
-                    if (x >= 832) break;
+                    x++;  if (x >= 832) break;
+                    if (scale >= 2)
+                    {
+                        for (uint16_t k = 2; k < scale; k++)
+                        {
+                            *plinebits = color;  plinebits++;
+                            x++;  if (x >= 832) break;
+                        }
+                        if (x >= 832) break;
+                    }
                     bits = bits >> 1;
                 }
                 if (x >= 832) break;
@@ -675,6 +703,29 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
     MainWindow_UpdateAllViews();
 
     return true;
+}
+
+void Emulator_LoadMemory()
+{
+    HANDLE hFile = CreateFile(_T("PK11Memory.bin"),
+            GENERIC_READ, FILE_SHARE_READ, nullptr,
+            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        AlertWarning(_T("Failed to load memory file."));
+        return;
+    }
+
+    uint8_t buffer[8192];
+
+    for (int bank = 0; bank < 512; bank++)
+    {
+        DWORD dwBytesRead = 0;
+        ReadFile(hFile, buffer, 8192, &dwBytesRead, nullptr);
+        g_pBoard->SetRAMBank(bank, buffer);
+    }
+
+    CloseHandle(hFile);
 }
 
 
