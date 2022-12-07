@@ -80,6 +80,10 @@
 #define ID_EMULATOR_HARDDRIVE2          32809
 #define ID_EMULATOR_CARTRIDGE1          32810
 #define ID_EMULATOR_CARTRIDGE2          32811
+#define ID_CONF_RAM512                  32812
+#define ID_CONF_RAM1024                 32813
+#define ID_CONF_RAM2048                 32814
+#define ID_CONF_RAM4096                 32815
 #define ID_EMULATOR_SERIAL              32826
 #define ID_EMULATOR_PARALLEL            32827
 #define ID_EMULATOR_NETWORK             32828

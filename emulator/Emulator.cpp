@@ -456,9 +456,9 @@ struct ScreenModeStruct
 }
 static ScreenModeReference[] =
 {
-    // wid  hei  callback                                 size   scaleX  scaleY  notes
-    { 416, 300, PrepareScreenLine416x300 },  //  416x300   0.5     1      Debug mode
-    { 832, 600, PrepareScreenLine832x600 },  //  832x600   1       2
+    // wid  hei  callback                                     size      scaleX scaleY   notes
+    { 416, 300, PrepareScreenLine416x300 },  //  416 x 300   0.5     1      Debug mode
+    { 832, 600, PrepareScreenLine832x600 },  //  832 x 600   1       2
 };
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)

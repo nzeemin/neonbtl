@@ -502,8 +502,18 @@ void MemoryView_OnDraw(HDC hdc)
     COLORREF colorMemoryIO = Settings_GetColor(ColorDebugMemoryIO);
     COLORREF colorMemoryNA = Settings_GetColor(ColorDebugMemoryNA);
     COLORREF colorHighlight = Settings_GetColor(ColorDebugHighlight);
+
+    RECT rcClip;
+    GetClipBox(hdc, &rcClip);
+    RECT rcClient;
+    GetClientRect(m_hwndMemoryViewer, &rcClient);
+
+    HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
+    ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
+    ::PatBlt(hdc, 32 + 4 + cxChar * 82 + cxChar / 2, 0, 4, rcClient.bottom, PATCOPY);
+
     HBRUSH hbrHighlight = ::CreateSolidBrush(colorHighlight);
-    HGDIOBJ hOldBrush = ::SelectObject(hdc, hbrHighlight);
+    ::SelectObject(hdc, hbrHighlight);
     ::SetBkMode(hdc, TRANSPARENT);
 
     m_cxChar = cxChar;
@@ -513,10 +523,6 @@ void MemoryView_OnDraw(HDC hdc)
     const TCHAR* ADDRESS_LINE = _T("  addr   0      2      4      6      10     12     14     16");
     TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE, (int)_tcslen(ADDRESS_LINE));
 
-    RECT rcClip;
-    GetClipBox(hdc, &rcClip);
-    RECT rcClient;
-    GetClientRect(m_hwndMemoryViewer, &rcClient);
     m_nPageSize = rcClient.bottom / cyLine - 1;
 
     WORD address = m_wBaseAddress;

@@ -62,6 +62,7 @@ void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
 void MainWindow_DoEmulatorFloppy(int slot);
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
+void MainWindow_DoEmulatorConfRam(int command);
 void MainWindow_DoFileScreenshot();
 void MainWindow_DoFileScreenshotToClipboard();
 void MainWindow_DoFileScreenshotSaveAs();
@@ -607,6 +608,16 @@ void MainWindow_UpdateMenu()
     MainWindow_SetToolbarImage(ID_EMULATOR_SOUND, (Settings_GetSound() ? ToolbarImageSoundOn : ToolbarImageSoundOff));
     EnableMenuItem(hMenu, ID_DEBUG_STEPINTO, (g_okEmulatorRunning ? MF_DISABLED : MF_ENABLED));
 
+    UINT ramcmd = ID_CONF_RAM512;
+    switch (Settings_GetConfiguration() & NEON_COPT_RAMSIZE_MASK)
+    {
+    case 512:  ramcmd = ID_CONF_RAM512;  break;
+    case 1024: ramcmd = ID_CONF_RAM1024; break;
+    case 2048: ramcmd = ID_CONF_RAM2048; break;
+    case 4096: ramcmd = ID_CONF_RAM4096; break;
+    }
+    CheckMenuRadioItem(hMenu, ID_CONF_RAM512, ID_CONF_RAM4096, ramcmd, MF_BYCOMMAND);
+
     // Emulator|FloppyX
     CheckMenuItem(hMenu, ID_EMULATOR_FLOPPY0, (g_pBoard->IsFloppyImageAttached(0) ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_EMULATOR_FLOPPY1, (g_pBoard->IsFloppyImageAttached(1) ? MF_CHECKED : MF_UNCHECKED));
@@ -618,6 +629,11 @@ void MainWindow_UpdateMenu()
     // Debug menu
     BOOL okDebug = Settings_GetDebug();
     CheckMenuItem(hMenu, ID_VIEW_DEBUG, (okDebug ? MF_CHECKED : MF_UNCHECKED));
+    EnableMenuItem(hMenu, ID_DEBUG_SUBTITLES, (okDebug ? MF_ENABLED : MF_DISABLED));
+    EnableMenuItem(hMenu, ID_DEBUG_STEPINTO, (okDebug ? MF_ENABLED : MF_DISABLED));
+    EnableMenuItem(hMenu, ID_DEBUG_STEPOVER, (okDebug ? MF_ENABLED : MF_DISABLED));
+    EnableMenuItem(hMenu, ID_DEBUG_CLEARCONSOLE, (okDebug ? MF_ENABLED : MF_DISABLED));
+    EnableMenuItem(hMenu, ID_DEBUG_DELETEALLBREAKPTS, (okDebug ? MF_ENABLED : MF_DISABLED));
 }
 
 // Process menu command
@@ -676,6 +692,12 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_EMULATOR_SOUND:
         MainWindow_DoEmulatorSound();
+        break;
+    case ID_CONF_RAM512:
+    case ID_CONF_RAM1024:
+    case ID_CONF_RAM2048:
+    case ID_CONF_RAM4096:
+        MainWindow_DoEmulatorConfRam(commandId);
         break;
     case ID_EMULATOR_FLOPPY0:
         MainWindow_DoEmulatorFloppy(0);
@@ -883,6 +905,20 @@ void MainWindow_DoEmulatorConf(NeonConfiguration configuration)
 
     MainWindow_UpdateMenu();
     MainWindow_UpdateAllViews();
+}
+void MainWindow_DoEmulatorConfRam(int command)
+{
+    int memsize = 512;
+    switch (command)
+    {
+    case ID_CONF_RAM512:  memsize = 512; break;
+    case ID_CONF_RAM1024: memsize = 1024; break;
+    case ID_CONF_RAM2048: memsize = 2048; break;
+    case ID_CONF_RAM4096: memsize = 4096; break;
+    }
+    NeonConfiguration conf = (NeonConfiguration)((Settings_GetConfiguration() & ~NEON_COPT_RAMSIZE_MASK) | memsize);
+
+    MainWindow_DoEmulatorConf(conf);
 }
 
 void MainWindow_DoFileSettingsColors()
