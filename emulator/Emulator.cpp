@@ -89,7 +89,7 @@ bool Emulator_LoadNeonRom()
     }
 
     g_pBoard->LoadROM((const uint8_t *)pData);
-
+    ::free(pData);
     return true;
 }
 
@@ -507,6 +507,9 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
 
     uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 0x000f)) << 18);
     uint32_t tapaddr = (((uint32_t)vdptaplo) << 2) | (((uint32_t)(vdptaphi & 0x000f)) << 18);
+    uint16_t pal0hi = pBoard->GetRAMWordView(tapaddr);
+    uint16_t pal0lo = pBoard->GetRAMWordView(tapaddr + 256);
+    uint32_t colorBorder = Color16Convert((uint16_t)((pal0hi & 0xff) << 8 | (pal0lo & 0xff)));
 
     for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам 0..299
     {
@@ -521,7 +524,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
 
         uint32_t* plinebits = linebits;
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
-        int x = 0;
+        int bar = 0;  // Счётчик полосок 0..51
         for (;;)  // Цикл по видеоотрезкам строки, до полного заполнения строки
         {
             uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
@@ -530,58 +533,66 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             int otrcount = 31 - (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
             if (otrcount == 0) otrcount = 32;
             uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 0x000f) << 18);
-            if (otraddr == 0)
-            {
-                int otrlen = otrcount * 16 * 2;
-                if (832 - x - otrlen < 0) otrlen = 832 - x;
-                ::memset(plinebits, 0, otrlen * 4);
-                plinebits += otrlen;
-                x += otrlen;
-                if (x >= 832) break;
-                continue;
-            }
             uint16_t otrvn = (otrhi >> 6) & 3;  // VN1, VN0 - бит/точку
             if ((otrhi & 0x80C0) == 0x00C0) otrvn = 2;  // если PB = 0, то бит/точку не больше 4
             uint16_t otrvd = (otrhi >> 8) & 3;  // VD1, VD0 - инф.плотность
             uint16_t baseScale = otrvd2scale[otrvd];  // 4 / 8 / 16 - базовый масштаб
             uint16_t scale = baseScale >> (3 - otrvn);  // 0 / 1 / 2 / 4 / 8 / 16
             if (scale == 0) scale = 1;  // 1 / 2 / 4 / 8 / 16 - итоговый масштаб
+            if (otraddr == 0)
+            {
+                int otrlen = otrcount * 2;  // Длина отрезка в полосках
+                if (52 - bar - otrlen < 0) otrlen = 52 - bar;
+                ::memset(plinebits, 0, otrlen * 16 * 4);
+                plinebits += otrlen * 16;
+                bar += otrlen;
+                if (bar >= 52) break;
+                continue;
+            }
             // Получить палитру
             uint32_t paladdr = tapaddr + otrvn * 64;
             if (otrhi & 0x8000) paladdr += 512;
             uint16_t otrpn = (otrhi >> 4) & 3;  // PN1, PN0 - номер палитры
             paladdr += otrpn * 16;
+            //TODO: Бордюр в начале отрезка
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            *plinebits++ = colorBorder;  *plinebits++ = colorBorder;
+            bar++;  if (bar >= 52) break;
             uint16_t palhi = pBoard->GetRAMWordView(paladdr + 14);
             uint16_t pallo = pBoard->GetRAMWordView(paladdr + 14 + 256);
             uint32_t color0 = Color16Convert((uint16_t)((palhi & 0xff) << 8 | (pallo & 0xff)));
             uint32_t color1 = Color16Convert((uint16_t)((palhi & 0xff00) | (pallo & 0xff00) >> 8));
-            //TODO: Бордюр в начале отрезка
             for (int i = 0; i < otrcount; i++)  // Цикл по 32-разрядным словам отрезка
             {
                 uint16_t bitslo = pBoard->GetRAMWordView(otraddr);
                 uint16_t bitshi = pBoard->GetRAMWordView(otraddr + 2);
                 uint32_t bits = MAKELONG(bitslo, bitshi);
+                if (otrvn > 0)
+                    DebugBreak();
+                int x = 0;
                 for (int j = 0; j < 32; j++)  // 1 бит/точку
                 {
                     uint32_t color = (bits & 1) ? color1 : color0;
-                    *plinebits = color;  plinebits++;
-                    x++;  if (x >= 832) break;
-                    if (scale >= 2)
+                    for (uint16_t k = 0; k < scale; k++)
                     {
-                        for (uint16_t k = 2; k < scale; k++)
-                        {
-                            *plinebits = color;  plinebits++;
-                            x++;  if (x >= 832) break;
-                        }
-                        if (x >= 832) break;
+                        *plinebits = color;  plinebits++;
+                        x++;  if (x % 16 == 0) bar++;
+                        if (bar >= 52) break;
                     }
+                    if (bar >= 52) break;
                     bits = bits >> 1;
                 }
-                if (x >= 832) break;
+                if (bar >= 52) break;
 
                 otraddr += 4;
             }
-            if (x >= 832) break;
+            if (bar >= 52) break;
         }
 
         (*lineCallback)((uint32_t*)pImageBits, linebits, line);
