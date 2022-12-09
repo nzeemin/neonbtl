@@ -568,10 +568,16 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
 
     if (address >= 0160000)
     {
-        if (address < 0174000 || address >= 0177700)  // Port
+        if (address < 0170000)
         {
             *pOffset = address;
             return ADDRTYPE_IO;
+        }
+
+        if (address < 0174000 || address >= 0177700)
+        {
+            *pOffset = address & 0007777;
+            return ADDRTYPE_RAM;
         }
 
         *pOffset = address;
