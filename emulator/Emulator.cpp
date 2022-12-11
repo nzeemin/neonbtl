@@ -447,6 +447,7 @@ typedef void (CALLBACK* SCREEN_LINE_CALLBACK)(uint32_t* pImageBits, const uint32
 
 void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine1040x750(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 struct ScreenModeStruct
@@ -460,6 +461,7 @@ static ScreenModeReference[] =
     // wid  hei  callback                           size      scaleX scaleY   notes
     {  416, 300, PrepareScreenLine416x300  },  //  416 x 300   0.5     1      Debug mode
     {  832, 600, PrepareScreenLine832x600  },  //  832 x 600   1       2
+    { 1040, 750, PrepareScreenLine1040x750 },  // 1040 x 750   1.25    2.5
     { 1248, 900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
 };
 
@@ -521,7 +523,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
         if (linelo == 0 && linehi == 0)
         {
             ::memset(linebits, 0, sizeof(linebits));
-            continue;
+            goto callback;
         }
 
         uint32_t* plinebits = linebits;
@@ -661,12 +663,16 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             firstOtr = false;
         }
 
+callback:
         (*lineCallback)((uint32_t*)pImageBits, linebits, line);
     }
 }
 
 // 1/2 part of "a" plus 1/2 part of "b"
 #define AVERAGERGB(a, b)  ( (((a) & 0xfefefeffUL) + ((b) & 0xfefefeffUL)) >> 1 )
+
+// 1/4 part of "a" plus 3/4 parts of "b"
+#define AVERAGERGB13(a, b)  ( ((a) == (b)) ? a : (((a) & 0xfcfcfcffUL) >> 2) + ((b) - (((b) & 0xfcfcfcffUL) >> 2)) )
 
 void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
 {
@@ -686,6 +692,44 @@ void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLi
     memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
     pBits += 832;
     memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
+}
+
+void CALLBACK PrepareScreenLine1040x750(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    bool even = (line & 1) == 0;
+    uint32_t* pBits = pImageBits + (750 - 1 - line / 2 * 5) * 1040;
+    if (!even)
+        pBits -= 1040 * 3;
+
+    uint32_t* p = pBits;
+    for (int x = 0; x < 832; x += 4)  // x1.25 - mapping every 4 pixels into 5 pixels
+    {
+        uint32_t color1 = *pLineBits++;
+        uint32_t color2 = *pLineBits++;
+        uint32_t color3 = *pLineBits++;
+        uint32_t color4 = *pLineBits++;
+        *p++ = color1;
+        *p++ = AVERAGERGB13(color1, color2);
+        *p++ = AVERAGERGB(color2, color3);
+        *p++ = AVERAGERGB13(color4, color3);
+        *p++ = color4;
+    }
+
+    memcpy(pBits - 1040, pBits, sizeof(uint32_t) * 1040);
+
+    if (!even)  // odd line
+    {
+        uint32_t* pBits1 = pBits;
+        uint32_t* pBits12 = pBits1 + 1040;
+        uint32_t* pBits2 = pBits12 + 1040;
+        for (int x = 0; x < 1040; x++)
+        {
+            uint32_t color1 = *pBits1++;
+            uint32_t color2 = *pBits2++;
+            uint32_t color12 = AVERAGERGB(color1, color2);
+            *pBits12++ = color12;
+        }
+    }
 }
 
 void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line)

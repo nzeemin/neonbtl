@@ -104,7 +104,8 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "416 x 300",                   ID_VIEW_SCREENMODE0
         MENUITEM "832 x 600",                   ID_VIEW_SCREENMODE1
-        MENUITEM "1048 x 900",                  ID_VIEW_SCREENMODE2
+        MENUITEM "1040 x 750",                  ID_VIEW_SCREENMODE2
+        MENUITEM "1248 x 900",                  ID_VIEW_SCREENMODE3
     END
     POPUP "&Emulator"
     BEGIN
