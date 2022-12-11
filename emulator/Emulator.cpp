@@ -447,6 +447,7 @@ typedef void (CALLBACK* SCREEN_LINE_CALLBACK)(uint32_t* pImageBits, const uint32
 
 void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 struct ScreenModeStruct
 {
@@ -456,9 +457,10 @@ struct ScreenModeStruct
 }
 static ScreenModeReference[] =
 {
-    // wid  hei  callback                                     size      scaleX scaleY   notes
-    { 416, 300, PrepareScreenLine416x300 },  //  416 x 300   0.5     1      Debug mode
-    { 832, 600, PrepareScreenLine832x600 },  //  832 x 600   1       2
+    // wid  hei  callback                           size      scaleX scaleY   notes
+    {  416, 300, PrepareScreenLine416x300  },  //  416 x 300   0.5     1      Debug mode
+    {  832, 600, PrepareScreenLine832x600  },  //  832 x 600   1       2
+    { 1248, 900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
 };
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)
@@ -684,6 +686,26 @@ void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLi
     memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
     pBits += 832;
     memcpy(pBits, pLineBits, sizeof(uint32_t) * 832);
+}
+
+void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    uint32_t* pBits = pImageBits + (300 - 1 - line) * 1248 * 3;
+    uint32_t* p = pBits;
+    for (int x = 0; x < 832 / 2; x++)
+    {
+        uint32_t color1 = *pLineBits++;
+        uint32_t color2 = *pLineBits++;
+        uint32_t color12 = AVERAGERGB(color1, color2);
+        *p++ = color1;
+        *p++ = color12;
+        *p++ = color2;
+    }
+
+    uint32_t* pBits2 = pBits + 1248;
+    memcpy(pBits2, pBits, sizeof(uint32_t) * 1248);
+    uint32_t* pBits3 = pBits2 + 1248;
+    memcpy(pBits3, pBits, sizeof(uint32_t) * 1248);
 }
 
 
