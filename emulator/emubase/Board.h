@@ -155,8 +155,8 @@ private:  // Access to I/O ports
     uint8_t     GetPortByte(uint16_t address);
     void        SetPortByte(uint16_t address, uint8_t byte);
 public:  // Saving/loading emulator status
-    //void        SaveToImage(uint8_t* pImage);
-    //void        LoadFromImage(const uint8_t* pImage);
+    void        SaveToImage(uint8_t* pImage);
+    void        LoadFromImage(const uint8_t* pImage);
 private:  // Ports: implementation
     uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
     uint16_t    m_PortPPIC;         // 161034
@@ -166,6 +166,8 @@ private:  // Ports: implementation
     uint16_t    m_Port177566;       // Serial port output data register
     uint16_t    m_PortKBDCSR;       // Keyboard status register
     uint16_t    m_PortKBDBUF;       // Keyboard register
+private:
+    uint16_t GetRtcPortValue(uint16_t address) const;
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags

@@ -562,9 +562,9 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 *plinebits++ = colorb;  *plinebits++ = colorb;
                 *plinebits++ = colorb;  *plinebits++ = colorb;
                 *plinebits++ = colorb;  *plinebits++ = colorb;
+                bar++;  if (bar >= 52) break;
             }
             colorbprev = colorb;  // Запоминаем цвет бордюра
-            bar++;  if (bar >= 52) break;
             // Заполняем отрезок
             for (int i = 0; i < otrcount; i++)  // Цикл по 32-разрядным словам отрезка
             {
@@ -642,8 +642,8 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                         uint16_t palhi = pBoard->GetRAMWordView(paladdr + (c & 0xfe));
                         uint16_t pallo = pBoard->GetRAMWordView(paladdr + (c & 0xfe) + 256);
                         uint32_t color = Color16Convert((c & 1)
-                            ? ((palhi & 0xff00) | (pallo & 0xff00) >> 8)
-                            : ((palhi & 0xff) << 8 | (pallo & 0xff)));
+                                ? ((palhi & 0xff00) | (pallo & 0xff00) >> 8)
+                                : ((palhi & 0xff) << 8 | (pallo & 0xff)));
                         for (uint16_t k = 0; k < scale; k++)
                             *plinebits++ = color;
                         x += scale;  if (x % 16 == 0) bar++;

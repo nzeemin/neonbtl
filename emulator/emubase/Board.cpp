@@ -14,6 +14,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include "Emubase.h"
 #include "Board.h"
+#include <ctime>
 
 void TraceInstruction(CProcessor* pProc, CMotherboard* pBoard, uint16_t address);
 
@@ -676,6 +677,24 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
             return m_UR[chunk];
         }
 
+        // RTC ports
+    case 0161400:
+    case 0161401:
+    case 0161402:
+    case 0161403:
+    case 0161404:
+    case 0161405:
+    case 0161406:
+    case 0161407:
+    case 0161410:
+    case 0161411:
+    case 0161412:
+    case 0161413:
+    case 0161414:
+    case 0161415:
+    case 0161416:
+        return GetRtcPortValue(address);
+
     default:
         DebugLogFormat(_T("%06o\tGETPORT Unknown (%06o)\n"), m_pCPU->GetInstructionPC(), address);
         m_pCPU->MemoryError();
@@ -720,6 +739,24 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
             int chunk = (address >> 1) & 7;
             return m_UR[chunk];
         }
+
+        // RTC ports
+    case 0161400:
+    case 0161401:
+    case 0161402:
+    case 0161403:
+    case 0161404:
+    case 0161405:
+    case 0161406:
+    case 0161407:
+    case 0161410:
+    case 0161411:
+    case 0161412:
+    case 0161413:
+    case 0161414:
+    case 0161415:
+    case 0161416:
+        return GetRtcPortValue(address);
 
     default:
         return 0;
@@ -847,6 +884,104 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         m_pCPU->MemoryError();
         break;
     }
+}
+
+// Get port value for Real Time Clock - ports 0161400..0161416
+uint16_t CMotherboard::GetRtcPortValue(uint16_t address) const
+{
+    time_t tnow = time(0);
+    struct tm* lnow = localtime(&tnow);
+
+    switch (address & 0777)
+    {
+    case 0400:
+    case 0401:
+        return (uint16_t)lnow->tm_sec;
+    case 0402:
+    case 0403:
+        return (uint16_t)lnow->tm_min;
+    case 0404:
+    case 0405:
+        return (uint16_t)lnow->tm_hour;
+    case 0406:
+        return (uint16_t)lnow->tm_wday + 1;  // 1..7
+    case 0407:
+        return (uint16_t)lnow->tm_mday;
+    case 0410:
+        return (uint16_t)lnow->tm_mon;
+    case 0411:
+        return (uint16_t)(lnow->tm_year % 100);
+    default:
+        return 0;
+    }
+}
+
+
+//////////////////////////////////////////////////////////////////////
+// Emulator image
+//  Offset Length
+//       0     32 bytes  - Header
+//      32    480 bytes  - Board status
+//     512     32 bytes  - CPU status
+//     544   1504 bytes  - RESERVED
+//    2048  16384 bytes  - ROM image 16K
+//   18432               - RAM image 512..4096 KB
+//             --        - END
+//  Board status (480 bytes):
+//      32      4 bytes  - RAM size bytes
+//      36     28 bytes  - RESERVED
+//      64     32 bytes  - HR[8]
+//      92     32 bytes  - UR[8]
+//     124
+//
+void CMotherboard::SaveToImage(uint8_t* pImage)
+{
+    // Board data
+    uint16_t* pwImage = reinterpret_cast<uint16_t*>(pImage + 32);
+    *pwImage++ = m_Configuration;
+    memcpy(pwImage, &m_nRamSizeBytes, sizeof(m_nRamSizeBytes));  // 4 bytes
+    pwImage += sizeof(m_nRamSizeBytes) / 2;
+    pwImage += 28 / 2;  // RESERVED
+    memcpy(pwImage, m_HR, sizeof(m_HR));  // 32 bytes
+    pwImage += sizeof(m_HR) / 2;
+    memcpy(pwImage, m_UR, sizeof(m_UR));  // 32 bytes
+    pwImage += sizeof(m_UR) / 2;
+    //TODO
+
+    // CPU status
+    uint8_t* pImageCPU = pImage + 256;
+    m_pCPU->SaveToImage(pImageCPU);
+    // ROM
+    uint8_t* pImageRom = pImage + 2048;
+    memcpy(pImageRom, m_pROM, 16 * 1024);
+    // RAM
+    uint8_t* pImageRam = pImage + 18432;
+    memcpy(pImageRam, m_pRAM, m_nRamSizeBytes);
+}
+void CMotherboard::LoadFromImage(const uint8_t* pImage)
+{
+    // Board data
+    const uint16_t* pwImage = reinterpret_cast<const uint16_t*>(pImage + 32);
+    m_Configuration = *pwImage++;
+    memcpy(&m_nRamSizeBytes, pwImage, sizeof(m_nRamSizeBytes));  // 4 bytes
+    pwImage += sizeof(m_nRamSizeBytes) / 2;
+    pwImage += 28 / 2;  // RESERVED
+    memcpy(m_HR, pwImage, sizeof(m_HR));  // 32 bytes
+    pwImage += sizeof(m_HR) / 2;
+    memcpy(m_UR, pwImage, sizeof(m_UR));  // 32 bytes
+    pwImage += sizeof(m_UR) / 2;
+    //TODO
+
+    // CPU status
+    const uint8_t* pImageCPU = pImage + 256;
+    m_pCPU->LoadFromImage(pImageCPU);
+
+    // ROM
+    const uint8_t* pImageRom = pImage + 2048;
+    memcpy(m_pROM, pImageRom, 16 * 1024);
+    // RAM
+    const uint8_t* pImageRam = pImage + 18432;
+    memcpy(m_pRAM, pImageRam, m_nRamSizeBytes);
 }
 
 
