@@ -446,6 +446,7 @@ uint16_t Emulator_GetChangeRamStatus(uint16_t address)
 typedef void (CALLBACK* SCREEN_LINE_CALLBACK)(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine624x450(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1040x750(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
@@ -460,6 +461,7 @@ static ScreenModeReference[] =
 {
     // wid  hei  callback                           size      scaleX scaleY   notes
     {  416, 300, PrepareScreenLine416x300  },  //  416 x 300   0.5     1      Debug mode
+    {  624, 450, PrepareScreenLine624x450  },  //  624 x 450   0.75    1.5
     {  832, 600, PrepareScreenLine832x600  },  //  832 x 600   1       2
     { 1040, 750, PrepareScreenLine1040x750 },  // 1040 x 750   1.25    2.5
     { 1248, 900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
@@ -496,7 +498,7 @@ uint32_t Color16Convert(uint16_t color)
 // Формирует 300 строк экрана; для каждой сформированной строки вызывает функцию lineCallback
 void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCallback)
 {
-    if (pImageBits == nullptr || lineCallback == nullptr) return;
+    if (pImageBits == nullptr || lineCallback == nullptr || g_pBoard == nullptr) return;
 
     uint32_t linebits[NEON_SCREEN_WIDTH];  // буфер под строку
 
@@ -520,11 +522,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
         tasaddr += 4;
-        if (linelo == 0 && linehi == 0)
-        {
-            ::memset(linebits, 0, sizeof(linebits));
-            goto callback;
-        }
+        //if (linelo == 0 && linehi == 0)
+        //{
+        //    ::memset(linebits, 0, sizeof(linebits));
+        //    goto callback;
+        //}
 
         uint32_t* plinebits = linebits;
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
@@ -663,7 +665,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             firstOtr = false;
         }
 
-callback:
+//callback:
         (*lineCallback)((uint32_t*)pImageBits, linebits, line);
     }
 }
@@ -683,6 +685,40 @@ void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLi
         uint32_t color2 = *pLineBits++;
         uint32_t color = AVERAGERGB(color1, color2);
         *pBits++ = color;
+    }
+}
+
+void CALLBACK PrepareScreenLine624x450(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    bool even = (line & 1) == 0;
+    uint32_t* pBits = pImageBits + (450 - 1 - line / 2 * 3) * 624;
+    if (!even)
+        pBits -= 624 * 2;
+
+    uint32_t* p = pBits;
+    for (int x = 0; x < 832; x += 4)  // x0.75 - mapping every 4 pixels into 3 pixels
+    {
+        uint32_t color1 = *pLineBits++;
+        uint32_t color2 = *pLineBits++;
+        uint32_t color3 = *pLineBits++;
+        uint32_t color4 = *pLineBits++;
+        *p++ = AVERAGERGB(color1, color2);
+        *p++ = AVERAGERGB(color2, color3);
+        *p++ = AVERAGERGB(color3, color4);
+    }
+
+    if (!even)  // odd line
+    {
+        uint32_t* pBits1 = pBits;
+        uint32_t* pBits12 = pBits1 + 624;
+        uint32_t* pBits2 = pBits12 + 624;
+        for (int x = 0; x < 624; x++)
+        {
+            uint32_t color1 = *pBits1++;
+            uint32_t color2 = *pBits2++;
+            uint32_t color12 = AVERAGERGB(color1, color2);
+            *pBits12++ = color12;
+        }
     }
 }
 
