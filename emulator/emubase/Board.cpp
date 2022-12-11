@@ -104,10 +104,7 @@ void CMotherboard::Reset ()
     m_PortKBDCSR = 0100;
     m_PortKBDBUF = 0;
 
-    m_timer = 0177777;
-    m_timerdivider = 0;
-    m_timerreload = 011000;
-    m_timerflags = 0177400;
+    m_timeralarmsec = m_timeralarmmin = m_timeralarmhour = 0;
 
     ResetDevices();
 
@@ -219,9 +216,7 @@ void CMotherboard::ResetDevices()
     m_Port177566 = 0;
 
     // Reset timer
-    m_timerflags = 0177400;
-    m_timer = 0177777;
-    m_timerreload = 011000;
+    //TODO
 }
 
 void CMotherboard::Tick50()  // 50 Hz timer
@@ -239,63 +234,7 @@ void CMotherboard::ExecuteCPU()
 
 void CMotherboard::TimerTick() // Timer Tick, 31250 Hz = 32 мкс (BK-0011), 23437.5 Hz = 42.67 мкс (BK-0010)
 {
-    if ((m_timerflags & 1) == 1)  // STOP, the timer stopped
-    {
-        m_timer = m_timerreload;
-        return;
-    }
-    if ((m_timerflags & 16) == 0)  // Not RUN, the timer paused
-        return;
-
-    m_timerdivider++;
-
-    bool flag = false;
-    switch ((m_timerflags >> 5) & 3)  // bits 5,6 -- prescaler
-    {
-    case 0:  // 32 мкс
-        flag = true;
-        break;
-    case 1:  // 32 * 16 = 512 мкс
-        flag = (m_timerdivider >= 16);
-        break;
-    case 2: // 32 * 4 = 128 мкс
-        flag = (m_timerdivider >= 4);
-        break;
-    case 3:  // 32 * 16 * 4 = 2048 мкс, 8129 тактов процессора
-        flag = (m_timerdivider >= 64);
-        break;
-    }
-    if (!flag)  // Nothing happened
-        return;
-
-    m_timerdivider = 0;
-    m_timer--;
-    if (m_timer == 0)
-    {
-        if ((m_timerflags & 2) == 0)  // If not WRAPAROUND
-        {
-            if ((m_timerflags & 8) != 0)  // If ONESHOT and not WRAPAROUND then reset RUN bit
-                m_timerflags &= ~16;
-
-            m_timer = m_timerreload;
-        }
-
-        if ((m_timerflags & 4) != 0)  // If EXPENABLE
-            m_timerflags |= 128;  // Set EXPIRY bit
-    }
-}
-
-void CMotherboard::SetTimerReload(uint16_t val)  // Sets timer reload value, write to port 177706
-{
-    //DebugPrintFormat(_T("SetTimerReload %06o\r\n"), val);
-    m_timerreload = val;
-}
-void CMotherboard::SetTimerState(uint16_t val) // Sets timer state, write to port 177712
-{
-    //DebugPrintFormat(_T("SetTimerState %06o\r\n"), val);
-    m_timer = m_timerreload;
-
-    m_timerflags = 0177400 | val;
+    //TODO
 }
 
 void CMotherboard::DebugTicks()
@@ -678,21 +617,14 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         }
 
         // RTC ports
-    case 0161400:
-    case 0161401:
-    case 0161402:
-    case 0161403:
-    case 0161404:
-    case 0161405:
-    case 0161406:
-    case 0161407:
-    case 0161410:
-    case 0161411:
-    case 0161412:
-    case 0161413:
-    case 0161414:
-    case 0161415:
-    case 0161416:
+    case 0161400: case 0161401: case 0161402: case 0161403: case 0161404: case 0161405: case 0161406: case 0161407:
+    case 0161410: case 0161411: case 0161412: case 0161413: case 0161414: case 0161415: case 0161416: case 0161417:
+    case 0161420: case 0161421: case 0161422: case 0161423: case 0161424: case 0161425: case 0161426: case 0161427:
+    case 0161430: case 0161431: case 0161432: case 0161433: case 0161434: case 0161435: case 0161436: case 0161437:
+    case 0161440: case 0161441: case 0161442: case 0161443: case 0161444: case 0161445: case 0161446: case 0161447:
+    case 0161450: case 0161451: case 0161452: case 0161453: case 0161454: case 0161455: case 0161456: case 0161457:
+    case 0161460: case 0161461: case 0161462: case 0161463: case 0161464: case 0161465: case 0161466: case 0161467:
+    case 0161470: case 0161471: case 0161472: case 0161473: case 0161474: case 0161475: case 0161476: case 0161477:
         return GetRtcPortValue(address);
 
     default:
@@ -741,21 +673,14 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
         }
 
         // RTC ports
-    case 0161400:
-    case 0161401:
-    case 0161402:
-    case 0161403:
-    case 0161404:
-    case 0161405:
-    case 0161406:
-    case 0161407:
-    case 0161410:
-    case 0161411:
-    case 0161412:
-    case 0161413:
-    case 0161414:
-    case 0161415:
-    case 0161416:
+    case 0161400: case 0161401: case 0161402: case 0161403: case 0161404: case 0161405: case 0161406: case 0161407:
+    case 0161410: case 0161411: case 0161412: case 0161413: case 0161414: case 0161415: case 0161416: case 0161417:
+    case 0161420: case 0161421: case 0161422: case 0161423: case 0161424: case 0161425: case 0161426: case 0161427:
+    case 0161430: case 0161431: case 0161432: case 0161433: case 0161434: case 0161435: case 0161436: case 0161437:
+    case 0161440: case 0161441: case 0161442: case 0161443: case 0161444: case 0161445: case 0161446: case 0161447:
+    case 0161450: case 0161451: case 0161452: case 0161453: case 0161454: case 0161455: case 0161456: case 0161457:
+    case 0161460: case 0161461: case 0161462: case 0161463: case 0161464: case 0161465: case 0161466: case 0161467:
+    case 0161470: case 0161471: case 0161472: case 0161473: case 0161474: case 0161475: case 0161476: case 0161477:
         return GetRtcPortValue(address);
 
     default:
@@ -886,31 +811,39 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     }
 }
 
-// Get port value for Real Time Clock - ports 0161400..0161416
-uint16_t CMotherboard::GetRtcPortValue(uint16_t address) const
+// Get port value for Real Time Clock - ports 0161400..0161476 - КР512ВИ1 == MC146818
+uint8_t CMotherboard::GetRtcPortValue(uint16_t address) const
 {
+    address = address & 0377;
+
+    if (address >= 14 && address < 64)
+        return m_timermemory[address - 14];
+
     time_t tnow = time(0);
     struct tm* lnow = localtime(&tnow);
 
-    switch (address & 0777)
+    switch (address & 0377)
     {
-    case 0400:
-    case 0401:
-        return (uint16_t)lnow->tm_sec;
-    case 0402:
-    case 0403:
-        return (uint16_t)lnow->tm_min;
-    case 0404:
-    case 0405:
-        return (uint16_t)lnow->tm_hour;
-    case 0406:
-        return (uint16_t)lnow->tm_wday + 1;  // 1..7
-    case 0407:
-        return (uint16_t)lnow->tm_mday;
-    case 0410:
-        return (uint16_t)lnow->tm_mon;
-    case 0411:
-        return (uint16_t)(lnow->tm_year % 100);
+    case 0:  // Seconds 0..59
+        return (uint8_t)lnow->tm_sec;
+    case 1:  // Seconds alarm
+        return m_timeralarmsec;
+    case 2:  // Minutes 0..59
+        return (uint8_t)lnow->tm_min;
+    case 3:  // Minutes alarm
+        return m_timeralarmmin;
+    case 4:  // Hours 0..23
+        return (uint8_t)lnow->tm_hour;
+    case 5:  // Hours alarm
+        return m_timeralarmhour;
+    case 6:  // Day of week
+        return (uint8_t)(lnow->tm_wday + 1);  // 1..7 - Вс..Сб
+    case 7:  // Day of month 1..31
+        return (uint8_t)lnow->tm_mday;
+    case 8:  // Month 1..12
+        return (uint8_t)lnow->tm_mon;
+    case 9:  // Year 0..99
+        return (uint8_t)(lnow->tm_year % 100);
     default:
         return 0;
     }
@@ -925,14 +858,15 @@ uint16_t CMotherboard::GetRtcPortValue(uint16_t address) const
 //     512     32 bytes  - CPU status
 //     544   1504 bytes  - RESERVED
 //    2048  16384 bytes  - ROM image 16K
-//   18432               - RAM image 512..4096 KB
-//             --        - END
+//   18432               - RAM image 512/1024/2048/4096 KB
+//
 //  Board status (480 bytes):
 //      32      4 bytes  - RAM size bytes
 //      36     28 bytes  - RESERVED
 //      64     32 bytes  - HR[8]
-//      92     32 bytes  - UR[8]
-//     124
+//      96     32 bytes  - UR[8]
+//     128     64 bytes  - Timer
+//     192
 //
 void CMotherboard::SaveToImage(uint8_t* pImage)
 {
@@ -942,10 +876,32 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     memcpy(pwImage, &m_nRamSizeBytes, sizeof(m_nRamSizeBytes));  // 4 bytes
     pwImage += sizeof(m_nRamSizeBytes) / 2;
     pwImage += 28 / 2;  // RESERVED
+    //TODO: m_PortPPIB, m_PortPPIC
     memcpy(pwImage, m_HR, sizeof(m_HR));  // 32 bytes
     pwImage += sizeof(m_HR) / 2;
     memcpy(pwImage, m_UR, sizeof(m_UR));  // 32 bytes
-    pwImage += sizeof(m_UR) / 2;
+    //pwImage += sizeof(m_UR) / 2;
+
+    // Timer
+    time_t tnow = time(0);
+    struct tm* lnow = localtime(&tnow);
+    uint8_t* pImageTimer = pImage + 128;
+    *pImageTimer++ = (uint8_t)lnow->tm_sec;  // Seconds
+    *pImageTimer++ = m_timeralarmsec;
+    *pImageTimer++ = (uint8_t)lnow->tm_min;  // Minutes
+    *pImageTimer++ = m_timeralarmmin;
+    *pImageTimer++ = (uint8_t)lnow->tm_hour;  // Hours
+    *pImageTimer++ = m_timeralarmhour;
+    *pImageTimer++ = (uint8_t)(lnow->tm_wday + 1);  // Day of week
+    *pImageTimer++ = (uint8_t)lnow->tm_mday;  // Day of month
+    *pImageTimer++ = (uint8_t)lnow->tm_mon;  // Month
+    *pImageTimer++ = (uint8_t)(lnow->tm_year % 100);  // Year
+    *pImageTimer++ = 0;
+    *pImageTimer++ = 0;
+    *pImageTimer++ = 0;
+    *pImageTimer++ = 0;
+    memcpy(pImageTimer, m_timermemory, sizeof(m_timermemory));  // 50 bytes
+
     //TODO
 
     // CPU status

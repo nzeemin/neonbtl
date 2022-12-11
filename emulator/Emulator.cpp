@@ -694,7 +694,7 @@ void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLi
 //   4 bytes        NEON_IMAGE_HEADER1
 //   4 bytes        NEON_IMAGE_HEADER2
 //   4 bytes        NEON_IMAGE_VERSION
-//   4 bytes        NEON_IMAGE_SIZE
+//   4 bytes        NEON_IMAGE_SIZE = 18K + 512/1024/2048/4096 KB
 //   4 bytes        NEON uptime
 //   12 bytes       Not used
 

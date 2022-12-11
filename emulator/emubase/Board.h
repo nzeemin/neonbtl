@@ -138,11 +138,11 @@ public:  // Memory
     void SetByte(uint16_t address, bool okHaltMode, uint8_t byte);
     // Read word from memory for video renderer and debugger
     uint16_t GetRAMWordView(uint32_t address) const;
-    uint16_t GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pValid) const;
+    uint16_t GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pAddrType) const;
     // Read word from port for debugger
     uint16_t GetPortView(uint16_t address) const;
     // Read SEL register
-    uint16_t GetSelRegister() const { return 0; }
+    static uint16_t GetSelRegister() { return 0; }
 private:
     // Determine memory type for the given address - see ADDRTYPE_Xxx constants
     //   okHaltMode - processor mode (USER/HALT)
@@ -167,18 +167,13 @@ private:  // Ports: implementation
     uint16_t    m_PortKBDCSR;       // Keyboard status register
     uint16_t    m_PortKBDBUF;       // Keyboard register
 private:
-    uint16_t GetRtcPortValue(uint16_t address) const;
+    uint8_t     GetRtcPortValue(uint16_t address) const;
+private:  // Timer implementation
+    uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;
+    uint8_t     m_timermemory[50];
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags
-private:  // Timer implementation
-    uint16_t    m_timer;
-    uint16_t    m_timerreload;
-    uint16_t    m_timerflags;
-    uint16_t    m_timerdivider;
-    void        SetTimerReload(uint16_t val);   //sets timer reload value
-    void        SetTimerState(uint16_t val);    //sets timer state
-
 private:
     SOUNDGENCALLBACK m_SoundGenCallback;
     SERIALOUTCALLBACK m_SerialOutCallback;
