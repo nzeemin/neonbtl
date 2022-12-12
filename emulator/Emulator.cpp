@@ -702,9 +702,9 @@ void CALLBACK PrepareScreenLine624x450(uint32_t* pImageBits, const uint32_t* pLi
         uint32_t color2 = *pLineBits++;
         uint32_t color3 = *pLineBits++;
         uint32_t color4 = *pLineBits++;
-        *p++ = AVERAGERGB(color1, color2);
+        *p++ = AVERAGERGB13(color2, color1);
         *p++ = AVERAGERGB(color2, color3);
-        *p++ = AVERAGERGB(color3, color4);
+        *p++ = AVERAGERGB13(color3, color4);
     }
 
     if (!even)  // odd line
