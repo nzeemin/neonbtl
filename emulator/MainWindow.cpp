@@ -13,7 +13,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include <commdlg.h>
 #include <crtdbg.h>
-#include <mmintrin.h>
 #include <Vfw.h>
 #include <CommCtrl.h>
 
@@ -267,17 +266,25 @@ void MainWindow_SavePosition()
 void MainWindow_RestorePositionAndShow()
 {
     RECT rc;
-    if (Settings_GetWindowRect(&rc))
+    if (!Settings_GetWindowRect(&rc))
     {
-        HMONITOR hmonitor = MonitorFromRect(&rc, MONITOR_DEFAULTTONULL);
-        if (hmonitor != NULL)
-        {
-            ::SetWindowPos(g_hwnd, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
-                    SWP_NOACTIVATE | SWP_NOZORDER);
-        }
+        rc.left = rc.top = 0;
+        rc.right = 900;  rc.bottom = 720;
     }
 
-    ShowWindow(g_hwnd, Settings_GetWindowMaximized() ? SW_SHOWMAXIMIZED : SW_SHOW);
+    HMONITOR hmonitor = ::MonitorFromRect(&rc, MONITOR_DEFAULTTONULL);
+    if (hmonitor == NULL)
+    {
+        hmonitor = ::MonitorFromRect(&rc, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO info;
+        VERIFY(::GetMonitorInfo(hmonitor, &info));
+        rc = info.rcMonitor;
+    }
+
+    ::SetWindowPos(g_hwnd, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top,
+            SWP_NOACTIVATE | SWP_NOZORDER);
+
+    ::ShowWindow(g_hwnd, Settings_GetWindowMaximized() ? SW_SHOWMAXIMIZED : SW_SHOW);
 }
 
 void MainWindow_UpdateWindowTitle()
