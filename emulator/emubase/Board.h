@@ -137,6 +137,7 @@ public:  // Memory
     // Write byte
     void SetByte(uint16_t address, bool okHaltMode, uint8_t byte);
     // Read word from memory for video renderer and debugger
+    uint8_t GetRAMByteView(uint32_t address) const;
     uint16_t GetRAMWordView(uint32_t address) const;
     uint16_t GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pAddrType) const;
     // Read word from port for debugger

@@ -311,6 +311,12 @@ void CMotherboard::KeyboardEvent(uint8_t scancode, bool okPressed)
 // Motherboard: memory management
 
 // Read word from memory for debugger
+uint8_t CMotherboard::GetRAMByteView(uint32_t address) const
+{
+    if (address >= m_nRamSizeBytes)
+        return 0;
+    return m_pRAM[address];
+}
 uint16_t CMotherboard::GetRAMWordView(uint32_t address) const
 {
     if (address >= m_nRamSizeBytes)
