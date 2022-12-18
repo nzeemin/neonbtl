@@ -22,3 +22,4 @@ This is work in progress project on early stage of development.
 * [Документация на персональную ЭВМ ПК-11/16](https://github.com/troosh/pk11-16/tree/master/Docs/P16DOC.DSK)
 * Архив файлов по Союз-Неон http://mirrors.pdp-11.ru/_pk11-16/
 * Используемая на Союз-Неон кодировка: [Основная кодировка](https://ru.wikipedia.org/wiki/%D0%9E%D1%81%D0%BD%D0%BE%D0%B2%D0%BD%D0%B0%D1%8F_%D0%BA%D0%BE%D0%B4%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0)
+* [Союз-Неон: самый желанный компьютер | Демодуляция 2022](https://www.youtube.com/watch?v=g0wQQ4NY5vc)

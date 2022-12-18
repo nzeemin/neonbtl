@@ -508,9 +508,10 @@ void MemoryView_OnDraw(HDC hdc)
     RECT rcClient;
     GetClientRect(m_hwndMemoryViewer, &rcClient);
 
+    int xRight = 32 + 4 + cxChar * 82 + cxChar / 2;
     HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
     ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
-    ::PatBlt(hdc, 32 + 4 + cxChar * 82 + cxChar / 2, 0, 4, rcClient.bottom, PATCOPY);
+    ::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
 
     HBRUSH hbrHighlight = ::CreateSolidBrush(colorHighlight);
     ::SelectObject(hdc, hbrHighlight);
@@ -606,6 +607,34 @@ void MemoryView_OnDraw(HDC hdc)
 
         y += cyLine;
         if (y > rcClip.bottom) break;
+    }
+
+    {
+        xRight += 4 + cxChar;
+        TextOut(hdc, xRight, cyLine, _T("Address"), 7);
+        DrawOctalValue(hdc, xRight + cxChar, cyLine * 2, m_wCurrentAddress);
+        DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 2, m_wCurrentAddress);
+        // Get word from memory
+        int addrtype;
+        bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
+        WORD word = g_pBoard->GetWordView(m_wCurrentAddress, okHalt, FALSE, &addrtype);
+        bool okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
+        //WORD wChanged = Emulator_GetChangeRamStatus(m_wCurrentAddress);
+        if (okValid)
+        {
+            TCHAR buf[7];
+            TextOut(hdc, xRight, cyLine * 4, _T("Value"), 5);
+            //::SetTextColor(hdc, (wChanged != 0) ? colorChanged : colorText);
+            DrawOctalValue(hdc, xRight + cxChar, cyLine * 5, word);
+            DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 5, word);
+            PrintOctalValue(buf, word & 0xff);
+            TextOut(hdc, xRight + cxChar * 4, cyLine * 6, buf + 3, 3);
+            PrintOctalValue(buf, word >> 8);
+            TextOut(hdc, xRight + cxChar, cyLine * 7, buf + 3, 3);
+            PrintHexValue(buf, word);
+            TextOut(hdc, xRight + cxChar * 10, cyLine * 6, buf + 2, 2);
+            TextOut(hdc, xRight + cxChar * 8, cyLine * 7, buf, 2);
+        }
     }
 
     ::SelectObject(hdc, hOldBrush);

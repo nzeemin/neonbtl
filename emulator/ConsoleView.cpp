@@ -250,7 +250,8 @@ void ConsoleView_PrintConsolePrompt()
     TCHAR bufferAddr[7];
     PrintOctalValue(bufferAddr, pProc->GetPC());
     TCHAR buffer[14];
-    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%s> "), bufferAddr);
+    TCHAR chHaltUser = pProc->IsHaltMode() ? _T('H') : _T('U');
+    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%c%s> "), chHaltUser, bufferAddr);
     ::SetWindowText(m_hwndConsolePrompt, buffer);
 }
 

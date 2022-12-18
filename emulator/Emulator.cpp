@@ -12,7 +12,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 #include "stdafx.h"
 #include <stdio.h>
-#include <Share.h>
+#include <share.h>
 #include "Main.h"
 #include "Emulator.h"
 #include "Views.h"
@@ -546,7 +546,6 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 0x000f) << 18);
             uint16_t otrvn = (otrhi >> 6) & 3;  // VN1 VN0 - бит/точку
             bool otrpb = (otrhi & 0x8000) != 0;
-            uint16_t otrvd = (otrhi >> 8) & 3;  // VD1 VD0 - инф.плотность
             uint16_t vmode = (otrhi >> 6) & 0x0f;  // биты VD1 VD0 VN1 VN0
             // Получить адрес палитры
             uint32_t paladdr = tapaddr;
@@ -564,11 +563,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             uint16_t palbhi = pBoard->GetRAMWordView(paladdr);
             uint16_t palblo = pBoard->GetRAMWordView(paladdr + 256);
             uint32_t colorb = Color16Convert((uint16_t)((palbhi & 0xff) << 8 | (palblo & 0xff)));
-            if (!firstOtr)  // Это не первый отрезок - будет бордюр, цвета по пикселям: AAAAAAABBCCCCCCC
+            if (!firstOtr)  // Это не первый отрезок - будет бордюр, цвета по пикселям: AAAAAAAAABBCCCCC
             {
-                FILL4PIXELS(colorbprev)  FILL2PIXELS(colorbprev)  FILL1PIXEL(colorbprev)
+                FILL8PIXELS(colorbprev)  FILL1PIXEL(colorbprev)
                 FILL2PIXELS(colorBorder)
-                FILL4PIXELS(colorb)  FILL2PIXELS(colorb)  FILL1PIXEL(colorb)
+                FILL4PIXELS(colorb)  FILL1PIXEL(colorb)
                 bar--;  if (bar == 0) break;
             }
             colorbprev = colorb;  // Запоминаем цвет бордюра
