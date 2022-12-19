@@ -467,9 +467,9 @@ void ConsoleView_CmdShowHelp(const ConsoleCommandParams& /*params*/)
             _T("  bcXXXXXX   Remove breakpoint at address XXXXXX\r\n")
             _T("  bc         Remove all breakpoints\r\n")
             _T("  w          List all watches\r\n")
-            //_T("  wXXXXXX    Set watch at address XXXXXX\r\n")
-            //_T("  wcXXXXXX   Remove watch at address XXXXXX\r\n")
-            //_T("  wc         Remove all watches\r\n")
+            _T("  wXXXXXX    Set watch at address XXXXXX\r\n")
+            _T("  wcXXXXXX   Remove watch at address XXXXXX\r\n")
+            _T("  wc         Remove all watches\r\n")
             _T("  u          Save memory dump to file memdump.bin\r\n")
 #if !defined(PRODUCT)
             _T("  t          Tracing on/off to trace.log file\r\n")
@@ -652,6 +652,52 @@ void ConsoleView_CmdRemoveBreakpointAtAddress(const ConsoleCommandParams& params
     DisasmView_Redraw();
 }
 
+void ConsoleView_CmdPrintAllWatches(const ConsoleCommandParams& /*params*/)
+{
+    CProcessor* pProc = ConsoleView_GetCurrentProcessor();
+    bool okHaltMode = pProc->IsHaltMode();
+
+    const uint16_t* pws = Emulator_GetWatchList();
+    if (pws == nullptr || *pws == 0177777)
+    {
+        ConsoleView_Print(_T("  No watches defined.\r\n"));
+    }
+    else
+    {
+        while (*pws != 0177777)
+        {
+            uint16_t address = *pws;
+            int addrtype;
+            uint16_t value = g_pBoard->GetWordView(address, okHaltMode, false, &addrtype);
+            ConsoleView_PrintFormat(_T("  %06ho %06ho\r\n"), address, value);
+            pws++;
+        }
+    }
+}
+void ConsoleView_CmdSetWatchAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_AddWatch(address);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to add the watch.\r\n"));
+    DebugView_Redraw();
+}
+void ConsoleView_CmdRemoveWatchAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_RemoveWatch(address);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to remove the watch.\r\n"));
+    DebugView_Redraw();
+}
+void ConsoleView_CmdRemoveAllWatches(const ConsoleCommandParams& /*params*/)
+{
+    Emulator_RemoveAllWatches();
+    DebugView_Redraw();
+}
+
 #if !defined(PRODUCT)
 void ConsoleView_CmdClearTraceLog(const ConsoleCommandParams& /*params*/)
 {
@@ -717,6 +763,10 @@ static ConsoleCommands[] =
     { _T("b"), ARGINFO_NONE, ConsoleView_CmdPrintAllBreakpoints },
     { _T("bc%ho"), ARGINFO_OCT, ConsoleView_CmdRemoveBreakpointAtAddress },
     { _T("bc"), ARGINFO_NONE, ConsoleView_CmdRemoveAllBreakpoints },
+    { _T("w%ho"), ARGINFO_OCT, ConsoleView_CmdSetWatchAtAddress },
+    { _T("w"), ARGINFO_NONE, ConsoleView_CmdPrintAllWatches },
+    { _T("wc%ho"), ARGINFO_OCT, ConsoleView_CmdRemoveWatchAtAddress },
+    { _T("wc"), ARGINFO_NONE, ConsoleView_CmdRemoveAllWatches },
 #if !defined(PRODUCT)
     { _T("t%ho"), ARGINFO_OCT, ConsoleView_CmdTraceLogWithMask },
     { _T("t"), ARGINFO_NONE, ConsoleView_CmdTraceLogOnOff },

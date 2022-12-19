@@ -28,6 +28,8 @@ bool g_okEmulatorRunning = false;
 int m_wEmulatorCPUBpsCount = 0;
 uint16_t m_EmulatorCPUBps[MAX_BREAKPOINTCOUNT + 1];
 uint16_t m_wEmulatorTempCPUBreakpoint = 0177777;
+int m_wEmulatorWatchesCount = 0;
+uint16_t m_EmulatorWatches[MAX_BREAKPOINTCOUNT];
 
 bool m_okEmulatorSound = false;
 bool m_okEmulatorCovox = false;
@@ -100,9 +102,14 @@ bool Emulator_Init()
     CProcessor::Init();
 
     m_wEmulatorCPUBpsCount = 0;
-    for (int i = 0; i <= MAX_BREAKPOINTCOUNT; i++)
+    for (int i = 0; i <= MAX_BREAKPOINTCOUNT + 1; i++)
     {
         m_EmulatorCPUBps[i] = 0177777;
+    }
+    m_wEmulatorWatchesCount = 0;
+    for (int i = 0; i <= MAX_WATCHESCOUNT; i++)
+    {
+        m_EmulatorWatches[i] = 0177777;
     }
 
     g_pBoard = new CMotherboard();
@@ -303,6 +310,54 @@ void Emulator_RemoveAllBreakpoints()
     for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)
         m_EmulatorCPUBps[i] = 0177777;
     m_wEmulatorCPUBpsCount = 0;
+}
+
+const uint16_t* Emulator_GetWatchList() { return m_EmulatorWatches; }
+bool Emulator_AddWatch(uint16_t address)
+{
+    if (m_wEmulatorWatchesCount == MAX_WATCHESCOUNT - 1 || address == 0177777)
+        return false;
+    for (int i = 0; i < m_wEmulatorWatchesCount; i++)  // Check if the BP exists
+    {
+        if (m_EmulatorWatches[i] == address)
+            return false;  // Already in the list
+    }
+    for (int i = 0; i < MAX_BREAKPOINTCOUNT; i++)  // Put in the first empty cell
+    {
+        if (m_EmulatorWatches[i] == 0177777)
+        {
+            m_EmulatorWatches[i] = address;
+            break;
+        }
+    }
+    m_wEmulatorWatchesCount++;
+    return true;
+}
+bool Emulator_RemoveWatch(uint16_t address)
+{
+    if (m_wEmulatorWatchesCount == 0 || address == 0177777)
+        return false;
+    for (int i = 0; i < MAX_WATCHESCOUNT; i++)
+    {
+        if (m_EmulatorWatches[i] == address)
+        {
+            m_EmulatorWatches[i] = 0177777;
+            m_wEmulatorWatchesCount--;
+            if (m_wEmulatorWatchesCount > i)  // fill the hole
+            {
+                m_EmulatorWatches[i] = m_EmulatorWatches[m_wEmulatorWatchesCount];
+                m_EmulatorWatches[m_wEmulatorWatchesCount] = 0177777;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+void Emulator_RemoveAllWatches()
+{
+    for (int i = 0; i < MAX_WATCHESCOUNT; i++)
+        m_EmulatorWatches[i] = 0177777;
+    m_wEmulatorWatchesCount = 0;
 }
 
 void Emulator_SetSound(bool soundOnOff)

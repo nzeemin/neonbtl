@@ -38,6 +38,7 @@ void DebugView_DoDraw(HDC hdc);
 BOOL DebugView_OnKeyDown(WPARAM vkey, LPARAM lParam);
 void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WORD* arrR, BOOL* arrRChanged, WORD oldPsw);
 void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, int x, int y, WORD oldValue);
+int DebugView_DrawWatches(HDC hdc, const CProcessor* pProc, int x, int y);
 void DebugView_DrawHRandUR(HDC hdc, int x, int y);
 void DebugView_DrawPorts(HDC hdc, int x, int y);
 void DebugView_DrawBreakpoints(HDC hdc, int x, int y);
@@ -314,8 +315,9 @@ void DebugView_DoDraw(HDC hdc)
     // Draw stack for the current processor
     DebugView_DrawMemoryForRegister(hdc, 6, pDebugPU, xStack + cxChar / 2, cyLine / 2, oldSP);
 
+    int nWatches = DebugView_DrawWatches(hdc, pDebugPU, xPorts + cxChar, cyLine / 2);
     //DebugView_DrawHRandUR(hdc, xPorts + cxChar, cyLine / 2);
-    DebugView_DrawPorts(hdc, xPorts + cxChar, cyLine / 2);
+    DebugView_DrawPorts(hdc, xPorts + cxChar, cyLine / 2 + (nWatches > 0 ? 2 + nWatches : 0) * cyLine);
 
     DebugView_DrawBreakpoints(hdc, xBreaks + cxChar / 2, cyLine / 2);
 
@@ -479,6 +481,28 @@ void DebugView_DrawMemoryForRegister(HDC hdc, int reg, const CProcessor* pProc, 
     }
 
     SetTextColor(hdc, colorOld);
+}
+
+int DebugView_DrawWatches(HDC hdc, const CProcessor* pProc, int x, int y)
+{
+    const uint16_t* pws = Emulator_GetWatchList();
+    if (*pws == 0177777)
+        return 0;
+
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+
+    int nWatches = 0;
+    TextOut(hdc, x, y, _T("Watches"), 7);
+    y += cyLine;
+    while (*pws != 0177777)
+    {
+        uint16_t address = *pws;
+        DebugView_DrawAddressAndValue(hdc, pProc, address, x, y, cxChar);
+        y += cyLine;
+        pws++;  nWatches++;
+    }
+
+    return nWatches;
 }
 
 void DebugView_DrawHRandUR(HDC hdc, int x, int y)

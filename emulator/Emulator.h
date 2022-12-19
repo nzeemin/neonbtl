@@ -19,6 +19,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 
 const int MAX_BREAKPOINTCOUNT = 16;
+const int MAX_WATCHESCOUNT = 16;
 
 extern CMotherboard* g_pBoard;
 extern NeonConfiguration g_nEmulatorConfiguration;  // Current configuration
@@ -45,6 +46,11 @@ bool Emulator_IsBreakpoint();
 bool Emulator_IsBreakpoint(uint16_t address);
 void Emulator_RemoveAllBreakpoints();
 
+const uint16_t* Emulator_GetWatchList();
+bool Emulator_AddWatch(uint16_t address);
+bool Emulator_RemoveWatch(uint16_t address);
+void Emulator_RemoveAllWatches();
+
 void Emulator_SetSound(bool soundOnOff);
 void Emulator_SetCovox(bool covoxOnOff);
 void Emulator_SetSerial(bool onOff);
@@ -53,7 +59,7 @@ void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();
 bool Emulator_SystemFrame();
-DWORD Emulator_GetUptime();  // BK uptime, in seconds
+DWORD Emulator_GetUptime();  // Device uptime, in seconds
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
