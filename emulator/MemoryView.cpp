@@ -611,9 +611,11 @@ void MemoryView_OnDraw(HDC hdc)
 
     {
         xRight += 4 + cxChar;
-        TextOut(hdc, xRight, cyLine, _T("Address"), 7);
-        DrawOctalValue(hdc, xRight + cxChar, cyLine * 2, m_wCurrentAddress);
-        DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 2, m_wCurrentAddress);
+        TextOut(hdc, xRight, 0, _T("    oct  hex   dec"), 18);
+        TextOut(hdc, xRight, cyLine * 2, _T("Address"), 7);
+        DrawOctalValue(hdc, xRight + cxChar, cyLine * 3, m_wCurrentAddress);
+        DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 3, m_wCurrentAddress);
+        DrawDecValue(hdc, xRight + cxChar * 13, cyLine * 3, m_wCurrentAddress);
         // Get word from memory
         int addrtype;
         bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
@@ -623,17 +625,22 @@ void MemoryView_OnDraw(HDC hdc)
         if (okValid)
         {
             TCHAR buf[7];
-            TextOut(hdc, xRight, cyLine * 4, _T("Value"), 5);
+            TextOut(hdc, xRight, cyLine * 5, _T("Value"), 5);
             //::SetTextColor(hdc, (wChanged != 0) ? colorChanged : colorText);
-            DrawOctalValue(hdc, xRight + cxChar, cyLine * 5, word);
-            DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 5, word);
+            DrawOctalValue(hdc, xRight + cxChar, cyLine * 6, word);
+            DrawHexValue(hdc, xRight + cxChar * 8, cyLine * 6, word);
+            DrawDecValue(hdc, xRight + cxChar * 13, cyLine * 6, word);
             PrintOctalValue(buf, word & 0xff);
-            TextOut(hdc, xRight + cxChar * 4, cyLine * 6, buf + 3, 3);
+            TextOut(hdc, xRight + cxChar * 4, cyLine * 7, buf + 3, 3);
             PrintOctalValue(buf, word >> 8);
-            TextOut(hdc, xRight + cxChar, cyLine * 7, buf + 3, 3);
+            TextOut(hdc, xRight + cxChar, cyLine * 8, buf + 3, 3);
             PrintHexValue(buf, word);
-            TextOut(hdc, xRight + cxChar * 10, cyLine * 6, buf + 2, 2);
-            TextOut(hdc, xRight + cxChar * 8, cyLine * 7, buf, 2);
+            TextOut(hdc, xRight + cxChar * 10, cyLine * 7, buf + 2, 2);
+            TextOut(hdc, xRight + cxChar * 8, cyLine * 8, buf, 2);
+            PrintDecValue(buf, word);
+            TextOut(hdc, xRight + cxChar * 15, cyLine * 7, buf + 2, 3);
+            PrintDecValue(buf, word >> 8);
+            TextOut(hdc, xRight + cxChar * 13, cyLine * 8, buf + 2, 3);
         }
     }
 

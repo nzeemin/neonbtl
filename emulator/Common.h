@@ -72,15 +72,21 @@ const int NEON_SCREEN_HEIGHT = 300;
 
 HFONT CreateMonospacedFont();
 HFONT CreateDialogFont();
+
 void GetFontWidthAndHeight(HDC hdc, int* pWidth, int* pHeight);
+
+void PrintDecValue(TCHAR* buffer, WORD value);
 void PrintOctalValue(TCHAR* buffer, WORD value);
 void PrintHexValue(TCHAR* buffer, WORD value);
 void PrintBinaryValue(TCHAR* buffer, WORD value);
+
 BOOL ParseOctalValue(LPCTSTR text, WORD* pValue);
+
+void DrawDecValue(HDC hdc, int x, int y, WORD value);
 void DrawOctalValue(HDC hdc, int x, int y, WORD value);
 void DrawHexValue(HDC hdc, int x, int y, WORD value);
 void DrawBinaryValue(HDC hdc, int x, int y, WORD value);
-BOOL ParseOctalValue(LPCTSTR text, WORD* pValue);
+
 TCHAR Translate_BK_Unicode(BYTE ch);
 TCHAR Translate_KOI7R_Unicode(BYTE ch);
 

@@ -227,6 +227,17 @@ void GetFontWidthAndHeight(HDC hdc, int* pWidth, int* pHeight)
         *pHeight = tm.tmHeight;
 }
 
+// Print 16-bit value to buffer as decimal
+// buffer size at least 6 characters
+void PrintDecValue(TCHAR* buffer, WORD value)
+{
+    buffer[5] = 0;
+    for (int p = 4; p >= 0; p--)
+    {
+        buffer[p] = _T('0') + (value % 10);
+        value /= 10;
+    }
+}
 // Print octal 16-bit value to buffer
 // buffer size at least 7 characters
 void PrintOctalValue(TCHAR* buffer, WORD value)
@@ -282,6 +293,12 @@ BOOL ParseOctalValue(LPCTSTR text, WORD* pValue)
     return TRUE;
 }
 
+void DrawDecValue(HDC hdc, int x, int y, WORD value)
+{
+    TCHAR buffer[6];
+    PrintDecValue(buffer, value);
+    TextOut(hdc, x, y, buffer, (int)_tcslen(buffer));
+}
 void DrawOctalValue(HDC hdc, int x, int y, WORD value)
 {
     TCHAR buffer[7];
