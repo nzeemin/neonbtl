@@ -17,12 +17,12 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Emubase.h"
 
 
-// Ôîðìàò îòîáðàæåíèÿ ðåæèìîâ àäðåñàöèè
+// Ð¤Ð¾Ñ€Ð¼Ð°Ñ‚ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ñ Ñ€ÐµÐ¶Ð¸Ð¼Ð¾Ð² Ð°Ð´Ñ€ÐµÑÐ°Ñ†Ð¸Ð¸
 const LPCTSTR ADDRESS_MODE_FORMAT[] =
 {
     _T("%s"), _T("(%s)"), _T("(%s)+"), _T("@(%s)+"), _T("-(%s)"), _T("@-(%s)"), _T("%06o(%s)"), _T("@%06o(%s)")
 };
-// Ôîðìàò îòîáðàæåíèÿ ðåæèìîâ àäðåñàöèè äëÿ ðåãèñòðà PC
+// Ð¤Ð¾Ñ€Ð¼Ð°Ñ‚ Ð¾Ñ‚Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ñ Ñ€ÐµÐ¶Ð¸Ð¼Ð¾Ð² Ð°Ð´Ñ€ÐµÑÐ°Ñ†Ð¸Ð¸ Ð´Ð»Ñ Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð° PC
 const LPCTSTR ADDRESS_MODE_PC_FORMAT[] =
 {
     _T("PC"), _T("(PC)"), _T("#%06o"), _T("@#%06o"), _T("-(PC)"), _T("@-(PC)"), _T("%06o"), _T("@%06o")
@@ -184,7 +184,7 @@ uint16_t DisassembleInstruction(const uint16_t* pMemory, uint16_t addr, TCHAR* s
     case PI_SENZV:  _tcscpy(strInstr, _T("SENZV"));  return 1;
     case PI_SCC:    _tcscpy(strInstr, _T("SCC"));    return 1;
 
-        // Ñïåöêîìàíäû ðåæèìà HALT ÂÌ2
+        // Ð¡Ð¿ÐµÑ†ÐºÐ¾Ð¼Ð°Ð½Ð´Ñ‹ Ñ€ÐµÐ¶Ð¸Ð¼Ð° HALT Ð’Ðœ2
     case PI_START:  _tcscpy(strInstr, _T("START"));  return 1;
     case PI_STEP:   _tcscpy(strInstr, _T("STEP"));   return 1;
     case PI_RSEL:   _tcscpy(strInstr, _T("RSEL"));   return 1;
@@ -460,8 +460,8 @@ bool Disasm_GetJumpConditionHint(
     if (instr >= 0101000 && instr <= 0101777)  // BHI, BLOS
     {
         _sntprintf(buffer, buffersize - 1, _T("C=%c, Z=%c"), (psw & PSW_C) ? '1' : '0', (psw & PSW_Z) ? '1' : '0');
-        // BHI:  IF ((Ñ or Z) == 0)
-        // BLOS: IF ((Ñ or Z) == 1)
+        // BHI:  IF ((Ð¡ or Z) == 0)
+        // BLOS: IF ((Ð¡ or Z) == 1)
         bool value = (((psw & PSW_C) != 0) || ((psw & PSW_Z) != 0));
         return ((instr & 0400) == 0) ? !value : value;
     }

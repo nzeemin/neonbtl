@@ -21,7 +21,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
-// Маска флагов, сохраняемых в m_flags
+// РњР°СЃРєР° С„Р»Р°РіРѕРІ, СЃРѕС…СЂР°РЅСЏРµРјС‹С… РІ m_flags
 const uint16_t FLOPPY_CMD_MASKSTORED =
     FLOPPY_CMD_CORRECTION250 | FLOPPY_CMD_CORRECTION500 | FLOPPY_CMD_SIDEUP | FLOPPY_CMD_DIR | FLOPPY_CMD_SKIPSYNC |
     FLOPPY_CMD_ENGINESTART;
@@ -168,9 +168,9 @@ void CFloppyController::SetCommand(uint16_t cmd)
 {
     if (m_okTrace) DebugLogFormat(_T("Floppy COMMAND %06o\r\n"), cmd);
 
-    bool okPrepareTrack = false;  // Нужно ли считывать дорожку в буфер
+    bool okPrepareTrack = false;  // РќСѓР¶РЅРѕ Р»Рё СЃС‡РёС‚С‹РІР°С‚СЊ РґРѕСЂРѕР¶РєСѓ РІ Р±СѓС„РµСЂ
 
-    // Проверить, не сменился ли текущий привод
+    // РџСЂРѕРІРµСЂРёС‚СЊ, РЅРµ СЃРјРµРЅРёР»СЃСЏ Р»Рё С‚РµРєСѓС‰РёР№ РїСЂРёРІРѕРґ
     uint16_t newdrive = (cmd & 3) ^ 3;
     if (m_drive != newdrive)
     {
@@ -184,13 +184,13 @@ void CFloppyController::SetCommand(uint16_t cmd)
     }
     if (m_drive == -1)
         return;
-    cmd &= ~3;  // Убираем из команды информацию о текущем приводе
+    cmd &= ~3;  // РЈР±РёСЂР°РµРј РёР· РєРѕРјР°РЅРґС‹ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ С‚РµРєСѓС‰РµРј РїСЂРёРІРѕРґРµ
 
     // Copy new flags to m_flags
     m_flags &= ~FLOPPY_CMD_MASKSTORED;
     m_flags |= cmd & FLOPPY_CMD_MASKSTORED;
 
-    // Проверяем, не сменилась ли сторона
+    // РџСЂРѕРІРµСЂСЏРµРј, РЅРµ СЃРјРµРЅРёР»Р°СЃСЊ Р»Рё СЃС‚РѕСЂРѕРЅР°
     if (m_flags & FLOPPY_CMD_SIDEUP)  // Side selection: 0 - down, 1 - up
     {
         if (m_side == 0) { m_side = 1;  okPrepareTrack = true; }
@@ -231,7 +231,7 @@ void CFloppyController::SetCommand(uint16_t cmd)
         m_status &= ~FLOPPY_STATUS_CHECKSUMOK;
     }
 
-    if (m_writing && (cmd & FLOPPY_CMD_SKIPSYNC))  // Запись маркера
+    if (m_writing && (cmd & FLOPPY_CMD_SKIPSYNC))  // Р—Р°РїРёСЃСЊ РјР°СЂРєРµСЂР°
     {
 //        DebugLog(_T("Floppy MARKER\r\n"));
 
@@ -296,9 +296,9 @@ void CFloppyController::WriteData(uint16_t data)
 
 void CFloppyController::Periodic()
 {
-    if (!IsEngineOn()) return;  // Вращаем дискеты только если включен мотор
+    if (!IsEngineOn()) return;  // Р’СЂР°С‰Р°РµРј РґРёСЃРєРµС‚С‹ С‚РѕР»СЊРєРѕ РµСЃР»Рё РІРєР»СЋС‡РµРЅ РјРѕС‚РѕСЂ
 
-    // Вращаем дискеты во всех драйвах сразу
+    // Р’СЂР°С‰Р°РµРј РґРёСЃРєРµС‚С‹ РІРѕ РІСЃРµС… РґСЂР°Р№РІР°С… СЃСЂР°Р·Сѓ
     for (int drive = 0; drive < 2; drive++)
     {
         m_drivedata[drive].dataptr += 2;
@@ -309,7 +309,7 @@ void CFloppyController::Periodic()
     if (m_pDrive != nullptr && m_pDrive->dataptr == 0)
         DebugLogFormat(_T("Floppy Index\n"));
 
-    // Далее обрабатываем чтение/запись на текущем драйве
+    // Р”Р°Р»РµРµ РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј С‡С‚РµРЅРёРµ/Р·Р°РїРёСЃСЊ РЅР° С‚РµРєСѓС‰РµРј РґСЂР°Р№РІРµ
     if (m_pDrive == nullptr) return;
     if (!IsAttached(m_drive)) return;
 
@@ -415,7 +415,7 @@ void CFloppyController::PrepareTrack()
     {
         ::fseek(m_pDrive->fpFile, foffset, SEEK_SET);
         count = ::fread(data, 1, 5120, m_pDrive->fpFile);
-        //TODO: Контроль ошибок чтения
+        //TODO: РљРѕРЅС‚СЂРѕР»СЊ РѕС€РёР±РѕРє С‡С‚РµРЅРёСЏ
     }
 
     // Fill m_data array and m_marker array with marked data
@@ -461,14 +461,14 @@ void CFloppyController::FlushChanges()
             uint32_t bytesToWrite = ((uint32_t)(foffset + 5120) - currentFileSize) % 512;
             if (bytesToWrite == 0) bytesToWrite = 512;
             ::fwrite(datafill, 1, bytesToWrite, m_pDrive->fpFile);
-            //TODO: Проверка на ошибки записи
+            //TODO: РџСЂРѕРІРµСЂРєР° РЅР° РѕС€РёР±РєРё Р·Р°РїРёСЃРё
             currentFileSize += bytesToWrite;
         }
 
         // Save data into the file
         ::fseek(m_pDrive->fpFile, foffset, SEEK_SET);
         size_t dwBytesWritten = ::fwrite(&data, 1, 5120, m_pDrive->fpFile);
-        //TODO: Проверка на ошибки записи
+        //TODO: РџСЂРѕРІРµСЂРєР° РЅР° РѕС€РёР±РєРё Р·Р°РїРёСЃРё
     }
     else
     {
