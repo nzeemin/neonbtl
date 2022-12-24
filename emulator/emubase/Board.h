@@ -88,8 +88,8 @@ public:  // Getting devices
 
 private:  // Memory
     uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
-    uint8_t*    m_pRAM;  // RAM, 512..4096 KB
     uint8_t*    m_pROM;  // ROM, 16 KB
+    uint8_t*    m_pRAM;  // RAM, 512..4096 KB
     uint16_t    m_HR[8];
     uint16_t    m_UR[8];
     uint32_t    m_nRamSizeBytes;  // Actual RAM size
@@ -101,6 +101,7 @@ public:  // Memory access
     void        SetRAMByte(uint32_t offset, uint8_t byte);
     uint16_t    GetROMWord(uint16_t offset) const;
     uint8_t     GetROMByte(uint16_t offset) const;
+    uint32_t    GetRamSizeBytes() const { return m_nRamSizeBytes; }
 
 public:  // Debug
     void        DebugTicks();  // One Debug CPU tick -- use for debug step or debug breakpoint

@@ -297,22 +297,27 @@ void ConsoleView_DeleteAllBreakpoints()
 
 BOOL ConsoleView_SaveMemoryDump()
 {
-    BYTE buf[65536];
-    for (int i = 0; i < 65536; i++)
-    {
-        buf[i] = g_pBoard->GetByte((uint16_t)i, 1);
-    }
-
     const TCHAR fname[] = _T("memdump.bin");
     HANDLE file = ::CreateFile(fname,
             GENERIC_WRITE, FILE_SHARE_READ, NULL,
             OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-    DWORD dwBytesWritten = 0;
-    ::WriteFile(file, buf, 65536, &dwBytesWritten, NULL);
+    uint32_t ramSizeBlocks = g_pBoard->GetRamSizeBytes() / 8192;
+    for (uint32_t block = 0; block < ramSizeBlocks; block++)
+    {
+        uint16_t buf[4096];
+        for (uint16_t i = 0; i < 4096; i++)
+        {
+            buf[i] = g_pBoard->GetRAMWord(block * 8192 + i * 2);
+        }
+
+        DWORD dwBytesWritten = 0;
+        ::WriteFile(file, buf, 8192, &dwBytesWritten, NULL);
+        if (dwBytesWritten != 8192)
+            return FALSE;
+    }
+
     ::CloseHandle(file);
-    if (dwBytesWritten != 65536)
-        return FALSE;
 
     return TRUE;
 }

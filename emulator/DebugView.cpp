@@ -530,13 +530,15 @@ m_DebugViewPorts[] =
     //{ 0161030, _T("PPIA") },
     { 0161032, _T("PPIB") },
     { 0161034, _T("PPIC") },
-    { 0161400, _T("RTC csec") },
-    { 0161402, _T("RTC cmin") },
-    { 0161404, _T("RTC chou") },
-    { 0161406, _T("RTC cdow") },
-    { 0161407, _T("RTC cday") },
-    { 0161410, _T("RTC cmon") },
-    { 0161411, _T("RTC cyea") },
+    { 0161000, _T("PICRR") },
+    { 0161002, _T("PICMR") },
+    //{ 0161400, _T("RTC csec") },
+    //{ 0161402, _T("RTC cmin") },
+    //{ 0161404, _T("RTC chou") },
+    //{ 0161406, _T("RTC cdow") },
+    //{ 0161407, _T("RTC cday") },
+    //{ 0161410, _T("RTC cmon") },
+    //{ 0161411, _T("RTC cyea") },
 };
 
 void DebugView_DrawPorts(HDC hdc, int x, int y)
