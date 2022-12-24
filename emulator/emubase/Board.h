@@ -51,6 +51,13 @@ enum NeonConfiguration
 #define TRACE_FLOPPY    0100  // Trace floppies
 #define TRACE_ALL    0177777  // Trace all
 
+// PIC 8259A flags
+#define PIC_MODE_ICW1      1  // Wait for ICW1 after RESET
+#define PIC_MODE_ICW2      2  // Wait for ICW2 after ICW1
+#define PIC_MODE_MASK    255  // Mask for mode bits, usage: (m_PICflags & PIC_MODE_MASK)
+#define PIC_CMD_POLL     256  // Flag for Poll Command
+
+
 //////////////////////////////////////////////////////////////////////
 // Special key codes
 
@@ -159,6 +166,9 @@ public:  // Saving/loading emulator status
     void        SaveToImage(uint8_t* pImage);
     void        LoadFromImage(const uint8_t* pImage);
 private:  // Ports: implementation
+    uint16_t    m_PICflags;         // PIC 8259A flags, see PIC_Xxx constants
+    uint8_t     m_PICRR;            // PIC interrupt request register
+    uint8_t     m_PICMR;            // PIC mask register
     uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
     uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_Port177560;       // Serial port input state register
@@ -168,6 +178,9 @@ private:  // Ports: implementation
     uint16_t    m_PortKBDCSR;       // Keyboard status register
     uint16_t    m_PortKBDBUF;       // Keyboard register
 private:
+    void        ProcessPICWrite(bool a, uint8_t byte);
+    uint8_t     ProcessPICRead(bool a);
+    void        SetPICInterrupt(int signal);  // Set PIC interrupt signal 0..7
     uint8_t     GetRtcPortValue(uint16_t address) const;
 private:  // Timer implementation
     uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;

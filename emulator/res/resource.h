@@ -74,12 +74,7 @@
 #define ID_EMULATOR_CONFIGURATION       32803
 #define ID_EMULATOR_FLOPPY0             32804
 #define ID_EMULATOR_FLOPPY1             32805
-#define ID_EMULATOR_FLOPPY2             32806
-#define ID_EMULATOR_FLOPPY3             32807
-#define ID_EMULATOR_HARDDRIVE1          32808
-#define ID_EMULATOR_HARDDRIVE2          32809
-#define ID_EMULATOR_CARTRIDGE1          32810
-#define ID_EMULATOR_CARTRIDGE2          32811
+#define ID_EMULATOR_HARDDRIVE           32808
 #define ID_CONF_RAM512                  32812
 #define ID_CONF_RAM1024                 32813
 #define ID_CONF_RAM2048                 32814

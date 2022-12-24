@@ -102,12 +102,12 @@ bool Emulator_Init()
     CProcessor::Init();
 
     m_wEmulatorCPUBpsCount = 0;
-    for (int i = 0; i <= MAX_BREAKPOINTCOUNT + 1; i++)
+    for (int i = 0; i <= MAX_BREAKPOINTCOUNT; i++)
     {
         m_EmulatorCPUBps[i] = 0177777;
     }
     m_wEmulatorWatchesCount = 0;
-    for (int i = 0; i <= MAX_WATCHESCOUNT; i++)
+    for (int i = 0; i < MAX_WATCHESCOUNT; i++)
     {
         m_EmulatorWatches[i] = 0177777;
     }
@@ -424,7 +424,12 @@ bool Emulator_SystemFrame()
     //Emulator_ProcessJoystick();
 
     if (!g_pBoard->SystemFrame())
+    {
+        uint16_t pc = g_pBoard->GetCPU()->GetPC();
+        if (pc != m_wEmulatorTempCPUBreakpoint)
+            DebugPrintFormat(_T("Breakpoint hit at %06ho\r\n"), pc);
         return false;
+    }
 
     // Calculate frames per second
     m_nFrameCount++;

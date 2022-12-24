@@ -726,12 +726,6 @@ bool MainWindow_DoCommand(int commandId)
     case ID_EMULATOR_FLOPPY1:
         MainWindow_DoEmulatorFloppy(1);
         break;
-    case ID_EMULATOR_FLOPPY2:
-        MainWindow_DoEmulatorFloppy(2);
-        break;
-    case ID_EMULATOR_FLOPPY3:
-        MainWindow_DoEmulatorFloppy(3);
-        break;
     case ID_VIEW_DEBUG:
         MainWindow_DoViewDebug();
         break;
@@ -982,7 +976,7 @@ void MainWindow_DoEmulatorFloppy(int slot)
         ofn.hwndOwner = g_hwnd;
         ofn.hInstance = g_hInst;
         ofn.lpstrTitle = _T("Open floppy image to attach");
-        ofn.lpstrFilter = _T("BK floppy images (*.img, *.bkd)\0*.img;*.bkd\0All Files (*.*)\0*.*\0\0");
+        ofn.lpstrFilter = _T("Neon floppy images (*.dsk)\0*.dsk\0All Files (*.*)\0*.*\0\0");
         ofn.Flags = OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
         ofn.lpstrFile = bufFileName;
         ofn.nMaxFile = sizeof(bufFileName) / sizeof(TCHAR);
@@ -1004,16 +998,13 @@ void MainWindow_OnToolbarGetInfoTip(LPNMTBGETINFOTIP lpnm)
 {
     int commandId = lpnm->iItem;
 
-    if (commandId == ID_EMULATOR_FLOPPY0 || commandId == ID_EMULATOR_FLOPPY1 ||
-        commandId == ID_EMULATOR_FLOPPY2 || commandId == ID_EMULATOR_FLOPPY3)
+    if (commandId == ID_EMULATOR_FLOPPY0 || commandId == ID_EMULATOR_FLOPPY1)
     {
         int floppyslot = 0;
         switch (commandId)
         {
         case ID_EMULATOR_FLOPPY0: floppyslot = 0; break;
         case ID_EMULATOR_FLOPPY1: floppyslot = 1; break;
-        case ID_EMULATOR_FLOPPY2: floppyslot = 2; break;
-        case ID_EMULATOR_FLOPPY3: floppyslot = 3; break;
         }
 
         if (g_pBoard->IsFloppyImageAttached(floppyslot))
