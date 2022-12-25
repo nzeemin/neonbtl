@@ -297,7 +297,7 @@ void CProcessor::Execute()
         CommandExecution();
 }
 
-bool CProcessor::InterruptProcessing ()
+bool CProcessor::InterruptProcessing()
 {
     uint16_t intrVector = 0xFFFF;
     bool currMode = ((m_psw & 0400) != 0);  // Current processor mode: true = HALT mode, false = USER mode

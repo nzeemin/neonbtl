@@ -389,18 +389,18 @@ void ScreenView_ScanKeyboard()
 void ScreenView_ProcessKeyboard()
 {
     // Process next event in the keyboard queue
-    WORD keyevent = ScreenView_GetKeyEventFromQueue();
-    if (keyevent != 0)
-    {
-        bool pressed = ((keyevent & 0x8000) != 0);
+    //WORD keyevent = ScreenView_GetKeyEventFromQueue();
+    //if (keyevent != 0)
+    //{
+    //    bool pressed = ((keyevent & 0x8000) != 0);
         //bool ctrl = ((keyevent & 0x4000) != 0);
-        BYTE bkscan = LOBYTE(keyevent);
+    //    BYTE bkscan = LOBYTE(keyevent);
 
 //        TCHAR bufoct[7];  PrintOctalValue(bufoct, bkscan);
-//        DebugPrintFormat(_T("KeyEvent: %s %d %d\r\n"), bufoct, pressed, ctrl);
+//  //      DebugPrintFormat(_T("KeyEvent: %s %d %d\r\n"), bufoct, pressed, ctrl);
 
-        g_pBoard->KeyboardEvent(bkscan, pressed);
-    }
+    //    g_pBoard->KeyboardEvent(bkscan, pressed);
+    //}
 }
 
 // External key event - e.g. from KeyboardView

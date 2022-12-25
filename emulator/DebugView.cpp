@@ -398,10 +398,14 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     BOOL okHaltMode = pProc->IsHaltMode();
     TextOut(hdc, x, y + 13 * cyLine, okHaltMode ? _T("HALT") : _T("USER"), 4);
 
+    // Processor HALT pin
+    BOOL okHaltPin = pProc->GetHALTPin();
+    TextOut(hdc, x, y + 14 * cyLine, okHaltPin ? _T("HALTpin 1") : _T("HALTpin 0"), 9);
+
     // "Stopped" flag
     BOOL okStopped = pProc->IsStopped();
     if (okStopped)
-        TextOut(hdc, x + 6 * cxChar, y + 13 * cyLine, _T("STOP"), 4);
+        TextOut(hdc, x + 6 * cxChar, y + 14 * cyLine, _T("STOP"), 4);
 }
 
 void DebugView_DrawAddressAndValue(HDC hdc, const CProcessor* pProc, uint16_t address, int x, int y, int cxChar)
@@ -532,6 +536,8 @@ m_DebugViewPorts[] =
     { 0161034, _T("PPIC") },
     { 0161000, _T("PICRR") },
     { 0161002, _T("PICMR") },
+    { 0161200, _T("HR0") },
+    { 0161202, _T("HR1") },
     //{ 0161400, _T("RTC csec") },
     //{ 0161402, _T("RTC cmin") },
     //{ 0161404, _T("RTC chou") },

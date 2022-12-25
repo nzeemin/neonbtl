@@ -103,7 +103,7 @@ void CMotherboard::Reset()
     m_pCPU->SetACLOPin(true);
 
     // Reset ports
-    m_PortPPIB = 0;
+    m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
     m_Port177560 = m_Port177562 = 0;
     m_Port177564 = 0200;
     m_Port177566 = 0;
@@ -240,10 +240,7 @@ void CMotherboard::Tick50()  // 50 Hz timer
 
 void CMotherboard::ExecuteCPU()
 {
-    bool ishalt = m_pCPU->IsHaltMode();
     m_pCPU->Execute();
-    if (ishalt && !m_pCPU->IsHaltMode())  // HALT -> USER
-        m_PortPPIB &= ~15;  // reset IHLT IOINT EF1 EF0
 }
 
 void CMotherboard::TimerTick() // Timer Tick, 31250 Hz = 32 мкс (BK-0011), 23437.5 Hz = 42.67 мкс (BK-0010)
@@ -254,7 +251,9 @@ void CMotherboard::TimerTick() // Timer Tick, 31250 Hz = 32 мкс (BK-0011), 23
 void CMotherboard::DebugTicks()
 {
     m_pCPU->ClearInternalTick();
+
     m_pCPU->Execute();
+
     if (m_pFloppyCtl != nullptr)
         m_pFloppyCtl->Periodic();
 }
@@ -283,10 +282,8 @@ bool CMotherboard::SystemFrame()
             if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
                 TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
-            bool ishalt = m_pCPU->IsHaltMode();
+
             m_pCPU->Execute();
-            if (ishalt && !m_pCPU->IsHaltMode())  // HALT -> USER
-                m_PortPPIB &= ~15;  // reset IHLT IOINT EF1 EF0
 
             if (m_CPUbps != nullptr)  // Check for breakpoints
             {
@@ -389,9 +386,10 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tGETWORD (%06ho) EMUL\n"), HU_INSTRUCTION_PC, address);
         m_pCPU->SetHALTPin(true);
-        if ((m_PortPPIB & 1) == 0)
+        if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
-            m_PortPPIB |= 12 + 1; m_HR[0] = address & 07777;
+            m_PortPPIB &= ~9;  // IHLT = 0, EF0 = 0
+            m_HR[0] = address & 07777;
         }
         return GetRAMWord(offset & 07777);
     case ADDRTYPE_DENY:
@@ -421,9 +419,10 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tGETBYTE (%06ho) EMUL\n"), HU_INSTRUCTION_PC, address);
         m_pCPU->SetHALTPin(true);
-        if ((m_PortPPIB & 1) == 0)
+        if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
-            m_PortPPIB |= 12 + 1; m_HR[0] = address & 07777;
+            m_PortPPIB &= ~9;  // IHLT = 0, EF0 = 0
+            m_HR[0] = address & 07777;
         }
         return GetRAMByte(offset & 07777);
     case ADDRTYPE_DENY:
@@ -459,9 +458,10 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETWORD %06ho -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, word, address);
         SetRAMWord(offset & 07777, word);
         m_pCPU->SetHALTPin(true);
-        if ((m_PortPPIB & 3) != 3)
+        if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
-            m_PortPPIB |= 12 + 3; m_HR[1] = address & 07777;
+            m_PortPPIB &= ~11;  // IHLT = 0, EF1,EF0 = 0
+            m_HR[1] = address & 07777;
         }
         return;
     case ADDRTYPE_DENY:
@@ -494,9 +494,10 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
         DebugLogFormat(_T("%c%06ho\tSETBYTE %03o -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, byte, address);
         SetRAMByte(offset & 07777, byte);
         m_pCPU->SetHALTPin(true);
-        if ((m_PortPPIB & 3) != 3)
+        if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
-            m_PortPPIB |= 12 + 3; m_HR[1] = address & 07777;
+            m_PortPPIB &= ~11;  // IHLT = 0, EF1,EF0 = 0
+            m_HR[1] = address & 07777;
         }
         return;
     case ADDRTYPE_DENY:
@@ -524,14 +525,15 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
             return ADDRTYPE_IO;
         }
 
-        if (address < 0174000 || address >= 0177700)
+        // Область памяти эмулируемых регистров, только для режима USER
+        if (!okHaltMode && address >= 0174000 && address < 0177700)
         {
             *pOffset = address & 0007777;
-            return ADDRTYPE_RAM;
+            return ADDRTYPE_EMUL;
         }
 
-        *pOffset = address;
-        return ADDRTYPE_EMUL;
+        *pOffset = address & 0007777;
+        return ADDRTYPE_RAM;
     }
 
     // Логика диспетчера памяти
@@ -873,7 +875,13 @@ void CMotherboard::ProcessPICWrite(bool a, uint8_t byte)
             if (byte == 014)
                 m_PICflags |= PIC_CMD_POLL;
             else if (byte == 040)  // End of Interrupt command
+            {
                 m_PICRR = 0;
+                // Тут сбрасываем источники прерывания
+                m_PortPPIB &= ~4;  // reset IOINT
+                m_PortPPIB |= 11;  // reset IHLT EF1 EF0
+                //NOTE: HR0 и HR1 очищаются в конце обработчика прерывания HALT в BIOS, см. P16HLT.MAC
+            }
         }
     }
     else
@@ -923,7 +931,12 @@ void CMotherboard::SetPICInterrupt(int signal)
     if (mode != 0)  // not READY
         return;
     int s = (1 << signal);
-    m_PICRR |= s;
+    if ((m_PICRR & s) == 0)
+    {
+        m_PICRR |= s;
+        m_PortPPIB |= 4;  // set IOINT
+        m_pCPU->SetHALTPin(true);
+    }
 }
 
 // Get port value for Real Time Clock - ports 0161400..0161476 - КР512ВИ1 == MC146818

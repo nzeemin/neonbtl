@@ -37,7 +37,7 @@ enum NeonConfiguration
 #define ADDRTYPE_RAM     0  // RAM
 #define ADDRTYPE_ROM     1  // ROM
 #define ADDRTYPE_IO      4  // I/O port
-#define ADDRTYPE_EMUL    8  // I/O port emulation
+#define ADDRTYPE_EMUL    8  // I/O port emulation, USER mode only
 #define ADDRTYPE_DENY  128  // Access denied
 
 //floppy debug
