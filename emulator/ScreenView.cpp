@@ -393,7 +393,7 @@ void ScreenView_ProcessKeyboard()
     //if (keyevent != 0)
     //{
     //    bool pressed = ((keyevent & 0x8000) != 0);
-        //bool ctrl = ((keyevent & 0x4000) != 0);
+    //bool ctrl = ((keyevent & 0x4000) != 0);
     //    BYTE bkscan = LOBYTE(keyevent);
 
 //        TCHAR bufoct[7];  PrintOctalValue(bufoct, bkscan);

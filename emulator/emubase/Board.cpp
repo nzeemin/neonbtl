@@ -389,7 +389,7 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
         if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
             m_PortPPIB &= ~9;  // IHLT = 0, EF0 = 0
-            m_HR[0] = address & 07777;
+            m_HR[0] = address;
         }
         return GetRAMWord(offset & 07777);
     case ADDRTYPE_DENY:
@@ -422,7 +422,7 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
         if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
             m_PortPPIB &= ~9;  // IHLT = 0, EF0 = 0
-            m_HR[0] = address & 07777;
+            m_HR[0] = address;
         }
         return GetRAMByte(offset & 07777);
     case ADDRTYPE_DENY:
@@ -461,7 +461,7 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~11;  // IHLT = 0, EF1,EF0 = 0
-            m_HR[1] = address & 07777;
+            m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -497,7 +497,7 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~11;  // IHLT = 0, EF1,EF0 = 0
-            m_HR[1] = address & 07777;
+            m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -573,28 +573,28 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161000:  // PICCSR
         {
             uint8_t b = ProcessPICRead(false);
-            DebugLogFormat(_T("%c%06ho\tGETPORT PICCSR = 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)b);
+            DebugLogFormat(_T("%c%06ho\tGETPORT PICCSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)b);
             return b;
         }
 
     case 0161002:  // PICMR
         {
             uint8_t b = ProcessPICRead(true);
-            DebugLogFormat(_T("%c%06ho\tGETPORT PICMR = 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)b);
+            DebugLogFormat(_T("%c%06ho\tGETPORT PICMR -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)b);
             return b;
         }
 
     case 0161014:
-        DebugLogFormat(_T("%c%06ho\tGETPORT SNDC2R = %06ho\n"), HU_INSTRUCTION_PC, 0);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho SNDC2R -> %06ho\n"), HU_INSTRUCTION_PC, address, 0);
         return 0;//TODO
 
     case 0161032:  // PPIB
         result = m_PortPPIB;
-        DebugLogFormat(_T("%c%06ho\tGETPORT PPIB = %06ho\n"), HU_INSTRUCTION_PC, result);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIB -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
         return result;
 
     case 0161034:  // PPIC
-        DebugLogFormat(_T("%c%06ho\tGETPORT PPIC = %06ho\n"), HU_INSTRUCTION_PC, m_PortPPIC);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIC -> %06ho\n"), HU_INSTRUCTION_PC, address, m_PortPPIC);
         return m_PortPPIC;
 
     case 0161040:
@@ -605,7 +605,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161052:
     case 0161054:
     case 0161056:
-        DebugLogFormat(_T("%c%06ho\tGETPORT HD\n"), HU_INSTRUCTION_PC, address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
     case 0161060:
@@ -640,7 +640,9 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161216:
         {
             int chunk = (address >> 1) & 7;
-            DebugLogFormat(_T("%c%06ho\tGETPORT HR%d = %06ho\n"), HU_INSTRUCTION_PC, chunk, m_HR[chunk]);
+            DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HR%d -> %06ho\n"), HU_INSTRUCTION_PC, address, chunk, m_HR[chunk]);
+            if (chunk == 0 || chunk == 1)  // Чтение HR0 или HR1
+                m_PortPPIB |= 3;  // Снимаем EF0 и EF1
             return m_HR[chunk];
         }
 
@@ -654,7 +656,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161236:
         {
             int chunk = (address >> 1) & 7;
-            DebugLogFormat(_T("%c%06ho\tGETPORT UR%d = %06ho\n"), HU_INSTRUCTION_PC, chunk, m_UR[chunk]);
+            DebugLogFormat(_T("%c%06ho\tGETPORT %06ho UR%d -> %06ho\n"), HU_INSTRUCTION_PC, address, chunk, m_UR[chunk]);
             return m_UR[chunk];
         }
 
@@ -804,6 +806,17 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         //TODO: PPIP -- Parallel port mode control
         break;
 
+    case 0161040:
+    case 0161042:
+    case 0161044:
+    case 0161046:
+    case 0161050:
+    case 0161052:
+    case 0161054:
+    case 0161056:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD\n"), HU_INSTRUCTION_PC, word, address);
+        break;
+
     case 0161060:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) DLBUF\n"), HU_INSTRUCTION_PC, word, address);
         if (m_SerialOutCallback != nullptr)
@@ -817,6 +830,12 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161066:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) KBDBUF\n"), HU_INSTRUCTION_PC, word, address);
         //TODO: KBDBUF -- Keyboard buffer
+        break;
+
+    case 0161070:
+    case 0161072:
+    case 0161076:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
     case 0161200:
@@ -879,7 +898,7 @@ void CMotherboard::ProcessPICWrite(bool a, uint8_t byte)
                 m_PICRR = 0;
                 // Тут сбрасываем источники прерывания
                 m_PortPPIB &= ~4;  // reset IOINT
-                m_PortPPIB |= 11;  // reset IHLT EF1 EF0
+                m_PortPPIB |= 8;  // reset IHLT
                 //NOTE: HR0 и HR1 очищаются в конце обработчика прерывания HALT в BIOS, см. P16HLT.MAC
             }
         }
