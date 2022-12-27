@@ -129,8 +129,8 @@ public:
     bool IsReadOnly(int drive) { return m_drivedata[drive].okReadOnly; }
     // Check if floppy engine now rotates
     bool IsEngineOn() { return (m_flags & FLOPPY_CMD_ENGINESTART) != 0; }
-    uint16_t GetData(void);         // Reading port 177132 - data
-    uint16_t GetState(void);        // Reading port 177130 - device status
+    uint16_t GetData();         // Reading port 177132 - data
+    uint16_t GetState();        // Reading port 177130 - device status
     uint16_t GetDataView() const { return m_datareg; }  // Get port 177132 value for debugger
     uint16_t GetStateView() const { return m_status; }  // Get port 177130 value for debugger
     void SetCommand(uint16_t cmd);  // Writing to port 177130 - commands

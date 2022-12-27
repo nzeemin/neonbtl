@@ -961,12 +961,6 @@ void MainWindow_DoEmulatorFloppy(int slot)
     }
     else
     {
-        if ((g_nEmulatorConfiguration & NEON_COPT_FDD) == 0)
-        {
-            AlertWarning(_T("Current configuration has no floppy controller."));
-            return;
-        }
-
         // File Open dialog
         TCHAR bufFileName[MAX_PATH];
         *bufFileName = 0;

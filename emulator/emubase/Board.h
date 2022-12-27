@@ -16,6 +16,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Defines.h"
 
 class CProcessor;
+class Motherboard;
+class CFloppyController;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -23,9 +25,6 @@ class CProcessor;
 // Machine configurations
 enum NeonConfiguration
 {
-    // Configuration options
-    NEON_COPT_FDD = 16,
-
     NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,
 };
 
@@ -67,8 +66,37 @@ typedef void (CALLBACK* SOUNDGENCALLBACK)(unsigned short L, unsigned short R);
 // Serial port output callback
 typedef void (CALLBACK* SERIALOUTCALLBACK)(uint8_t byte);
 
-class CFloppyController;
 
+//////////////////////////////////////////////////////////////////////
+
+struct PIT8253_chan
+{
+    uint8_t     control;    // Control byte
+    uint8_t     phase;
+    uint16_t    value;      // Current counter value
+    uint16_t    count;      // Counter reload value
+    bool        gate;       // Gate input line
+    bool        writehi;
+    bool        readhi;
+    bool        output;
+public:
+    PIT8253_chan();
+};
+
+class PIT8253
+{
+    friend class CMotherboard;
+    PIT8253_chan    m_chan[3];
+public:
+    PIT8253();
+    void        Write(uint8_t address, uint8_t byte);
+    uint8_t     Read(uint8_t address);
+    void        SetGate(uint8_t chan, bool gate);
+    void        Tick();
+    bool        GetOutput(uint8_t chan);
+private:
+    void        Tick(uint8_t channel);
+};
 
 //////////////////////////////////////////////////////////////////////
 
@@ -108,24 +136,23 @@ public:  // Debug
     void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
     void        SetTrace(uint32_t dwTraceCPU) { m_dwTrace = dwTraceCPU; }
-    void        SetRAMBank(int bank, const void* buffer);
+    void        LoadRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     void        Reset();  // Reset computer
     void        LoadROM(const uint8_t* pBuffer);  // Load 16 KB ROM image from the buffer
-    void        Tick50();           // Tick 50 Hz - goes to CPU EVNT line
-    void        TimerTick();        // Timer Tick, 31250 Hz, 32uS -- dividers are within timer routine
+    void        Tick50();           // Tick 50 Hz
+    void        TimerTick();        // Timer Tick
     void        ResetDevices();     // INIT signal
 
 public:
-    void        ExecuteCPU();  // Execute one CPU instruction
     bool        SystemFrame();  // Do one frame -- use for normal run
     void        KeyboardEvent(uint8_t scancode, bool okPressed);  // Key pressed or released
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
-    bool        IsFloppyImageAttached(int slot);
-    bool        IsFloppyReadOnly(int slot);
+    bool        IsFloppyImageAttached(int slot) const;
+    bool        IsFloppyReadOnly(int slot) const;
 
 public:  // Callbacks
     // Assign sound output callback function.
@@ -182,8 +209,11 @@ private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
     void        SetPICInterrupt(int signal);  // Set PIC interrupt signal 0..7
-    uint8_t     GetRtcPortValue(uint16_t address) const;
+    uint8_t     ProcessRtcRead(uint16_t address) const;
+    void        ProcessTimerWrite(uint16_t address, uint8_t byte);
+    uint8_t     ProcessTimerRead(uint16_t address);
 private:  // Timer implementation
+    PIT8253     m_snd, m_snl;
     uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;
     uint8_t     m_timermemory[50];
 private:

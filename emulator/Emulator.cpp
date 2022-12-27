@@ -15,8 +15,11 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include <share.h>
 #include "Main.h"
 #include "Emulator.h"
+
 #include "Views.h"
 #include "emubase\Emubase.h"
+#include "SoundGen.h"
+
 
 //////////////////////////////////////////////////////////////////////
 
@@ -122,7 +125,7 @@ bool Emulator_Init()
 
     if (m_okEmulatorSound)
     {
-        //SoundGen_Initialize(Settings_GetSoundVolume());
+        SoundGen_Initialize(Settings_GetSoundVolume());
         g_pBoard->SetSoundGenCallback(Emulator_SoundGenCallback);
     }
 
@@ -138,7 +141,7 @@ void Emulator_Done()
     CProcessor::Done();
 
     g_pBoard->SetSoundGenCallback(nullptr);
-    //SoundGen_Finalize();
+    SoundGen_Finalize();
 
     delete g_pBoard;
     g_pBoard = nullptr;
@@ -366,13 +369,13 @@ void Emulator_SetSound(bool soundOnOff)
     {
         if (soundOnOff)
         {
-            //SoundGen_Initialize(Settings_GetSoundVolume());
+            SoundGen_Initialize(Settings_GetSoundVolume());
             g_pBoard->SetSoundGenCallback(Emulator_SoundGenCallback);
         }
         else
         {
             g_pBoard->SetSoundGenCallback(nullptr);
-            //SoundGen_Finalize();
+            SoundGen_Finalize();
         }
     }
 
@@ -465,9 +468,9 @@ bool Emulator_SystemFrame()
     return true;
 }
 
-void CALLBACK Emulator_SoundGenCallback(unsigned short /*L*/, unsigned short /*R*/)
+void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)
 {
-    //SoundGen_FeedDAC(L, R);
+    SoundGen_FeedDAC(L, R);
 }
 
 // Update cached values after Run or Step
@@ -1226,7 +1229,7 @@ void Emulator_LoadMemory()
     {
         DWORD dwBytesRead = 0;
         ReadFile(hFile, buffer, 8192, &dwBytesRead, nullptr);
-        g_pBoard->SetRAMBank(bank, buffer);
+        g_pBoard->LoadRAMBank(bank, buffer);
     }
 
     CloseHandle(hFile);
