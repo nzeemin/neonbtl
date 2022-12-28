@@ -44,6 +44,10 @@
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="ToolWindow.cpp" />
+    <ClCompile Include="emubase\pit8253.cpp">
+      <Filter>emubase</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundGen.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="emubase\Board.h">
