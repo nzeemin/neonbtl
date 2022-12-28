@@ -454,7 +454,7 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_HR[1] = address;
+            m_HR[0] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -490,7 +490,7 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_HR[1] = address;
+            m_HR[0] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -867,6 +867,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161214:
     case 0161216:
         {
+            //TODO: Запись HR в режиме USER должна быть запрещена
             DebugLogFormat(_T("%c%06ho\tSETPORT HR %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
             int chunk = (address >> 1) & 7;
             m_HR[chunk] = word;
