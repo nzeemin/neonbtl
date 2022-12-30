@@ -200,6 +200,7 @@ private:  // Ports: implementation
     uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
     uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_PortHDsdh;
+    bool        m_hdint;
     uint16_t    m_Port177560;       // Serial port input state register
     uint16_t    m_Port177562;       // Serial port input data register
     uint16_t    m_Port177564;       // Serial port output state register
@@ -209,7 +210,7 @@ private:  // Ports: implementation
 private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
-    void        SetPICInterrupt(int signal);  // Set PIC interrupt signal 0..7
+    void        SetPICInterrupt(int signal, bool set = true);  // Set PIC interrupt signal 0..7
     uint8_t     ProcessRtcRead(uint16_t address) const;
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);

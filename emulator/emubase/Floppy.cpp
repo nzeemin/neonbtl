@@ -49,10 +49,6 @@ CFloppyController::CFloppyController()
     m_phase = FLOPPY_PHASE_CMD;
     m_state = FLOPPY_STATE_IDLE;
     m_int = false;
-
-    m_datareg = m_writereg = m_shiftreg = 0;
-    m_writing = m_searchsync = m_writemarker = m_crccalculus = false;
-    m_writeflag = m_shiftflag = m_shiftmarker = false;
     m_trackchanged = false;
     m_okTrace = false;
 }
@@ -75,10 +71,6 @@ void CFloppyController::Reset()
     m_state = FLOPPY_STATE_IDLE;
     m_int = false;
     m_commandlen = m_resultlen = m_resultpos = 0;
-
-    m_datareg = m_writereg = m_shiftreg = 0;
-    m_writing = m_searchsync = m_writemarker = m_crccalculus = false;
-    m_writeflag = m_shiftflag = false;
     m_trackchanged = false;
 
     PrepareTrack();
@@ -106,11 +98,7 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
     m_side = m_track = 0;
     m_drivedata[drive].datatrack = m_drivedata[drive].dataside = 0;
     m_drivedata[drive].dataptr = 0;
-    m_datareg = m_writereg = m_shiftreg = 0;
-    m_writing = m_searchsync = m_writemarker = m_crccalculus = false;
-    m_writeflag = m_shiftflag = false;
     m_trackchanged = false;
-    m_state = (m_pDrive->okReadOnly) ? FLOPPY_STATUS_TRACK0 | FLOPPY_STATUS_WRITEPROTECT : FLOPPY_STATUS_TRACK0;
 
     PrepareTrack();
 
@@ -196,6 +184,7 @@ uint8_t CFloppyController::FifoRead()
     case FLOPPY_PHASE_EXEC:
         break;
     case FLOPPY_PHASE_RESULT:
+        m_int = false;//TODO: not sure it should be here
         if (m_resultpos < m_resultlen)
         {
             r = m_result[m_resultpos++];
@@ -274,8 +263,20 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
     switch (cmd)
     {
     case FLOPPY_COMMAND_READ_DATA:
-        m_state = FLOPPY_STATE_READ_DATA;
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
+            m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
+        //m_state = FLOPPY_STATE_READ_DATA;
         //TODO
+        m_phase = FLOPPY_PHASE_RESULT;//DEBUG
+        m_result[0] = 0;//TODO
+        m_result[1] = 0;//TODO
+        m_result[2] = 0;//TODO
+        m_result[3] = m_command[2];
+        m_result[4] = m_command[3];
+        m_result[5] = m_command[4];
+        m_result[6] = m_command[5];
+        m_resultlen = 7;
+        m_int = true;//DEBUG
         break;
 
     case FLOPPY_COMMAND_READ_TRACK:
@@ -323,139 +324,37 @@ uint16_t CFloppyController::GetData(void)
     }
 #endif
 
-    m_state &= ~FLOPPY_STATUS_MOREDATA;
-    m_writing = m_searchsync = false;
-    m_writeflag = m_shiftflag = false;
-
     if (m_pDrive == nullptr || m_pDrive->fpFile == nullptr)
         return 0;
 
-    return m_datareg;
+    return 0;//STUB
 }
 
 void CFloppyController::WriteData(uint16_t data)
 {
-    m_writing = true;  // Switch to write mode if not yet
-    m_searchsync = false;
-
-    if (!m_writeflag && !m_shiftflag)  // Both registers are empty
-    {
-        m_shiftreg = data;
-        m_shiftflag = true;
-        m_state |= FLOPPY_STATUS_MOREDATA;
-    }
-    else if (!m_writeflag && m_shiftflag)  // Write register is empty
-    {
-        m_writereg = data;
-        m_writeflag = true;
-        m_state &= ~FLOPPY_STATUS_MOREDATA;
-    }
-    else if (m_writeflag && !m_shiftflag)  // Shift register is empty
-    {
-        m_shiftreg = m_writereg;
-        m_shiftflag = m_writeflag;
-        m_writereg = data;
-        m_writeflag = true;
-        m_state &= ~FLOPPY_STATUS_MOREDATA;
-    }
-    else  // Both registers are not empty
-    {
-        m_writereg = data;
-    }
+    //TODO
 }
 
 void CFloppyController::Periodic()
 {
-    if (!IsEngineOn()) return;  // Вращаем дискеты только если включен мотор
+    //if (!IsEngineOn()) return;  // Вращаем дискеты только если включен мотор
 
-    // Вращаем дискеты во всех драйвах сразу
-    for (int drive = 0; drive < 4; drive++)
-    {
-        m_drivedata[drive].dataptr += 2;
-        if (m_drivedata[drive].dataptr >= FLOPPY_RAWTRACKSIZE)
-            m_drivedata[drive].dataptr = 0;
-    }
+    //// Вращаем дискеты во всех драйвах сразу
+    //for (int drive = 0; drive < 4; drive++)
+    //{
+    //    m_drivedata[drive].dataptr += 2;
+    //    if (m_drivedata[drive].dataptr >= FLOPPY_RAWTRACKSIZE)
+    //        m_drivedata[drive].dataptr = 0;
+    //}
 
-    if (m_pDrive != nullptr && m_pDrive->dataptr == 0)
-        DebugLogFormat(_T("Floppy Index\n"));
+    //if (m_pDrive != nullptr && m_pDrive->dataptr == 0)
+    //    DebugLogFormat(_T("Floppy Index\n"));
 
     // Далее обрабатываем чтение/запись на текущем драйве
     if (m_pDrive == nullptr) return;
     if (!IsAttached(m_drive)) return;
 
-    if (!m_writing)  // Read mode
-    {
-        m_datareg = (m_pDrive->data[m_pDrive->dataptr] << 8) | m_pDrive->data[m_pDrive->dataptr + 1];
-        if (m_state & FLOPPY_STATUS_MOREDATA)
-        {
-            if (m_crccalculus)  // Stop CRC calculation
-            {
-                m_crccalculus = false;
-                //TODO: Compare calculated CRC to m_datareg
-                m_state |= FLOPPY_STATUS_CHECKSUMOK;
-            }
-        }
-        else
-        {
-            if (m_searchsync)  // Search for marker
-            {
-                if (m_pDrive->marker[m_pDrive->dataptr / 2])  // Marker found
-                {
-                    m_state |= FLOPPY_STATUS_MOREDATA;
-                    m_searchsync = false;
-
-                    DebugLogFormat(_T("Floppy Marker Found\n"));
-                }
-            }
-            else  // Just read
-                m_state |= FLOPPY_STATUS_MOREDATA;
-        }
-    }
-    else  // Write mode
-    {
-        if (m_shiftflag)
-        {
-            m_pDrive->data[m_pDrive->dataptr] = LOBYTE(m_shiftreg);
-            m_pDrive->data[m_pDrive->dataptr + 1] = HIBYTE(m_shiftreg);
-            m_shiftflag = false;
-            m_trackchanged = true;
-
-            if (m_shiftmarker)
-            {
-//            DebugLogFormat(_T("Floppy WRITING %06o MARKER\r\n"), m_shiftreg);  //DEBUG
-
-                m_pDrive->marker[m_pDrive->dataptr / 2] = true;
-                m_shiftmarker = false;
-                m_crccalculus = true;  // Start CRC calculation
-            }
-            else
-            {
-//            DebugLogFormat(_T("Floppy WRITING %06o\r\n"), m_shiftreg);  //DEBUG
-
-                m_pDrive->marker[m_pDrive->dataptr / 2] = false;
-            }
-
-            if (m_writeflag)
-            {
-                m_shiftreg = m_writereg;
-                m_shiftflag = m_writeflag;  m_writeflag = false;
-                m_shiftmarker = m_writemarker;  m_writemarker = false;
-                m_state |= FLOPPY_STATUS_MOREDATA;
-            }
-            else
-            {
-                if (m_crccalculus)  // Stop CRC calclation
-                {
-                    m_shiftreg = 0x4444;  //STUB
-                    m_shiftflag = true;
-                    m_shiftmarker = false;
-                    m_crccalculus = false;
-                    m_state |= FLOPPY_STATUS_CHECKSUMOK;
-                }
-            }
-
-        }
-    }
+    //TODO
 }
 
 // Read track data from file and fill m_data
@@ -470,7 +369,6 @@ void CFloppyController::PrepareTrack()
     size_t count;
 
     m_trackchanged = false;
-    m_state |= FLOPPY_STATUS_MOREDATA;
     //NOTE: Not changing m_pDrive->dataptr
     m_pDrive->datatrack = m_track;
     m_pDrive->dataside = m_side;

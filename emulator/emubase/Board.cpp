@@ -102,6 +102,7 @@ void CMotherboard::Reset()
     // Reset ports
     m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
     m_PortHDsdh = 0;
+    m_hdint = false;
     m_Port177560 = m_Port177562 = 0;
     m_Port177564 = 0200;
     m_Port177566 = 0;
@@ -250,8 +251,8 @@ void CMotherboard::DebugTicks()
     m_pCPU->Execute();
 
     m_pFloppyCtl->Periodic();
-    if (m_pFloppyCtl->CheckInterrupt())
-        SetPICInterrupt(1);
+    //TODO: OR interrupt from HD controller
+    SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
 }
 
 
@@ -302,8 +303,8 @@ bool CMotherboard::SystemFrame()
         if (frameticks % 32 == 0)  // FDD tick
         {
             m_pFloppyCtl->Periodic();
-            if (m_pFloppyCtl->CheckInterrupt())
-                SetPICInterrupt(1);
+            //TODO: OR interrupt from HD controller
+            SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
         }
 
         soundBrasErr += soundSamplesPerFrame;
@@ -632,6 +633,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return 0;
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CSR\n"), HU_INSTRUCTION_PC, address);
+        m_hdint = false;
         return 0x41;
 
     case 0161060:
@@ -730,8 +732,8 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
 
     case 0161070:
         return m_pFloppyCtl->GetStateView();
-    case 0161072:
-        return m_pFloppyCtl->GetDataView();
+        //case 0161072:
+        //    return m_pFloppyCtl->GetDataView();
 
     case 0161200:
     case 0161202:
@@ -855,7 +857,10 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
         m_PortPPIC = word;
         if ((m_PortPPIC & 010) == 0)  // VIRQ
+        {
+            AlertWarning(_T("VIRQ"));
             DebugBreak();
+        }
         break;
     case 0161036:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);
@@ -883,9 +888,15 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161054:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SDH\n"), HU_INSTRUCTION_PC, word, address);
         m_PortHDsdh = word;
+        //if ((m_PortHDsdh & 010) == 0)
         break;
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);
+        if (word == 020)  // RESTORE
+        {
+            SetPICInterrupt(1);//DEBUG
+            m_hdint = true;
+        }
         break;
 
     case 0161060:
@@ -1018,7 +1029,7 @@ uint8_t CMotherboard::ProcessPICRead(bool a)
 }
 
 // Set interrupt on PIC
-void CMotherboard::SetPICInterrupt(int signal)
+void CMotherboard::SetPICInterrupt(int signal, bool set)
 {
     if (signal < 0 || signal > 7)
         return;
@@ -1026,9 +1037,17 @@ void CMotherboard::SetPICInterrupt(int signal)
     if (mode != 0)  // not READY
         return;
     int s = (1 << signal);
-    if ((m_PICRR & s) == 0)
-        m_PICRR |= s;
-    DebugLogFormat(_T("%c%06ho\tSET PIC INT%d, PICRR 0x%02hx PICMR 0x%02hx\n"), HU_INSTRUCTION_PC, signal, m_PICRR, m_PICMR);
+    if (set)
+    {
+        if ((m_PICRR & s) == 0)
+            m_PICRR |= s;
+        DebugLogFormat(_T("%c%06ho\tSET PIC INT%d, PICRR 0x%02hx PICMR 0x%02hx\n"), HU_INSTRUCTION_PC, signal, m_PICRR, m_PICMR);
+    }
+    else
+    {
+        if ((m_PICRR & s) != 0)
+            m_PICRR &= ~s;
+    }
 }
 
 // Get port value for Real Time Clock - ports 0161400..0161476 - КР512ВИ1 == MC146818

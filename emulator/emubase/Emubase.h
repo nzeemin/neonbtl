@@ -140,17 +140,6 @@ protected:
     uint8_t  m_track;       // Track number: 0 to 79
     uint8_t  m_side;        // Disk side: 0 or 1
     bool     m_int;         // Interrupt flag
-    uint16_t m_flags;       // See FLOPPY_CMD_XXX defines
-    uint16_t m_datareg;     // Read mode data register
-    uint16_t m_writereg;    // Write mode data register
-    bool m_writeflag;       // Write mode data register has data
-    bool m_writemarker;     // Write marker in m_marker
-    uint16_t m_shiftreg;    // Write mode shift register
-    bool m_shiftflag;       // Write mode shift register has data
-    bool m_shiftmarker;     // Write marker in m_marker
-    bool m_writing;         // true = write mode, false = read mode
-    bool m_searchsync;      // Read sub-mode: true = search for sync, false = just read
-    bool m_crccalculus;     // true = CRC is calculated now
     bool m_trackchanged;    // true = m_data was changed - need to save it into the file
     bool m_okTrace;         // Trace mode on/off
 
@@ -168,13 +157,10 @@ public:
     bool IsAttached(int drive) const { return (m_drivedata[drive].fpFile != nullptr); }
     // Check if the drive's attached image is read-only
     bool IsReadOnly(int drive) const { return m_drivedata[drive].okReadOnly; }
-    // Check if floppy engine now rotates
-    bool IsEngineOn() { return (m_flags & FLOPPY_CMD_ENGINESTART) != 0; }
 public:
     uint8_t  GetState();        // Reading status
     uint16_t GetData();         // Reading data
     uint16_t GetStateView() const { return m_state; }  // Get status value for debugger
-    uint16_t GetDataView() const { return m_datareg; }  // Get data buffer value for debugger
     void FifoWrite(uint8_t cmd);  // Writing commands
     uint8_t  FifoRead();
     void WriteData(uint16_t data);  // Writing data
