@@ -50,6 +50,8 @@ CMotherboard::CMotherboard()
 
     SetConfiguration(0);  // Default configuration
 
+    m_pFloppyCtl->SetTrace(true);//DEBUG
+
     Reset();
 }
 
@@ -247,6 +249,8 @@ void CMotherboard::DebugTicks()
     m_pCPU->Execute();
 
     m_pFloppyCtl->Periodic();
+    if (m_pFloppyCtl->CheckInterrupt())
+        SetPICInterrupt(1);
 }
 
 
@@ -295,7 +299,11 @@ bool CMotherboard::SystemFrame()
             Tick50();  // 1/50 timer event
 
         if (frameticks % 32 == 0)  // FDD tick
+        {
             m_pFloppyCtl->Periodic();
+            if (m_pFloppyCtl->CheckInterrupt())
+                SetPICInterrupt(1);
+        }
 
         soundBrasErr += soundSamplesPerFrame;
         if (2 * soundBrasErr >= 20000)
@@ -560,6 +568,7 @@ uint8_t CMotherboard::GetPortByte(uint16_t address)
 uint16_t CMotherboard::GetPortWord(uint16_t address)
 {
     uint16_t result;
+    uint8_t resb;
 
     switch (address)
     {
@@ -627,11 +636,13 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return 0;
 
     case 0161070:
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CSR\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        resb = m_pFloppyCtl->GetState();
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
+        return resb;
     case 0161072:
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.BUF\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        resb = m_pFloppyCtl->FifoRead();
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.BUF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
+        return resb;
     case 0161076:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CNT\n"), HU_INSTRUCTION_PC, address);
         return 0;
@@ -698,6 +709,11 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
         return m_PortPPIB;
     case 0161034:  // PPIC
         return m_PortPPIC;
+
+    case 0161070:
+        return m_pFloppyCtl->GetStateView();
+    case 0161072:
+        return m_pFloppyCtl->GetDataView();
 
     case 0161200:
     case 0161202:
@@ -853,9 +869,15 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
 
     case 0161070:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CSR\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161072:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.BUF\n"), HU_INSTRUCTION_PC, word, address);
+        m_pFloppyCtl->FifoWrite(word & 0xff);
+        break;
     case 0161076:
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD\n"), HU_INSTRUCTION_PC, word, address);
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CNT\n"), HU_INSTRUCTION_PC, word, address);
+        //m_pFloppyCtl->SetRate(word & 0xff);
         break;
 
     case 0161200:

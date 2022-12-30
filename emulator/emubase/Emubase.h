@@ -50,7 +50,41 @@ int Disasm_GetInstructionHint(
 //////////////////////////////////////////////////////////////////////
 // CFloppy
 
-#define FLOPPY_FSM_IDLE         0
+#define FLOPPY_PHASE_CMD        1
+#define FLOPPY_PHASE_EXEC       2
+#define FLOPPY_PHASE_RESULT     3
+
+#define FLOPPY_STATE_IDLE          0
+#define FLOPPY_STATE_RECALIBRATE   1
+#define FLOPPY_STATE_SEEK          2
+#define FLOPPY_STATE_READ_DATA     3
+#define FLOPPY_STATE_WRITE_DATA    4
+#define FLOPPY_STATE_READ_TRACK    5
+#define FLOPPY_STATE_FORMAT_TRACK  6
+#define FLOPPY_STATE_READ_ID       7
+#define FLOPPY_STATE_SCAN_DATA     8
+
+#define FLOPPY_COMMAND_INVALID              0xff
+#define FLOPPY_COMMAND_INCOMPLETE           0xfe
+#define FLOPPY_COMMAND_SPECIFY                 3
+#define FLOPPY_COMMAND_SENSE_DRIVE_STATUS      4
+#define FLOPPY_COMMAND_RECALIBRATE             7
+#define FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS  8
+#define FLOPPY_COMMAND_SEEK                   15
+#define FLOPPY_COMMAND_READ_TRACK              2
+#define FLOPPY_COMMAND_WRITE_DATA              5
+#define FLOPPY_COMMAND_READ_DATA               6
+#define FLOPPY_COMMAND_READ_ID                10
+#define FLOPPY_COMMAND_FORMAT_TRACK           14
+#define FLOPPY_COMMAND_SCAN_EQUAL             17
+#define FLOPPY_COMMAND_SCAN_LOW               25
+#define FLOPPY_COMMAND_SCAN_HIGH              29
+
+#define FLOPPY_MSR_DB   0x0f
+#define FLOPPY_MSR_CB   0x10
+#define FLOPPY_MSR_EXM  0x20
+#define FLOPPY_MSR_DIO  0x40
+#define FLOPPY_MSR_RQM  0x80
 
 #define FLOPPY_CMD_CORRECTION250        04
 #define FLOPPY_CMD_ENGINESTART          020
@@ -64,7 +98,7 @@ int Disasm_GetInstructionHint(
 //dir == 1 from center (towards trk80)
 
 #define FLOPPY_STATUS_TRACK0                 01  // Track 0 flag
-#define FLOPPY_STATUS_RDY                    02  // Ready status
+#define FLOPPY_STATUS_RDY                  0200  // Ready status
 #define FLOPPY_STATUS_WRITEPROTECT           04  // Write protect
 #define FLOPPY_STATUS_MOREDATA             0200  // Need more data flag
 #define FLOPPY_STATUS_CHECKSUMOK         040000  // Checksum verified OK
@@ -93,12 +127,19 @@ public:
 class CFloppyController
 {
 protected:
-    CFloppyDrive m_drivedata[2];  // Floppy drives
+    CFloppyDrive m_drivedata[4];  // Floppy drives
     CFloppyDrive* m_pDrive; // Current drive; nullptr if not selected
-    uint16_t m_drive;       // Drive number: from 0 to 3; -1 if not selected
-    uint16_t m_track;       // Track number: from 0 to 79
-    uint16_t m_side;        // Disk side: 0 or 1
-    uint16_t m_status;      // See FLOPPY_STATUS_XXX defines
+    uint8_t  m_drive;       // Current drive number: 0 to 3; 0xff if not selected
+    uint8_t  m_phase;
+    uint8_t  m_state;       // See FLOPPY_STATE_XXX defines
+    uint8_t  m_command[9];
+    uint8_t  m_commandlen;
+    uint8_t  m_result[9];
+    uint8_t  m_resultlen;
+    uint8_t  m_resultpos;
+    uint8_t  m_track;       // Track number: 0 to 79
+    uint8_t  m_side;        // Disk side: 0 or 1
+    bool     m_int;         // Interrupt flag
     uint16_t m_flags;       // See FLOPPY_CMD_XXX defines
     uint16_t m_datareg;     // Read mode data register
     uint16_t m_writereg;    // Write mode data register
@@ -126,22 +167,27 @@ public:
     // Check if the drive has an image attached
     bool IsAttached(int drive) const { return (m_drivedata[drive].fpFile != nullptr); }
     // Check if the drive's attached image is read-only
-    bool IsReadOnly(int drive) { return m_drivedata[drive].okReadOnly; }
+    bool IsReadOnly(int drive) const { return m_drivedata[drive].okReadOnly; }
     // Check if floppy engine now rotates
     bool IsEngineOn() { return (m_flags & FLOPPY_CMD_ENGINESTART) != 0; }
-    uint16_t GetData();         // Reading port 177132 - data
-    uint16_t GetState();        // Reading port 177130 - device status
-    uint16_t GetDataView() const { return m_datareg; }  // Get port 177132 value for debugger
-    uint16_t GetStateView() const { return m_status; }  // Get port 177130 value for debugger
-    void SetCommand(uint16_t cmd);  // Writing to port 177130 - commands
-    void WriteData(uint16_t data);  // Writing to port 177132 - data
+public:
+    uint8_t  GetState();        // Reading status
+    uint16_t GetData();         // Reading data
+    uint16_t GetStateView() const { return m_state; }  // Get status value for debugger
+    uint16_t GetDataView() const { return m_datareg; }  // Get data buffer value for debugger
+    void FifoWrite(uint8_t cmd);  // Writing commands
+    uint8_t  FifoRead();
+    void WriteData(uint16_t data);  // Writing data
     void Periodic();            // Rotate disk; call it each 64 us - 15625 times per second
+    bool CheckInterrupt() const { return m_int; }
     void SetTrace(bool okTrace) { m_okTrace = okTrace; }  // Set trace mode on/off
 
 private:
+    uint8_t CheckCommand();
+    void StartCommand(uint8_t cmd);
+    void ExecuteCommand(uint8_t cmd);
     void PrepareTrack();
     void FlushChanges();  // If current track was changed - save it
-
 };
 
 
