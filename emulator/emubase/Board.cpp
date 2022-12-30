@@ -101,6 +101,7 @@ void CMotherboard::Reset()
 
     // Reset ports
     m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
+    m_PortHDsdh = 0;
     m_Port177560 = m_Port177562 = 0;
     m_Port177564 = 0200;
     m_Port177566 = 0;
@@ -609,15 +610,29 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return m_PortPPIC;
 
     case 0161040:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF\n"), HU_INSTRUCTION_PC, address);
+        return 0x26;
     case 0161042:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.ERR\n"), HU_INSTRUCTION_PC, address);
+        return 0xff;
     case 0161044:
-    case 0161046:
-    case 0161050:
-    case 0161052:
-    case 0161054:
-    case 0161056:
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD\n"), HU_INSTRUCTION_PC, address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SCNT\n"), HU_INSTRUCTION_PC, address);
         return 0;
+    case 0161046:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SNUM\n"), HU_INSTRUCTION_PC, address);
+        return 0;
+    case 0161050:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CNLO\n"), HU_INSTRUCTION_PC, address);
+        return 0;
+    case 0161052:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CNHI\n"), HU_INSTRUCTION_PC, address);
+        return 0;
+    case 0161054:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SDH\n"), HU_INSTRUCTION_PC, address);
+        return 0;
+    case 0161056:
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CSR\n"), HU_INSTRUCTION_PC, address);
+        return 0x41;
 
     case 0161060:
         DebugLogFormat(_T("%c%06ho\tGETPORT DLBUF\n"), HU_INSTRUCTION_PC, address);
@@ -640,7 +655,10 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
     case 0161072:
-        resb = m_pFloppyCtl->FifoRead();
+        if ((m_PortHDsdh & 010) == 0)
+            resb = m_pFloppyCtl->FifoRead();
+        else
+            resb = 0;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.BUF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
     case 0161076:
@@ -836,8 +854,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         PrintBinaryValue(buffer, word);
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
         m_PortPPIC = word;
-        //if ((m_PortPPIC & 010) == 0)
-        //    DebugBreak();
+        if ((m_PortPPIC & 010) == 0)  // VIRQ
+            DebugBreak();
         break;
     case 0161036:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);
@@ -845,14 +863,29 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
 
     case 0161040:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.BUFF\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161042:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.ERR\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161044:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SCNT\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161046:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNUM\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161050:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNLO\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161052:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNHI\n"), HU_INSTRUCTION_PC, word, address);
+        break;
     case 0161054:
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SDH\n"), HU_INSTRUCTION_PC, word, address);
+        m_PortHDsdh = word;
+        break;
     case 0161056:
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD\n"), HU_INSTRUCTION_PC, word, address);
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
     case 0161060:
@@ -873,7 +906,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161072:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.BUF\n"), HU_INSTRUCTION_PC, word, address);
-        m_pFloppyCtl->FifoWrite(word & 0xff);
+        if ((m_PortHDsdh & 010) == 0)
+            m_pFloppyCtl->FifoWrite(word & 0xff);
         break;
     case 0161076:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CNT\n"), HU_INSTRUCTION_PC, word, address);

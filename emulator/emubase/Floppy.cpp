@@ -157,54 +157,6 @@ uint8_t CFloppyController::GetState()
     return msr;
 }
 
-uint8_t CFloppyController::CheckCommand()
-{
-    switch (m_command[0])
-    {
-    case 0x03:
-        return m_commandlen == 3 ? FLOPPY_COMMAND_SPECIFY : FLOPPY_COMMAND_INCOMPLETE;
-    case 0x04:
-        return m_commandlen == 2 ? FLOPPY_COMMAND_SENSE_DRIVE_STATUS : FLOPPY_COMMAND_INCOMPLETE;
-    case 0x07:
-        return m_commandlen == 2 ? FLOPPY_COMMAND_RECALIBRATE : FLOPPY_COMMAND_INCOMPLETE;
-    case 0x08:
-        return FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS;
-    case 0x0f:
-        return m_commandlen == 3 ? FLOPPY_COMMAND_SEEK : FLOPPY_COMMAND_INCOMPLETE;
-    }
-
-    switch (m_command[0] & 0x1f) {
-    case 0x02:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_READ_TRACK : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x05:
-    case 0x09:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_WRITE_DATA : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x06:
-    case 0x0c:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_READ_DATA : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x0a:
-        return m_commandlen == 2 ? FLOPPY_COMMAND_READ_ID : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x0d:
-        return m_commandlen == 6 ? FLOPPY_COMMAND_FORMAT_TRACK : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x11:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_EQUAL : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x19:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_LOW : FLOPPY_COMMAND_INCOMPLETE;
-
-    case 0x1d:
-        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_HIGH : FLOPPY_COMMAND_INCOMPLETE;
-
-    default:
-        return FLOPPY_COMMAND_INVALID;
-    }
-}
-
 void CFloppyController::FifoWrite(uint8_t data)
 {
     if (m_okTrace) DebugLogFormat(_T("Floppy FIFO WR 0x%02hx\r\n"), (uint16_t)data);
@@ -213,6 +165,7 @@ void CFloppyController::FifoWrite(uint8_t data)
     {
         m_int = false;
         m_command[m_commandlen++] = data;
+
         uint8_t cmd = CheckCommand();
 
         if (cmd == FLOPPY_COMMAND_INCOMPLETE)
@@ -257,10 +210,59 @@ uint8_t CFloppyController::FifoRead()
     return r;
 }
 
+uint8_t CFloppyController::CheckCommand()
+{
+    switch (m_command[0])
+    {
+    case 0x03:
+        return m_commandlen == 3 ? FLOPPY_COMMAND_SPECIFY : FLOPPY_COMMAND_INCOMPLETE;
+    case 0x04:
+        return m_commandlen == 2 ? FLOPPY_COMMAND_SENSE_DRIVE_STATUS : FLOPPY_COMMAND_INCOMPLETE;
+    case 0x07:
+        return m_commandlen == 2 ? FLOPPY_COMMAND_RECALIBRATE : FLOPPY_COMMAND_INCOMPLETE;
+    case 0x08:
+        return FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS;
+    case 0x0f:
+        return m_commandlen == 3 ? FLOPPY_COMMAND_SEEK : FLOPPY_COMMAND_INCOMPLETE;
+    }
+
+    switch (m_command[0] & 0x1f)
+    {
+    case 0x02:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_READ_TRACK : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x05:
+    case 0x09:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_WRITE_DATA : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x06:
+    case 0x0c:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_READ_DATA : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x0a:
+        return m_commandlen == 2 ? FLOPPY_COMMAND_READ_ID : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x0d:
+        return m_commandlen == 6 ? FLOPPY_COMMAND_FORMAT_TRACK : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x11:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_EQUAL : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x19:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_LOW : FLOPPY_COMMAND_INCOMPLETE;
+
+    case 0x1d:
+        return m_commandlen == 9 ? FLOPPY_COMMAND_SCAN_HIGH : FLOPPY_COMMAND_INCOMPLETE;
+
+    default:
+        return FLOPPY_COMMAND_INVALID;
+    }
+}
+
 void CFloppyController::StartCommand(uint8_t cmd)
 {
     m_commandlen = 0;
-    m_resultlen = 0;
+    m_resultlen = 0;  m_resultpos = 0;
     m_phase = FLOPPY_PHASE_EXEC;
 
     ExecuteCommand(cmd);
@@ -276,6 +278,13 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         //TODO
         break;
 
+    case FLOPPY_COMMAND_READ_TRACK:
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
+                    m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
+        m_state = FLOPPY_STATE_READ_TRACK;
+        //TODO
+        break;
+
     case FLOPPY_COMMAND_RECALIBRATE:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD RECALIBRATE 0x%02hx\r\n"), (uint16_t)m_command[1]);
         //TODO: m_state = FLOPPY_STATE_RECALIBRATE;
@@ -285,11 +294,11 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         break;
 
     case FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS:
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD SENSE_INTERRUPT\r\n"));
         m_phase = FLOPPY_PHASE_RESULT;
         m_result[0] = 0x10;//TODO
-        m_result[1] = 0xff;//TODO
+        m_result[1] = 0x00;//TODO
         m_resultlen = 2;
-        m_resultpos = 0;
         m_int = false;
         break;
 
@@ -326,8 +335,6 @@ uint16_t CFloppyController::GetData(void)
 
 void CFloppyController::WriteData(uint16_t data)
 {
-//    DebugLogFormat(_T("Floppy WRITE\t\t%04x\r\n"), data);
-
     m_writing = true;  // Switch to write mode if not yet
     m_searchsync = false;
 
