@@ -121,6 +121,7 @@ private:  // Memory
     uint16_t    m_HR[8];
     uint16_t    m_UR[8];
     uint32_t    m_nRamSizeBytes;  // Actual RAM size
+    uint8_t*    m_pHDbuff;  // HD buffers, 2K
 
 public:  // Memory access
     uint16_t    GetRAMWord(uint32_t offset) const;
@@ -153,6 +154,8 @@ public:  // Floppy
     void        DetachFloppyImage(int slot);
     bool        IsFloppyImageAttached(int slot) const;
     bool        IsFloppyReadOnly(int slot) const;
+    // Fill the current HD buffer, to call from floppy controller only
+    void        FillHDBuffer(const uint8_t* data);
 
 public:  // Callbacks
     // Assign sound output callback function.
@@ -201,6 +204,8 @@ private:  // Ports: implementation
     uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_PortHDsdh;
     bool        m_hdint;
+    uint8_t     m_nHDbuff;          // Number of the current HD buffer, 0..3
+    uint16_t    m_nHDbuffpos;       // Current position in the current HD buffer, 0..511
     uint16_t    m_Port177560;       // Serial port input state register
     uint16_t    m_Port177562;       // Serial port input data register
     uint16_t    m_Port177564;       // Serial port output state register

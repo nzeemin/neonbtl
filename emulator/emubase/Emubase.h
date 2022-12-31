@@ -50,6 +50,8 @@ int Disasm_GetInstructionHint(
 //////////////////////////////////////////////////////////////////////
 // CFloppy
 
+class CMotherboard;
+
 #define FLOPPY_PHASE_CMD        1
 #define FLOPPY_PHASE_EXEC       2
 #define FLOPPY_PHASE_RESULT     3
@@ -112,9 +114,8 @@ struct CFloppyDrive
 {
     FILE*    fpFile;
     bool     okReadOnly;    // Write protection flag
+    uint8_t* data;          // Data image for the whole disk
     uint16_t dataptr;       // Data offset within m_data - "head" position
-    uint8_t  data[FLOPPY_RAWTRACKSIZE];  // Raw track image for the current track
-    uint8_t  marker[FLOPPY_RAWMARKERSIZE];  // Marker positions
     uint16_t datatrack;     // Track number of data in m_data array
     uint16_t dataside;      // Disk side of data in m_data array
 
@@ -127,6 +128,7 @@ public:
 class CFloppyController
 {
 protected:
+    CMotherboard* m_pBoard;
     CFloppyDrive m_drivedata[4];  // Floppy drives
     CFloppyDrive* m_pDrive; // Current drive; nullptr if not selected
     uint8_t  m_drive;       // Current drive number: 0 to 3; 0xff if not selected
@@ -140,11 +142,11 @@ protected:
     uint8_t  m_track;       // Track number: 0 to 79
     uint8_t  m_side;        // Disk side: 0 or 1
     bool     m_int;         // Interrupt flag
-    bool m_trackchanged;    // true = m_data was changed - need to save it into the file
-    bool m_okTrace;         // Trace mode on/off
+    bool     m_trackchanged; // true = m_data was changed - need to save it into the file
+    bool     m_okTrace;     // Trace mode on/off
 
 public:
-    CFloppyController();
+    CFloppyController(CMotherboard* pBoard);
     ~CFloppyController();
     void Reset();           // Reset the device
 
@@ -159,11 +161,9 @@ public:
     bool IsReadOnly(int drive) const { return m_drivedata[drive].okReadOnly; }
 public:
     uint8_t  GetState();        // Reading status
-    uint16_t GetData();         // Reading data
     uint16_t GetStateView() const { return m_state; }  // Get status value for debugger
-    void FifoWrite(uint8_t cmd);  // Writing commands
+    void     FifoWrite(uint8_t cmd);  // Writing commands
     uint8_t  FifoRead();
-    void WriteData(uint16_t data);  // Writing data
     void Periodic();            // Rotate disk; call it each 64 us - 15625 times per second
     bool CheckInterrupt() const { return m_int; }
     void SetTrace(bool okTrace) { m_okTrace = okTrace; }  // Set trace mode on/off

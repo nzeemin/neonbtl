@@ -28,7 +28,7 @@ CMotherboard::CMotherboard()
 {
     // Create devices
     m_pCPU = new CProcessor(this);
-    m_pFloppyCtl = new CFloppyController();
+    m_pFloppyCtl = new CFloppyController(this);
 
     m_dwTrace = 0;
     m_SoundGenCallback = nullptr;
@@ -40,6 +40,10 @@ CMotherboard::CMotherboard()
     m_nRamSizeBytes = 0;
     m_pRAM = nullptr;  // RAM allocation in SetConfiguration() method
     m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
+    m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));
+
+    m_nHDbuff = 0;
+    m_nHDbuffpos = 0;
 
     m_PICRR = m_PICMR = 0;
     m_PICflags = PIC_MODE_ICW1;
@@ -64,6 +68,7 @@ CMotherboard::~CMotherboard()
     // Free memory
     ::free(m_pRAM);
     ::free(m_pROM);
+    ::free(m_pHDbuff);
 }
 
 void CMotherboard::SetConfiguration(uint16_t conf)
@@ -108,6 +113,9 @@ void CMotherboard::Reset()
     m_Port177566 = 0;
     m_PortKBDCSR = 0100;
     m_PortKBDBUF = 0;
+
+    m_nHDbuff = 0;
+    m_nHDbuffpos = 0;
 
     m_timeralarmsec = m_timeralarmmin = m_timeralarmhour = 0;
 
@@ -155,6 +163,15 @@ void CMotherboard::DetachFloppyImage(int slot)
 {
     ASSERT(slot >= 0 && slot < 2);
     m_pFloppyCtl->DetachImage(slot);
+}
+
+void CMotherboard::FillHDBuffer(const uint8_t* data)
+{
+    ASSERT(data != nullptr);
+
+    uint8_t* pBuffer = m_pHDbuff + 512 * m_nHDbuff;
+    memcpy(pBuffer, data, 512);
+    m_nHDbuffpos = 0;
 }
 
 
@@ -611,8 +628,10 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return m_PortPPIC;
 
     case 0161040:
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF\n"), HU_INSTRUCTION_PC, address);
-        return 0x26;
+        result = m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512];
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, result);
+        m_nHDbuffpos = (m_nHDbuffpos + 1) % 512;
+        return result;
     case 0161042:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.ERR\n"), HU_INSTRUCTION_PC, address);
         return 0xff;
