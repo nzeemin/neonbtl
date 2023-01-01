@@ -272,21 +272,21 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
     {
     case FLOPPY_COMMAND_READ_DATA:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
-                    m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
+                    m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7], m_command[8]);
         //m_state = FLOPPY_STATE_READ_DATA;
         //TODO
         m_phase = FLOPPY_PHASE_RESULT;//DEBUG
         m_result[0] = 0;//TODO
         m_result[1] = 0;//TODO
         m_result[2] = 0;//TODO
-        m_result[3] = m_command[1];
-        m_result[4] = m_command[2];
-        m_result[5] = m_command[3];
-        m_result[6] = m_command[4];
+        m_result[3] = m_command[2];
+        m_result[4] = m_command[3];
+        m_result[5] = m_command[4];
+        m_result[6] = m_command[5];
         m_resultlen = 7;
         m_int = true;//DEBUG
         {
-            size_t offset = m_command[1] * 5120 * 2 + m_command[2] * 5120 + m_command[3] * 512;
+            size_t offset = m_command[2] * 5120 * 2 + m_command[3] * 5120 + (m_command[4] - 1) * 512;
             if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x\r\n"), offset);
             m_pBoard->FillHDBuffer(m_drivedata[0].data + offset);
         }
