@@ -165,13 +165,24 @@ void CMotherboard::DetachFloppyImage(int slot)
     m_pFloppyCtl->DetachImage(slot);
 }
 
-void CMotherboard::FillHDBuffer(const uint8_t* data)
+// data = 512 bytes
+// result: true - continue reading; false - stop reading
+bool CMotherboard::FillHDBuffer(const uint8_t* data)
 {
     ASSERT(data != nullptr);
 
     uint8_t* pBuffer = m_pHDbuff + 512 * m_nHDbuff;
     memcpy(pBuffer, data, 512);
-    m_nHDbuffpos = 0;
+
+    if (m_nHDbuff >= 3)
+    {
+        m_nHDbuff = 0;
+        m_nHDbuffpos = 0;
+        return false;
+    }
+
+    m_nHDbuff++;
+    return true;
 }
 
 
@@ -592,11 +603,9 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     switch (address)
     {
     case 0161000:  // PICCSR
-        {
-            uint8_t b = ProcessPICRead(false);
-            DebugLogFormat(_T("%c%06ho\tGETPORT PICCSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)b);
-            return b;
-        }
+        resb = ProcessPICRead(false);
+        DebugLogFormat(_T("%c%06ho\tGETPORT PICCSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)resb);
+        return resb;
 
     case 0161002:  // PICMR
         {
@@ -630,7 +639,12 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161040:
         result = m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512];
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, result);
-        m_nHDbuffpos = (m_nHDbuffpos + 1) % 512;
+        m_nHDbuffpos++;
+        if (m_nHDbuffpos >= 512)
+        {
+            m_nHDbuffpos = 0;
+            m_nHDbuff = (m_nHDbuff + 1) & 3;
+        }
         return result;
     case 0161042:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.ERR\n"), HU_INSTRUCTION_PC, address);
@@ -941,7 +955,9 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161076:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CNT\n"), HU_INSTRUCTION_PC, word, address);
-        //m_pFloppyCtl->SetRate(word & 0xff);
+        //TODO: if (word & 020) -- reset floppy controller
+        m_nHDbuff = (word & 3);
+        m_nHDbuffpos = 0;
         break;
 
     case 0161200:

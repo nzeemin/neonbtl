@@ -155,7 +155,7 @@ public:  // Floppy
     bool        IsFloppyImageAttached(int slot) const;
     bool        IsFloppyReadOnly(int slot) const;
     // Fill the current HD buffer, to call from floppy controller only
-    void        FillHDBuffer(const uint8_t* data);
+    bool        FillHDBuffer(const uint8_t* data);
 
 public:  // Callbacks
     // Assign sound output callback function.

@@ -286,9 +286,16 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_resultlen = 7;
         m_int = true;//DEBUG
         {
-            size_t offset = m_command[2] * 5120 * 2 + m_command[3] * 5120 + (m_command[4] - 1) * 512;
-            if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x\r\n"), offset);
-            m_pBoard->FillHDBuffer(m_drivedata[0].data + offset);
+            uint8_t sector = m_command[4] - 1;
+            while (true)
+            {
+                size_t offset = m_command[2] * 5120 * 2 + m_command[3] * 5120 + sector * 512;
+                if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x\r\n"), offset);
+                bool contflag = m_pBoard->FillHDBuffer(m_drivedata[0].data + offset);
+                if (!contflag)
+                    break;
+                sector++;
+            }
         }
         break;
 
@@ -307,6 +314,13 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_int = true;//DEBUG
         break;
 
+    case FLOPPY_COMMAND_SEEK:
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD SEEK 0x%02hx 0x%02hx\r\n"), (uint16_t)m_command[1], (uint16_t)m_command[2]);
+        m_phase = FLOPPY_PHASE_CMD;//DEBUG
+        m_commandlen = 0;//DEBUG
+        m_int = true;//DEBUG
+        break;
+
     case FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD SENSE_INTERRUPT\r\n"));
         m_phase = FLOPPY_PHASE_RESULT;
@@ -317,12 +331,15 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         break;
 
     case FLOPPY_COMMAND_SPECIFY:
-        if (m_okTrace) DebugLogFormat(_T("Floppy CMD SPECIFY 0x%02hx\r\n"), (uint16_t)m_command[1]);
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD SPECIFY 0x%02hx 0x%02hx\r\n"), (uint16_t)m_command[1], (uint16_t)m_command[2]);
         //TODO
         m_phase = FLOPPY_PHASE_CMD;
         m_commandlen = 0;
         break;
         //TODO
+
+    default:
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD 0x%02hx not implemented\r\n"), (uint16_t)m_command[0]);
     }
 }
 
