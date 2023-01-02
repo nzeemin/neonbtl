@@ -52,6 +52,9 @@ CMotherboard::CMotherboard()
     m_snd.SetGate(1, true);
     m_snd.SetGate(2, true);
 
+    ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
+    m_keyint = false;
+
     SetConfiguration(0);  // Default configuration
 
     m_pFloppyCtl->SetTrace(true);//DEBUG
@@ -116,6 +119,9 @@ void CMotherboard::Reset()
 
     m_nHDbuff = 0;
     m_nHDbuffpos = 0;
+
+    ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
+    m_keyint = false;
 
     m_timeralarmsec = m_timeralarmmin = m_timeralarmhour = 0;
 
@@ -272,6 +278,27 @@ uint8_t CMotherboard::ProcessTimerRead(uint16_t address)
     return pit.Read((address >> 1) & 3);
 }
 
+void CMotherboard::UpdateKeyboardMatrix(const uint8_t matrix[8])
+{
+    bool hasChanges = false;
+    for (int i = 0; i < 8; i++)
+    {
+        if (m_keymatrix[i] != matrix[i])
+        {
+            hasChanges = true;
+            break;
+        }
+    }
+
+    ::memcpy(m_keymatrix, matrix, sizeof(m_keymatrix));
+
+    if (hasChanges && !m_keyint)
+    {
+        m_keyint = true;
+        SetPICInterrupt(4, true);
+    }
+}
+
 void CMotherboard::DebugTicks()
 {
     m_pCPU->ClearInternalTick();
@@ -420,7 +447,11 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
         if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
             m_PortPPIB &= ~1;  // EF0 = 0
-            m_HR[0] = address;
+            if (m_HR[0] == 0)
+                m_HR[0] = address;
+            else
+                if (m_HR[1] == 0)
+                    m_HR[1] = address;
         }
         return GetRAMWord(offset & 07777);
     case ADDRTYPE_DENY:
@@ -453,7 +484,11 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
         if ((m_PortPPIB & 1) != 0)  // EF0 = 1
         {
             m_PortPPIB &= ~1;  // EF0 = 0
-            m_HR[0] = address;
+            if (m_HR[0] == 0)
+                m_HR[0] = address;
+            else
+                if (m_HR[1] == 0)
+                    m_HR[1] = address;
         }
         return GetRAMByte(offset & 07777);
     case ADDRTYPE_DENY:
@@ -492,7 +527,11 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_HR[0] = address;
+            if (m_HR[0] == 0)
+                m_HR[0] = address;
+            else
+                if (m_HR[1] == 0)
+                    m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -528,7 +567,11 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
         if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
         {
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_HR[0] = address;
+            if (m_HR[0] == 0)
+                m_HR[0] = address;
+            else
+                if (m_HR[1] == 0)
+                    m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -941,6 +984,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 
     case 0161066:  // KBDBUF -- Keyboard buffer
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) KBDBUF\n"), HU_INSTRUCTION_PC, word, address);
+        if ((word & 0xf0) == 0xf0)  // End interrupt command
+        {
+            m_keyint = false;
+            SetPICInterrupt(4, false);
+        }
         break;
 
     case 0161070:
@@ -953,9 +1001,10 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161076:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CNT\n"), HU_INSTRUCTION_PC, word, address);
-        //TODO: if (word & 020) -- reset floppy controller
         m_nHDbuff = (word & 3);
         m_nHDbuffpos = 0;
+        if (word & 020) // reset floppy controller
+            m_pFloppyCtl->Reset();
         break;
 
     case 0161200:
@@ -967,8 +1016,9 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161214:
     case 0161216:
         {
-            //TODO: Запись HR в режиме USER должна быть запрещена
             DebugLogFormat(_T("%c%06ho\tSETPORT HR %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
+            if (!m_pCPU->IsHaltMode())
+                m_pCPU->MemoryError();  // Запись HR в режиме USER запрещена
             int chunk = (address >> 1) & 7;
             m_HR[chunk] = word;
             if (m_pCPU->IsHaltMode() && (chunk == 0 || chunk == 1))  // Запись HR0 или HR1 в режиме HALT

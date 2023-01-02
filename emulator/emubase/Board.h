@@ -156,6 +156,8 @@ public:  // Floppy
     bool        IsFloppyReadOnly(int slot) const;
     // Fill the current HD buffer, to call from floppy controller only
     bool        FillHDBuffer(const uint8_t* data);
+public:  // Keyboard
+    void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
 
 public:  // Callbacks
     // Assign sound output callback function.
@@ -210,6 +212,8 @@ private:  // Ports: implementation
     uint16_t    m_Port177562;       // Serial port input data register
     uint16_t    m_Port177564;       // Serial port output state register
     uint16_t    m_Port177566;       // Serial port output data register
+    uint8_t     m_keymatrix[8];     // Keyboard key matrix
+    bool        m_keyint;           // Keyboard interrupt flag
     uint16_t    m_PortKBDCSR;       // Keyboard status register
     uint16_t    m_PortKBDBUF;       // Keyboard register
 private:

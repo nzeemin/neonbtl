@@ -209,7 +209,7 @@ LRESULT CALLBACK KeyboardViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
             if (keyscan != 0)
             {
                 // Fire keydown event and capture mouse
-                ScreenView_KeyEvent(keyscan, TRUE);
+                //ScreenView_KeyEvent(keyscan, TRUE);
                 ::SetCapture(g_hwndKeyboard);
 
                 // Draw focus frame for the key pressed
@@ -226,7 +226,7 @@ LRESULT CALLBACK KeyboardViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
         if (m_nKeyboardKeyPressed != 0)
         {
             // Fire keyup event and release mouse
-            ScreenView_KeyEvent(m_nKeyboardKeyPressed, FALSE);
+            //ScreenView_KeyEvent(m_nKeyboardKeyPressed, FALSE);
             ::ReleaseCapture();
 
             // Draw focus frame for the released key

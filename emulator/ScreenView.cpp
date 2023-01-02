@@ -13,7 +13,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include <windowsx.h>
 #include <mmintrin.h>
-#include <vfw.h>
+#include <Vfw.h>
 #include "Main.h"
 #include "Views.h"
 #include "Emulator.h"
@@ -31,25 +31,18 @@ HDRAWDIB m_hdd = NULL;
 BITMAPINFO m_bmpinfo;
 HBITMAP m_hbmp = NULL;
 DWORD * m_bits = NULL;
+int m_ScreenMode = 0;
 int m_cxScreenWidth = NEON_SCREEN_WIDTH / 2;
 int m_cyScreenHeight = NEON_SCREEN_HEIGHT;
 int m_xScreenOffset = 0;
 int m_yScreenOffset = 0;
 BYTE m_ScreenKeyState[256];
-int m_ScreenMode = 0;
+uint8_t m_KeyboardMatrix[8];
 
 void ScreenView_CreateDisplay();
 void ScreenView_OnDraw(HDC hdc);
 //BOOL ScreenView_OnKeyEvent(WPARAM vkey, BOOL okExtKey, BOOL okPressed);
 void ScreenView_OnRButtonDown(int mousex, int mousey);
-
-const int KEYEVENT_QUEUE_SIZE = 32;
-WORD m_ScreenKeyQueue[KEYEVENT_QUEUE_SIZE];
-int m_ScreenKeyQueueTop = 0;
-int m_ScreenKeyQueueBottom = 0;
-int m_ScreenKeyQueueCount = 0;
-void ScreenView_PutKeyEventToQueue(WORD keyevent);
-WORD ScreenView_GetKeyEventFromQueue();
 
 
 //////////////////////////////////////////////////////////////////////
@@ -272,141 +265,91 @@ void ScreenView_PrepareScreen()
     Emulator_PrepareScreenRGB32(m_bits, m_ScreenMode);
 }
 
-void ScreenView_PutKeyEventToQueue(WORD keyevent)
-{
-    if (m_ScreenKeyQueueCount == KEYEVENT_QUEUE_SIZE) return;  // Full queue
-
-    m_ScreenKeyQueue[m_ScreenKeyQueueTop] = keyevent;
-    m_ScreenKeyQueueTop++;
-    if (m_ScreenKeyQueueTop >= KEYEVENT_QUEUE_SIZE)
-        m_ScreenKeyQueueTop = 0;
-    m_ScreenKeyQueueCount++;
-}
-WORD ScreenView_GetKeyEventFromQueue()
-{
-    if (m_ScreenKeyQueueCount == 0) return 0;  // Empty queue
-
-    WORD keyevent = m_ScreenKeyQueue[m_ScreenKeyQueueBottom];
-    m_ScreenKeyQueueBottom++;
-    if (m_ScreenKeyQueueBottom >= KEYEVENT_QUEUE_SIZE)
-        m_ScreenKeyQueueBottom = 0;
-    m_ScreenKeyQueueCount--;
-
-    return keyevent;
-}
-
 // АР2 = Ctrl;
 // Ins = ВС;  Tab = ТАБ;
 // РУС = End, 0x23;  ЛАТ = Home, 0x24;
-// джойстик = NumPad;
-//TODO: СТОП = Break, 0x13;
-const BYTE arrPcscan2BkscanRus[256] =    // BK keys from PC keys, РУС
+const uint16_t arrPcscan2BkscanRus[256] =    // Device keys from PC keys, RUS
 {
-    /*       0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f  */
-    /*0*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0030, 0015, 0000, 0000, 0000, 0012, 0000, 0000,
-    /*1*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*2*/    0040, 0000, 0000, 0016, 0017, 0010, 0032, 0031, 0033, 0000, 0000, 0000, 0000, 0023, 0000, 0000,
-    /*3*/    0060, 0061, 0062, 0063, 0064, 0065, 0066, 0067, 0070, 0071, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*4*/    0000, 0106, 0111, 0123, 0127, 0125, 0101, 0120, 0122, 0133, 0117, 0114, 0104, 0120, 0124, 0135,
-    /*5*/    0132, 0112, 0113, 0131, 0105, 0107, 0115, 0103, 0136, 0116, 0121, 0000, 0000, 0000, 0000, 0000,
-    /*6*/    0000, 0211, 0215, 0213, 0216, 0000, 0214, 0210, 0217, 0212, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*7*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*8*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*9*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*a*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*b*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0126, 0000, 0102, 0055, 0100, 0000,
-    /*c*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*d*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0110, 0000, 0137, 0134, 0000,
-    /*e*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*f*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
+    /*       0       1       2       3       4       5       6       7       8       9       a       b       c       d       e       f  */
+    /*0*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0030, 0015, 0x0000, 0x0000, 0x0000, 0012, 0x0000, 0x0000,
+    /*1*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0080, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*2*/    0x0408, 0x0000, 0x0000, 0016, 0017, 0010, 0032, 0031, 0033, 0x0000, 0x0000, 0x0000, 0x0000, 0023, 0x0000, 0x0000,
+    /*3*/    0060, 0061, 0062, 0063, 0064, 0065, 0066, 0067, 0070, 0071, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*4*/    0x0000, 0106, 0111, 0123, 0127, 0125, 0101, 0120, 0122, 0133, 0117, 0114, 0104, 0120, 0124, 0135,
+    /*5*/    0132, 0112, 0113, 0131, 0105, 0107, 0115, 0103, 0136, 0116, 0121, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*6*/    0x0000, 0211, 0215, 0213, 0216, 0x0000, 0214, 0210, 0217, 0212, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*7*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*8*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*9*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*a*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*b*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0126, 0x0000, 0102, 0055, 0100, 0x0000,
+    /*c*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*d*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0110, 0x0000, 0137, 0134, 0x0000,
+    /*e*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*f*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 };
-const BYTE arrPcscan2BkscanLat[256] =    // BK keys from PC keys, ЛАТ
+const uint16_t arrPcscan2BkscanLat[256] =    // Device keys from PC keys, LAT
 {
-    /*       0     1     2     3     4     5     6     7     8     9     a     b     c     d     e     f  */
-    /*0*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0030, 0015, 0000, 0000, 0000, 0012, 0000, 0000,
-    /*1*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*2*/    0040, 0000, 0000, 0016, 0017, 0010, 0032, 0031, 0033, 0000, 0000, 0000, 0000, 0023, 0000, 0000,
-    /*3*/    0060, 0061, 0062, 0063, 0064, 0065, 0066, 0067, 0070, 0071, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*4*/    0000, 0101, 0102, 0103, 0104, 0105, 0106, 0107, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117,
-    /*5*/    0120, 0121, 0122, 0123, 0124, 0125, 0126, 0127, 0130, 0131, 0132, 0000, 0000, 0000, 0000, 0000,
-    /*6*/    0000, 0211, 0215, 0213, 0216, 0000, 0214, 0210, 0217, 0212, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*7*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*8*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*9*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*a*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*b*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0052, 0000, 0074, 0055, 0076, 0000,
-    /*c*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*d*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0133, 0000, 0135, 0134, 0000,
-    /*e*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
-    /*f*/    0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000, 0000,
+    /*       0       1       2       3       4       5       6       7       8       9       a       b       c       d       e       f  */
+    /*0*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0030, 0015, 0x0000, 0x0000, 0x0000, 0012, 0x0000, 0x0000,
+    /*1*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0080, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*2*/    0x0408, 0x0000, 0x0000, 0016, 0017, 0010, 0032, 0031, 0033, 0x0000, 0x0000, 0x0000, 0x0000, 0023, 0x0000, 0x0000,
+    /*3*/    0060, 0061, 0062, 0063, 0064, 0065, 0066, 0067, 0070, 0071, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*4*/    0x0000, 0101, 0102, 0103, 0104, 0105, 0106, 0107, 0110, 0111, 0112, 0113, 0114, 0115, 0116, 0117,
+    /*5*/    0120, 0121, 0122, 0123, 0124, 0125, 0126, 0127, 0130, 0131, 0132, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*6*/    0x0000, 0211, 0215, 0213, 0216, 0x0000, 0214, 0210, 0217, 0212, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*7*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*8*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*9*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*a*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*b*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0052, 0x0000, 0074, 0055, 0076, 0x0000,
+    /*c*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*d*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0133, 0x0000, 0135, 0134, 0x0000,
+    /*e*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    /*f*/    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
 };
 
 void ScreenView_ScanKeyboard()
 {
     if (! g_okEmulatorRunning) return;
-    if (::GetFocus() == g_hwndScreen)
+    if (::GetFocus() != g_hwndScreen)
+        return;
+
+    // Read current keyboard state
+    BYTE keys[256];
+    VERIFY(::GetKeyboardState(keys));
+
+    //TODO: Выбираем таблицу маппинга в зависимости от флага РУС/ЛАТ
+    const uint16_t* pTable = arrPcscan2BkscanLat;
+
+    uint8_t matrix[8];
+    ::memset(matrix, 0, sizeof(matrix));
+
+    // Check every key for state change
+    for (int scan = 0; scan < 256; scan++)
     {
-        // Read current keyboard state
-        BYTE keys[256];
-        VERIFY(::GetKeyboardState(keys));
-
-        BOOL okShift = ((keys[VK_SHIFT] & 128) != 0);
-        BOOL okCtrl = ((keys[VK_CONTROL] & 128) != 0);
-
-        // Выбираем таблицу маппинга в зависимости от флага РУС/ЛАТ
-        const BYTE* pTable = arrPcscan2BkscanLat;
-
-        // Check every key for state change
-        for (int scan = 0; scan < 256; scan++)
+        uint16_t vscan = pTable[scan];
+        BYTE newstate = keys[scan];
+        BYTE oldstate = m_ScreenKeyState[scan];
+        if ((newstate & 128) != (oldstate & 128))  // Key state changed - key pressed or released
         {
-            BYTE newstate = keys[scan];
-            BYTE oldstate = m_ScreenKeyState[scan];
-            if ((newstate & 128) != (oldstate & 128))  // Key state changed - key pressed or released
-            {
-                BYTE pcscan = (BYTE) scan;
-
-//                DebugPrintFormat(_T("Key PC: 0x%0x 0x%0x 0x%0x\r\n"), scan, keys[VK_SHIFT], keys[VK_CONTROL]);
-
-                BYTE bkscan = pTable[pcscan];
-                if (bkscan != 0)
-                {
-                    if (okShift && bkscan >= 0100 && bkscan <= 0137)
-                        bkscan += 040;
-                    else if (okShift && bkscan >= 0060 && bkscan <= 0077)
-                        bkscan -= 020;
-                    BYTE pressed = (newstate & 128) | (okCtrl ? 64 : 0);
-                    WORD keyevent = MAKEWORD(bkscan, pressed);
-                    ScreenView_PutKeyEventToQueue(keyevent);
-                }
-            }
+            if ((newstate & 128) != 0 && scan > 2)
+                DebugPrintFormat(_T("Key PC: 0x%02x 0x%04x\r\n"), scan, vscan);
         }
-
-        // Save keyboard state
-        ::memcpy(m_ScreenKeyState, keys, 256);
+        if (vscan != 0 && (newstate & 128) != 0)
+        {
+            matrix[(vscan >> 8) & 7] |= (vscan & 0xff);
+        }
     }
-}
 
-void ScreenView_ProcessKeyboard()
-{
-    // Process next event in the keyboard queue
-    //WORD keyevent = ScreenView_GetKeyEventFromQueue();
-    //if (keyevent != 0)
-    //{
-    //    bool pressed = ((keyevent & 0x8000) != 0);
-    //bool ctrl = ((keyevent & 0x4000) != 0);
-    //    BYTE bkscan = LOBYTE(keyevent);
+    // Save keyboard state
+    ::memcpy(m_ScreenKeyState, keys, 256);
 
-//        TCHAR bufoct[7];  PrintOctalValue(bufoct, bkscan);
-//  //      DebugPrintFormat(_T("KeyEvent: %s %d %d\r\n"), bufoct, pressed, ctrl);
+    //TODO: Update matrix with KeyboardView keys
 
-    //    g_pBoard->KeyboardEvent(bkscan, pressed);
-    //}
-}
+    ::memcpy(m_KeyboardMatrix, matrix, sizeof(matrix));
 
-// External key event - e.g. from KeyboardView
-void ScreenView_KeyEvent(BYTE keyscan, BOOL pressed)
-{
-    ScreenView_PutKeyEventToQueue(MAKEWORD(keyscan, pressed ? 128 : 0));
+    Emulator_UpdateKeyboardMatrix(m_KeyboardMatrix);
 }
 
 BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)

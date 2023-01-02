@@ -418,13 +418,16 @@ void Emulator_SetSerial(bool onOff)
     m_okEmulatorSerial = onOff;
 }
 
+void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8])
+{
+    g_pBoard->UpdateKeyboardMatrix(matrix);
+}
+
 bool Emulator_SystemFrame()
 {
     g_pBoard->SetCPUBreakpoints(m_wEmulatorCPUBpsCount > 0 ? m_EmulatorCPUBps : nullptr);
 
     ScreenView_ScanKeyboard();
-    ScreenView_ProcessKeyboard();
-    //Emulator_ProcessJoystick();
 
     if (!g_pBoard->SystemFrame())
     {
@@ -437,7 +440,7 @@ bool Emulator_SystemFrame()
     // Calculate frames per second
     m_nFrameCount++;
     uint32_t dwCurrentTicks = GetTickCount();
-    long nTicksElapsed = dwCurrentTicks - m_dwTickCount;
+    uint32_t nTicksElapsed = dwCurrentTicks - m_dwTickCount;
     if (nTicksElapsed >= 1200)
     {
         double dFramesPerSecond = m_nFrameCount * 1000.0 / nTicksElapsed;

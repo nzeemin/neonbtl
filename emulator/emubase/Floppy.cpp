@@ -276,7 +276,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         //m_state = FLOPPY_STATE_READ_DATA;
         //TODO
         m_phase = FLOPPY_PHASE_RESULT;//DEBUG
-        m_result[0] = 0;//TODO
+        m_result[0] = 0x20;//TODO
         m_result[1] = 0;//TODO
         m_result[2] = 0;//TODO
         m_result[3] = m_command[2];
@@ -289,35 +289,34 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
             uint8_t sector = m_command[4] - 1;
             while (true)
             {
-                size_t offset = m_command[2] * 5120 * 2 + m_command[3] * 5120 + sector * 512;
-                if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x\r\n"), offset);
+                size_t offset = (m_command[2] * 2 + m_command[3]) * 5120 + sector * 512;
+                int block = offset / 512;
+                if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x block %d.\r\n"), offset, block);
                 bool contflag = m_pBoard->FillHDBuffer(m_drivedata[0].data + offset);
                 if (!contflag)
                     break;
-                sector++;
+                sector = (sector + 1) % 10;
             }
         }
         break;
 
-    //case FLOPPY_COMMAND_READ_TRACK:
-    //    if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
-    //                m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
-    //    m_state = FLOPPY_STATE_READ_TRACK;
-    //    //TODO
-    //    break;
+        //case FLOPPY_COMMAND_READ_TRACK:
+        //    if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
+        //                m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
+        //    m_state = FLOPPY_STATE_READ_TRACK;
+        //    //TODO
+        //    break;
 
     case FLOPPY_COMMAND_RECALIBRATE:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD RECALIBRATE 0x%02hx\r\n"), (uint16_t)m_command[1]);
         //TODO: m_state = FLOPPY_STATE_RECALIBRATE;
         m_phase = FLOPPY_PHASE_CMD;//DEBUG
-        m_commandlen = 0;//DEBUG
         m_int = true;//DEBUG
         break;
 
     case FLOPPY_COMMAND_SEEK:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD SEEK 0x%02hx 0x%02hx\r\n"), (uint16_t)m_command[1], (uint16_t)m_command[2]);
         m_phase = FLOPPY_PHASE_CMD;//DEBUG
-        m_commandlen = 0;//DEBUG
         m_int = true;//DEBUG
         break;
 
@@ -334,9 +333,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD SPECIFY 0x%02hx 0x%02hx\r\n"), (uint16_t)m_command[1], (uint16_t)m_command[2]);
         //TODO
         m_phase = FLOPPY_PHASE_CMD;
-        m_commandlen = 0;
         break;
-        //TODO
 
     default:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD 0x%02hx not implemented\r\n"), (uint16_t)m_command[0]);

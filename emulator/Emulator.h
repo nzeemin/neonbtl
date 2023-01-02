@@ -59,7 +59,8 @@ void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();
 bool Emulator_SystemFrame();
-DWORD Emulator_GetUptime();  // Device uptime, in seconds
+
+void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8]);
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
