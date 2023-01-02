@@ -303,154 +303,156 @@ bool CProcessor::InterruptProcessing()
     bool intrMode = false;  // true = HALT mode interrupt, false = USER mode interrupt
 
     if (m_stepmode)
-        m_stepmode = false;
-    else
     {
-        m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
-        m_TBITrq = (m_psw & 020) != 0;  // T-bit
+        m_stepmode = false;
+        return false;
+    }
 
-        if (m_STRTrq)
-        {
-            intrVector = 0; intrMode = true;
-            m_STRTrq = false;
-        }
-        else if (m_HALTrq)  // HALT command
-        {
-            intrVector = 0170;  intrMode = true;
-            m_HALTrq = false;
-        }
-        else if (m_BPT_rq)  // BPT command
-        {
-            intrVector = 0000014;  intrMode = false;
-            m_BPT_rq = false;
-        }
-        else if (m_IOT_rq)  // IOT command
-        {
-            intrVector = 0000020;  intrMode = false;
-            m_IOT_rq = false;
-        }
-        else if (m_EMT_rq)  // EMT command
-        {
-            intrVector = 0000030;  intrMode = false;
-            m_EMT_rq = false;
-        }
-        else if (m_TRAPrq)  // TRAP command
-        {
-            intrVector = 0000034;  intrMode = false;
-            m_TRAPrq = false;
-        }
-        else if (m_FIS_rq)  // FIS commands -- Floating point Instruction Set
-        {
-            intrVector = 0010;  intrMode = true;
-            m_FIS_rq = false;
-        }
-        else if (m_RPLYrq)  // Зависание, priority 1
-        {
-            if (m_buserror)
-            {
-                intrVector = 0174; intrMode = true;
-            }
-            else if (currMode)
-            {
-                intrVector = 0004;  intrMode = true;
-            }
-            else
-            {
-                intrVector = 0000004; intrMode = false;
-            }
-            m_buserror = true;
-            m_RPLYrq = false;
-        }
-        else if (m_ILLGrq)
-        {
-            intrVector = 000004;  intrMode = false;
-            m_ILLGrq = false;
-        }
-        else if (m_RSVDrq)  // Reserved command, priority 2
-        {
-            intrVector = 000010;  intrMode = false;
-            m_RSVDrq = false;
-        }
-        else if (m_TBITrq && (!m_waitmode))  // T-bit, priority 3
-        {
-            intrVector = 000014;  intrMode = false;
-            m_TBITrq = false;
-        }
-        else if (m_ACLOrq && (m_psw & 0600) != 0600)  // ACLO, priority 4
-        {
-            intrVector = 000024;  intrMode = false;
-            m_ACLOreset = true;
-        }
-        else if (m_haltpin && (m_psw & 0400) != 0400)  // HALT signal in USER mode, priority 5
-        {
-            intrVector = 0170;  intrMode = true;
-            m_haltpinreset = true;
-        }
-        else if (m_EVNTrq && (m_psw & 0200) != 0200)  // EVNT signal, priority 6
-        {
-            intrVector = 0000100;  intrMode = false;
-            m_EVNTreset = true;
-        }
-        else if (m_VIRQrq && (m_psw & 0200) != 0200)  // VIRQ, priority 7
-        {
-            //NOTE: Special case just for PK11/16
-            intrVector = 0000274;  intrMode = true;
-            m_VIRQrq = false;
-        }
-        if (intrVector != 0xFFFF)
-        {
-            if (m_internalTick == 0) m_internalTick = EMT_TIMING;  //ANYTHING UNKNOWN WILL CAUSE EXCEPTION (EMT)
+    m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
+    m_TBITrq = (m_psw & 020) != 0;  // T-bit
 
-            m_waitmode = false;
+    if (m_STRTrq)
+    {
+        intrVector = 0; intrMode = true;
+        m_STRTrq = false;
+    }
+    else if (m_HALTrq)  // HALT command
+    {
+        intrVector = 0170;  intrMode = true;
+        m_HALTrq = false;
+    }
+    else if (m_BPT_rq)  // BPT command
+    {
+        intrVector = 0000014;  intrMode = false;
+        m_BPT_rq = false;
+    }
+    else if (m_IOT_rq)  // IOT command
+    {
+        intrVector = 0000020;  intrMode = false;
+        m_IOT_rq = false;
+    }
+    else if (m_EMT_rq)  // EMT command
+    {
+        intrVector = 0000030;  intrMode = false;
+        m_EMT_rq = false;
+    }
+    else if (m_TRAPrq)  // TRAP command
+    {
+        intrVector = 0000034;  intrMode = false;
+        m_TRAPrq = false;
+    }
+    else if (m_FIS_rq)  // FIS commands -- Floating point Instruction Set
+    {
+        intrVector = 0010;  intrMode = true;
+        m_FIS_rq = false;
+    }
+    else if (m_RPLYrq)  // Зависание, priority 1
+    {
+        if (m_buserror)
+        {
+            intrVector = 0174; intrMode = true;
+        }
+        else if (currMode)
+        {
+            intrVector = 0004;  intrMode = true;
+        }
+        else
+        {
+            intrVector = 0000004; intrMode = false;
+        }
+        m_buserror = true;
+        m_RPLYrq = false;
+    }
+    else if (m_ILLGrq)
+    {
+        intrVector = 000004;  intrMode = false;
+        m_ILLGrq = false;
+    }
+    else if (m_RSVDrq)  // Reserved command, priority 2
+    {
+        intrVector = 000010;  intrMode = false;
+        m_RSVDrq = false;
+    }
+    else if (m_TBITrq && (!m_waitmode))  // T-bit, priority 3
+    {
+        intrVector = 000014;  intrMode = false;
+        m_TBITrq = false;
+    }
+    else if (m_ACLOrq && (m_psw & 0600) != 0600)  // ACLO, priority 4
+    {
+        intrVector = 000024;  intrMode = false;
+        m_ACLOreset = true;
+    }
+    else if (m_haltpin && (m_psw & 0400) != 0400)  // HALT signal in USER mode, priority 5
+    {
+        intrVector = 0170;  intrMode = true;
+        m_haltpinreset = true;
+    }
+    else if (m_EVNTrq && (m_psw & 0200) != 0200)  // EVNT signal, priority 6
+    {
+        intrVector = 0000100;  intrMode = false;
+        m_EVNTreset = true;
+    }
+    else if (m_VIRQrq && (m_psw & 0200) != 0200)  // VIRQ, priority 7
+    {
+        //NOTE: Special case just for PK11/16
+        intrVector = 0000274;  intrMode = true;
+        m_VIRQrq = false;
+    }
+    if (intrVector != 0xFFFF)
+    {
+        if (m_internalTick == 0) m_internalTick = EMT_TIMING;  //ANYTHING UNKNOWN WILL CAUSE EXCEPTION (EMT)
 
-            if (intrMode)  // HALT mode interrupt
+        m_waitmode = false;
+
+        if (intrMode)  // HALT mode interrupt
+        {
+            uint16_t selVector = m_pBoard->GetSelRegister() & 0x0ff00;
+            intrVector |= selVector;
+            // Save PC/PSW to CPC/CPSW
+            m_savepc = GetPC();
+            m_savepsw = GetPSW();
+            m_psw |= 0400;
+            SetHALT(true);
+            uint16_t new_pc = GetWord(intrVector);
+            uint16_t new_psw = GetWord(intrVector + 2);
+            if (!m_RPLYrq)
             {
-                uint16_t selVector = m_pBoard->GetSelRegister() & 0x0ff00;
-                intrVector |= selVector;
-                // Save PC/PSW to CPC/CPSW
-                m_savepc = GetPC();
-                m_savepsw = GetPSW();
-                m_psw |= 0400;
-                SetHALT(true);
-                uint16_t new_pc = GetWord(intrVector);
-                uint16_t new_psw = GetWord(intrVector + 2);
+                DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+                if (m_haltpinreset) m_haltpin = false;
+                SetPSW(new_psw);
+                SetPC(new_pc);
+            }
+        }
+        else  // USER mode interrupt
+        {
+            SetHALT(false);
+            // Save PC/PSW to stack
+            SetSP(GetSP() - 2);
+            SetWord(GetSP(), GetCPSW());
+            SetSP(GetSP() - 2);
+            if (!m_RPLYrq)
+            {
+                SetWord(GetSP(), GetCPC());
                 if (!m_RPLYrq)
                 {
-                    DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
-                    if (m_haltpinreset) m_haltpin = false;
-                    SetPSW(new_psw);
-                    SetPC(new_pc);
-                }
-            }
-            else  // USER mode interrupt
-            {
-                SetHALT(false);
-                // Save PC/PSW to stack
-                SetSP(GetSP() - 2);
-                SetWord(GetSP(), GetCPSW());
-                SetSP(GetSP() - 2);
-                if (!m_RPLYrq)
-                {
-                    SetWord(GetSP(), GetCPC());
+                    if (m_ACLOreset) m_ACLOrq = false;
+                    if (m_EVNTreset) m_EVNTrq = false;
+                    uint16_t new_pc = GetWord(intrVector);
+                    uint16_t new_psw = GetWord(intrVector + 2);
                     if (!m_RPLYrq)
                     {
-                        if (m_ACLOreset) m_ACLOrq = false;
-                        if (m_EVNTreset) m_EVNTrq = false;
-                        uint16_t new_pc = GetWord(intrVector);
-                        uint16_t new_psw = GetWord(intrVector + 2);
-                        if (!m_RPLYrq)
-                        {
-                            DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
-                            SetLPSW((uint8_t)(new_psw & 0xff));
-                            SetPC(new_pc);
-                        }
+                        DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+                        SetLPSW((uint8_t)(new_psw & 0xff));
+                        SetPC(new_pc);
                     }
                 }
             }
-
-            return true;
         }
+
+        return true;
     }
+
     return false;
 }
 

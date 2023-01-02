@@ -88,17 +88,6 @@ class CMotherboard;
 #define FLOPPY_MSR_DIO  0x40
 #define FLOPPY_MSR_RQM  0x80
 
-#define FLOPPY_STATUS_TRACK0                 01  // Track 0 flag
-#define FLOPPY_STATUS_RDY                  0200  // Ready status
-#define FLOPPY_STATUS_WRITEPROTECT           04  // Write protect
-#define FLOPPY_STATUS_MOREDATA             0200  // Need more data flag
-#define FLOPPY_STATUS_CHECKSUMOK         040000  // Checksum verified OK
-#define FLOPPY_STATUS_INDEXMARK         0100000  // Index flag, indicates the beginning of track
-
-#define FLOPPY_RAWTRACKSIZE             6250
-#define FLOPPY_RAWMARKERSIZE            (FLOPPY_RAWTRACKSIZE / 2)
-#define FLOPPY_INDEXLENGTH              30
-
 struct CFloppyDrive
 {
     FILE*    fpFile;
@@ -131,7 +120,6 @@ protected:
     uint8_t  m_track;       // Track number: 0 to 79
     uint8_t  m_side;        // Disk side: 0 or 1
     bool     m_int;         // Interrupt flag
-    bool     m_trackchanged; // true = m_data was changed - need to save it into the file
     bool     m_okTrace;     // Trace mode on/off
 
 public:
@@ -161,7 +149,6 @@ private:
     uint8_t CheckCommand();
     void StartCommand(uint8_t cmd);
     void ExecuteCommand(uint8_t cmd);
-    void PrepareTrack();
     void FlushChanges();  // If current track was changed - save it
 };
 

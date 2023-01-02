@@ -106,23 +106,19 @@ class CMotherboard
 public:  // Construct / destruct
     CMotherboard();
     ~CMotherboard();
-
 private:  // Devices
+    uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
     CProcessor* m_pCPU;  // CPU device
     CFloppyController* m_pFloppyCtl;  // FDD control
-
 public:  // Getting devices
     CProcessor* GetCPU() { return m_pCPU; }
-
 private:  // Memory
-    uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
     uint8_t*    m_pROM;  // ROM, 16 KB
     uint8_t*    m_pRAM;  // RAM, 512..4096 KB
     uint16_t    m_HR[8];
     uint16_t    m_UR[8];
     uint32_t    m_nRamSizeBytes;  // Actual RAM size
     uint8_t*    m_pHDbuff;  // HD buffers, 2K
-
 public:  // Memory access
     uint16_t    GetRAMWord(uint32_t offset) const;
     uint8_t     GetRAMByte(uint32_t offset) const;
@@ -131,7 +127,6 @@ public:  // Memory access
     uint16_t    GetROMWord(uint16_t offset) const;
     uint8_t     GetROMByte(uint16_t offset) const;
     uint32_t    GetRamSizeBytes() const { return m_nRamSizeBytes; }
-
 public:  // Debug
     void        DebugTicks();  // One Debug CPU tick -- use for debug step or debug breakpoint
     void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
@@ -140,15 +135,13 @@ public:  // Debug
     void        LoadRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
-    void        Reset();  // Reset computer
     void        LoadROM(const uint8_t* pBuffer);  // Load 16 KB ROM image from the buffer
+    void        Reset();  // Reset computer
     void        Tick50();           // Tick 50 Hz
     void        TimerTick();        // Timer Tick
     void        ResetDevices();     // INIT signal
-
-public:
     bool        SystemFrame();  // Do one frame -- use for normal run
-    void        KeyboardEvent(uint8_t scancode, bool okPressed);  // Key pressed or released
+    void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
@@ -156,11 +149,7 @@ public:  // Floppy
     bool        IsFloppyReadOnly(int slot) const;
     // Fill the current HD buffer, to call from floppy controller only
     bool        FillHDBuffer(const uint8_t* data);
-public:  // Keyboard
-    void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
-
 public:  // Callbacks
-    // Assign sound output callback function.
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetSerialOutCallback(SERIALOUTCALLBACK outcallback);
 public:  // Memory
@@ -205,17 +194,16 @@ private:  // Ports: implementation
     uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
     uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_PortHDsdh;
-    bool        m_hdint;
+    bool        m_hdint;            // HDD interrupt flag
     uint8_t     m_nHDbuff;          // Number of the current HD buffer, 0..3
     uint16_t    m_nHDbuffpos;       // Current position in the current HD buffer, 0..511
-    uint16_t    m_Port177560;       // Serial port input state register
-    uint16_t    m_Port177562;       // Serial port input data register
-    uint16_t    m_Port177564;       // Serial port output state register
-    uint16_t    m_Port177566;       // Serial port output data register
     uint8_t     m_keymatrix[8];     // Keyboard key matrix
     bool        m_keyint;           // Keyboard interrupt flag
-    uint16_t    m_PortKBDCSR;       // Keyboard status register
-    uint16_t    m_PortKBDBUF;       // Keyboard register
+    uint16_t    m_keypos;           // Keyboard reading position 0..7
+private:  // Timer implementation
+    PIT8253     m_snd, m_snl;
+    uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;
+    uint8_t     m_timermemory[50];
 private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
@@ -223,19 +211,13 @@ private:
     uint8_t     ProcessRtcRead(uint16_t address) const;
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);
-private:  // Timer implementation
-    PIT8253     m_snd, m_snl;
-    uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;
-    uint8_t     m_timermemory[50];
+    void        DoSound();
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags
 private:
     SOUNDGENCALLBACK m_SoundGenCallback;
     SERIALOUTCALLBACK m_SerialOutCallback;
-private:
-    void        DoSound();
-
 };
 
 

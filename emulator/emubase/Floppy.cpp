@@ -51,7 +51,6 @@ CFloppyController::CFloppyController(CMotherboard* pBoard)
     m_state = FLOPPY_STATE_IDLE;
     m_int = false;
     m_commandlen = m_resultlen = m_resultpos = 0;
-    m_trackchanged = false;
     m_okTrace = false;
 }
 
@@ -73,9 +72,6 @@ void CFloppyController::Reset()
     m_state = FLOPPY_STATE_IDLE;
     m_int = false;
     m_commandlen = m_resultlen = m_resultpos = 0;
-    m_trackchanged = false;
-
-    PrepareTrack();
 }
 
 bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
@@ -105,9 +101,6 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
     m_side = m_track = 0;
     m_drivedata[drive].datatrack = m_drivedata[drive].dataside = 0;
     m_drivedata[drive].dataptr = 0;
-    m_trackchanged = false;
-
-    //PrepareTrack();
 
     return true;
 }
@@ -145,10 +138,7 @@ uint8_t CFloppyController::GetState()
         break;
     }
 
-    //if (m_pDrive == nullptr)
-    //    return 0;
-    //if (m_pDrive->fpFile == nullptr)
-    //    return 0;//TODO
+    //if (m_pDrive != nullptr && m_pDrive->fpFile == nullptr)
 
     return msr;
 }
@@ -262,12 +252,17 @@ void CFloppyController::StartCommand(uint8_t cmd)
     m_resultlen = 0;  m_resultpos = 0;
     m_phase = FLOPPY_PHASE_EXEC;
 
+    if (cmd != FLOPPY_COMMAND_SPECIFY && cmd != FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS)
+    {
+        m_drive = m_command[1] & 3;
+        m_pDrive = m_drivedata + m_drive;
+    }
+
     ExecuteCommand(cmd);
 }
 
 void CFloppyController::ExecuteCommand(uint8_t cmd)
 {
-    uint8_t drive = m_command[1] & 3;
     switch (cmd)
     {
     case FLOPPY_COMMAND_READ_DATA:
@@ -276,7 +271,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         //m_state = FLOPPY_STATE_READ_DATA;
         //TODO
         m_phase = FLOPPY_PHASE_RESULT;//DEBUG
-        m_result[0] = 0x20;//TODO
+        m_result[0] = 0x20 | (m_command[1] & 3);
         m_result[1] = 0;//TODO
         m_result[2] = 0;//TODO
         m_result[3] = m_command[2];
@@ -285,9 +280,14 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_result[6] = m_command[5];
         m_resultlen = 7;
         m_int = true;//DEBUG
+        if (m_drive != 0xff && !IsAttached(m_drive))
+        {
+            m_result[0] = 0xC8 | (m_command[1] & 3);  // Not ready
+        }
+        else
         {
             uint8_t sector = m_command[4] - 1;
-            while (true)
+            for (;;)
             {
                 size_t offset = (m_command[2] * 2 + m_command[3]) * 5120 + sector * 512;
                 int block = offset / 512;
@@ -299,13 +299,6 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
             }
         }
         break;
-
-        //case FLOPPY_COMMAND_READ_TRACK:
-        //    if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
-        //                m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
-        //    m_state = FLOPPY_STATE_READ_TRACK;
-        //    //TODO
-        //    break;
 
     case FLOPPY_COMMAND_RECALIBRATE:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD RECALIBRATE 0x%02hx\r\n"), (uint16_t)m_command[1]);
@@ -323,7 +316,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
     case FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD SENSE_INTERRUPT\r\n"));
         m_phase = FLOPPY_PHASE_RESULT;
-        m_result[0] = 0x10;//TODO
+        m_result[0] = 0x20;
         m_result[1] = 0x00;//TODO
         m_resultlen = 2;
         m_int = false;
@@ -336,25 +329,12 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         break;
 
     default:
-        if (m_okTrace) DebugLogFormat(_T("Floppy CMD 0x%02hx not implemented\r\n"), (uint16_t)m_command[0]);
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD 0x%02hx NOT IMPLEMENTED\r\n"), (uint16_t)m_command[0]);
     }
 }
 
 void CFloppyController::Periodic()
 {
-    //if (!IsEngineOn()) return;  // Вращаем дискеты только если включен мотор
-
-    //// Вращаем дискеты во всех драйвах сразу
-    //for (int drive = 0; drive < 4; drive++)
-    //{
-    //    m_drivedata[drive].dataptr += 2;
-    //    if (m_drivedata[drive].dataptr >= FLOPPY_RAWTRACKSIZE)
-    //        m_drivedata[drive].dataptr = 0;
-    //}
-
-    //if (m_pDrive != nullptr && m_pDrive->dataptr == 0)
-    //    DebugLogFormat(_T("Floppy Index\n"));
-
     // Далее обрабатываем чтение/запись на текущем драйве
     if (m_pDrive == nullptr) return;
     if (!IsAttached(m_drive)) return;
@@ -362,62 +342,14 @@ void CFloppyController::Periodic()
     //TODO
 }
 
-// Read track data from file and fill m_data
-void CFloppyController::PrepareTrack()
-{
-    FlushChanges();
-
-    if (m_pDrive == nullptr) return;
-
-    //if (m_okTrace) DebugLogFormat(_T("Floppy PREP  %hu TR %hu SD %hu\r\n"), m_drive, m_track, m_side);
-
-    m_trackchanged = false;
-    //NOTE: Not changing m_pDrive->dataptr
-    m_pDrive->datatrack = m_track;
-    m_pDrive->dataside = m_side;
-}
-
 void CFloppyController::FlushChanges()
 {
     if (m_drive == 0xff) return;
     if (!IsAttached(m_drive)) return;
-    if (!m_trackchanged) return;
 
-    if (m_okTrace) DebugLogFormat(_T("Floppy FLUSH %hu TR %hu SD %hu\r\n"), m_drive, m_pDrive->datatrack, m_pDrive->dataside);
+    //if (m_okTrace) DebugLogFormat(_T("Floppy FLUSH %hu TR %hu SD %hu\r\n"), m_drive, m_pDrive->datatrack, m_pDrive->dataside);
 
-    // Decode track data from m_data
-    uint8_t data[5120];  memset(data, 0, 5120);
-    bool decoded = true; //DecodeTrackData(m_pDrive->data, data);
-
-    if (decoded)  // Write to the file only if the track was correctly decoded from raw data
-    {
-        // Track has 10 sectors, 512 bytes each; offset of the file is === ((Track<<1)+SIDE)*5120
-        long foffset = ((m_pDrive->datatrack * 2) + (m_pDrive->dataside)) * 5120;
-
-        // Check file length
-        ::fseek(m_pDrive->fpFile, 0, SEEK_END);
-        uint32_t currentFileSize = ::ftell(m_pDrive->fpFile);
-        while (currentFileSize < (uint32_t)(foffset + 5120))
-        {
-            uint8_t datafill[512];  ::memset(datafill, 0, 512);
-            uint32_t bytesToWrite = ((uint32_t)(foffset + 5120) - currentFileSize) % 512;
-            if (bytesToWrite == 0) bytesToWrite = 512;
-            ::fwrite(datafill, 1, bytesToWrite, m_pDrive->fpFile);
-            //TODO: Проверка на ошибки записи
-            currentFileSize += bytesToWrite;
-        }
-
-        // Save data into the file
-        ::fseek(m_pDrive->fpFile, foffset, SEEK_SET);
-        size_t dwBytesWritten = ::fwrite(&data, 1, 5120, m_pDrive->fpFile);
-        //TODO: Проверка на ошибки записи
-    }
-    else
-    {
-        if (m_okTrace) DebugLog(_T("Floppy FLUSH FAILED\r\n"));
-    }
-
-    m_trackchanged = false;
+    //TODO
 }
 
 

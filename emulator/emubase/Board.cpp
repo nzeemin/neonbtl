@@ -111,11 +111,7 @@ void CMotherboard::Reset()
     m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
     m_PortHDsdh = 0;
     m_hdint = false;
-    m_Port177560 = m_Port177562 = 0;
-    m_Port177564 = 0200;
-    m_Port177566 = 0;
-    m_PortKBDCSR = 0100;
-    m_PortKBDBUF = 0;
+    m_keypos = 0;
 
     m_nHDbuff = 0;
     m_nHDbuffpos = 0;
@@ -233,11 +229,6 @@ void CMotherboard::ResetDevices()
 
     m_pFloppyCtl->Reset();
 
-    // Reset ports
-    m_Port177560 = m_Port177562 = 0;
-    m_Port177564 = 0200;
-    m_Port177566 = 0;
-
     // Reset PIC 8259A
     m_PICRR = 0;
     m_PICflags = PIC_MODE_ICW1;  // Waiting for ICW1
@@ -313,11 +304,10 @@ void CMotherboard::DebugTicks()
 
 /*
 Каждый фрейм равен 1/25 секунды = 40 мс = 20000 тиков, 1 тик = 2 мкс.
-12 МГц = 1 / 12000000 = 0.83(3) мкс
 В каждый фрейм происходит:
 * 320000 тиков ЦП - 16 раз за тик - 8 МГц
 * программируемый таймер - на каждый 4-й тик процессора - 2 МГц
-* 2 тика IRQ2 50 Гц, в 0-й и 10000-й тик фрейма
+* 2 тика 50 Гц, в 0-й и 10000-й тик фрейма
 * 625 тиков FDD - каждый 32-й тик (300 RPM = 5 оборотов в секунду)
 * 882 тиков звука (для частоты 22050 Гц)
 */
@@ -330,15 +320,15 @@ bool CMotherboard::SystemFrame()
     {
         for (int procticks = 0; procticks < 16; procticks++)  // CPU ticks
         {
-#if !defined(PRODUCT)
-            if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
-                TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
-#endif
-
             // Update signals
             bool ioint = ((m_PICRR & ~m_PICMR) != 0);
             m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update IOINT signal
             m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
+
+#if !defined(PRODUCT)
+            if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
+                TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
+#endif
 
             m_pCPU->Execute();
 
@@ -371,14 +361,6 @@ bool CMotherboard::SystemFrame()
     }
 
     return true;
-}
-
-// Key pressed or released
-void CMotherboard::KeyboardEvent(uint8_t scancode, bool okPressed)
-{
-    //TODO
-
-    SetPICInterrupt(4);  // На INT4 идет запрос от контроллера клавиатуры
 }
 
 
@@ -449,9 +431,8 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
             m_PortPPIB &= ~1;  // EF0 = 0
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            else
-                if (m_HR[1] == 0)
-                    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return GetRAMWord(offset & 07777);
     case ADDRTYPE_DENY:
@@ -486,9 +467,8 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
             m_PortPPIB &= ~1;  // EF0 = 0
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            else
-                if (m_HR[1] == 0)
-                    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return GetRAMByte(offset & 07777);
     case ADDRTYPE_DENY:
@@ -529,9 +509,8 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            else
-                if (m_HR[1] == 0)
-                    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -569,9 +548,8 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
             m_PortPPIB &= ~3;  // EF1,EF0 = 0
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            else
-                if (m_HR[1] == 0)
-                    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -681,7 +659,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
 
     case 0161040:
         result = m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512];
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, result);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx buf%d %03x\n"), HU_INSTRUCTION_PC, address, result, m_nHDbuff, m_nHDbuffpos);
         m_nHDbuffpos++;
         if (m_nHDbuffpos >= 512)
         {
@@ -713,19 +691,21 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return 0x41;
 
     case 0161060:
-        DebugLogFormat(_T("%c%06ho\tGETPORT DLBUF\n"), HU_INSTRUCTION_PC, address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho DLBUF\n"), HU_INSTRUCTION_PC, address);
         //TODO: DLBUF -- Programmable parallel port
         return 0;
     case 0161062:  // DLCSR
         //TODO: DLCSR -- Programmable parallel port
-        DebugLogFormat(_T("%c%06ho\tGETPORT DLCSR\n"), HU_INSTRUCTION_PC, address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho DLCSR\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
     case 0161064:  // KBDCSR
-        DebugLogFormat(_T("%c%06ho\tGETPORT KBDCSR\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        resb = m_keymatrix[m_keypos & 7];
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho KBDCSR -> 0x%02x pos%d\n"), HU_INSTRUCTION_PC, address, resb, m_keypos);
+        m_keypos = (m_keypos + 1) & 7;
+        return resb;
     case 0161066:  // KBDBUF
-        DebugLogFormat(_T("%c%06ho\tGETPORT KBDBUF\n"), HU_INSTRUCTION_PC, address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho KBDBUF\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
     case 0161070:
@@ -984,7 +964,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 
     case 0161066:  // KBDBUF -- Keyboard buffer
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) KBDBUF\n"), HU_INSTRUCTION_PC, word, address);
-        if ((word & 0xf0) == 0xf0)  // End interrupt command
+        if ((word & 0xe0) == 0x40)  // Read FIFO command
+            m_keypos = 0;
+        else if ((word & 0xe0) == 0xc0)  // Clear command
+            m_keypos = 0;
+        else if ((word & 0xe0) == 0xe0)  // End interrupt command
         {
             m_keyint = false;
             SetPICInterrupt(4, false);
