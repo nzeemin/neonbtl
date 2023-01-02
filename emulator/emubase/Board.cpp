@@ -887,13 +887,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161034:  // PPIC
         PrintBinaryValue(buffer, word);
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12,
+                (word & 010) ? _T("") : _T("VIRQ"));
         m_PortPPIC = word;
-        if ((m_PortPPIC & 010) == 0)  // VIRQ
-        {
-            AlertWarning(_T("VIRQ"));
-            DebugBreak();
-        }
+        if ((m_PortPPIC & 010) == 0)
+            m_pCPU->InterruptVIRQ();
         break;
     case 0161036:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);

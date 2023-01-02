@@ -271,8 +271,8 @@ CProcessor::CProcessor(CMotherboard* pBoard)
     m_stepmode = false;
     m_buserror = false;
     m_STRTrq = m_RPLYrq = m_RSVDrq = m_TBITrq = m_ACLOrq = m_HALTrq = m_EVNTrq = false;
-    m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = false;
-    m_haltpinreset = m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+    m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = m_VIRQrq = false;
+    m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
     m_DCLOpin = m_ACLOpin = true;
     m_haltpin = false;
 
@@ -280,7 +280,6 @@ CProcessor::CProcessor(CMotherboard* pBoard)
     m_regsrc = m_methsrc = 0;
     m_regdest = m_methdest = 0;
     m_addrsrc = m_addrdest = 0;
-    memset(m_virq, 0, sizeof(m_virq));
 }
 
 void CProcessor::Execute()
@@ -307,7 +306,7 @@ bool CProcessor::InterruptProcessing()
         m_stepmode = false;
     else
     {
-        m_haltpinreset = m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+        m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
         m_TBITrq = (m_psw & 020) != 0;  // T-bit
 
         if (m_STRTrq)
@@ -392,18 +391,11 @@ bool CProcessor::InterruptProcessing()
             intrVector = 0000100;  intrMode = false;
             m_EVNTreset = true;
         }
-        else if ((m_psw & 0200) != 0200)  // VIRQ, priority 7
+        else if (m_VIRQrq && (m_psw & 0200) != 0200)  // VIRQ, priority 7
         {
-            intrMode = false;
-            for (uint8_t irq = 1; irq <= 15; irq++)
-            {
-                if (m_virq[irq] != 0)
-                {
-                    intrVector = m_virq[irq];
-                    m_VIRQreset = irq;
-                    break;
-                }
-            }
+            //NOTE: Special case just for PK11/16
+            intrVector = 0000274;  intrMode = true;
+            m_VIRQrq = false;
         }
         if (intrVector != 0xFFFF)
         {
@@ -415,7 +407,6 @@ bool CProcessor::InterruptProcessing()
             {
                 uint16_t selVector = m_pBoard->GetSelRegister() & 0x0ff00;
                 intrVector |= selVector;
-                DebugLogFormat(_T("CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), intrVector, GetPC(), GetPSW());
                 // Save PC/PSW to CPC/CPSW
                 m_savepc = GetPC();
                 m_savepsw = GetPSW();
@@ -425,6 +416,7 @@ bool CProcessor::InterruptProcessing()
                 uint16_t new_psw = GetWord(intrVector + 2);
                 if (!m_RPLYrq)
                 {
+                    DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
                     if (m_haltpinreset) m_haltpin = false;
                     SetPSW(new_psw);
                     SetPC(new_pc);
@@ -432,7 +424,6 @@ bool CProcessor::InterruptProcessing()
             }
             else  // USER mode interrupt
             {
-                DebugLogFormat(_T("CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), intrVector, GetPC(), GetPSW());
                 SetHALT(false);
                 // Save PC/PSW to stack
                 SetSP(GetSP() - 2);
@@ -445,11 +436,11 @@ bool CProcessor::InterruptProcessing()
                     {
                         if (m_ACLOreset) m_ACLOrq = false;
                         if (m_EVNTreset) m_EVNTrq = false;
-                        if (m_VIRQreset) m_virq[m_VIRQreset] = 0;
                         uint16_t new_pc = GetWord(intrVector);
                         uint16_t new_psw = GetWord(intrVector + 2);
                         if (!m_RPLYrq)
                         {
+                            DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
                             SetLPSW((uint8_t)(new_psw & 0xff));
                             SetPC(new_pc);
                         }
@@ -498,9 +489,8 @@ void CProcessor::SetDCLOPin(bool value)
         m_waitmode = false;
         m_internalTick = 0;
         m_RPLYrq = m_RSVDrq = m_TBITrq = m_ACLOrq = m_HALTrq = m_EVNTrq = false;
-        m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = false;
-        memset(m_virq, 0, sizeof(m_virq));
-        m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+        m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = m_VIRQrq = false;
+        m_ACLOreset = m_EVNTreset = false;
         m_pBoard->ResetDevices();
     }
 }
@@ -516,9 +506,8 @@ void CProcessor::SetACLOPin(bool value)
         m_waitmode = false;
         m_buserror = false;
         m_RPLYrq = m_RSVDrq = m_TBITrq = m_ACLOrq = m_HALTrq = m_EVNTrq = false;
-        m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = false;
-        memset(m_virq, 0, sizeof(m_virq));
-        m_ACLOreset = m_EVNTreset = false; m_VIRQreset = 0;
+        m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = m_VIRQrq = false;
+        m_ACLOreset = m_EVNTreset = false;
 
         // "Turn On" interrupt processing
         m_STRTrq = true;
@@ -2565,10 +2554,9 @@ void CProcessor::SaveToImage(uint8_t* pImage) const
     flags2 |= (m_TRAPrq ?  16 : 0);
     flags2 |= (m_ACLOreset ? 32 : 0);
     flags2 |= (m_EVNTreset ? 64 : 0);
+    flags2 |= (m_VIRQrq ? 128 : 0);
     *pbImage++ = flags2;                            //   28     1   Flags
-    *pbImage++ = m_VIRQreset;                       //   29     1   VIRQ reset request
-    //                                              //   30     2   Reserved
-    memcpy(pImage + 32, m_virq, 2 * 16);            //   32    32   VIRQ vectors
+    //                                              //   29    35   Reserved
 }
 
 void CProcessor::LoadFromImage(const uint8_t* pImage)
@@ -2605,9 +2593,8 @@ void CProcessor::LoadFromImage(const uint8_t* pImage)
     m_TRAPrq    = ((flags2 & 16) != 0);
     m_ACLOreset = ((flags2 & 32) != 0);
     m_EVNTreset = ((flags2 & 64) != 0);
-    m_VIRQreset = *pbImage++;                       //   29     1   VIRQ reset request
-    //                                              //   30     2   Reserved
-    memcpy(m_virq, pImage + 32, 2 * 16);            //   32    32   VIRQ vectors
+    m_VIRQrq    = ((flags2 & 128) != 0);
+    //                                              //   29    35   Reserved
 }
 
 uint16_t CProcessor::GetWordAddr (uint8_t meth, uint8_t reg)

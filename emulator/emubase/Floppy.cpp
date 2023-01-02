@@ -299,12 +299,12 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         }
         break;
 
-    case FLOPPY_COMMAND_READ_TRACK:
-        if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
-                    m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
-        m_state = FLOPPY_STATE_READ_TRACK;
-        //TODO
-        break;
+    //case FLOPPY_COMMAND_READ_TRACK:
+    //    if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_TRACK C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
+    //                m_command[1], m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7]);
+    //    m_state = FLOPPY_STATE_READ_TRACK;
+    //    //TODO
+    //    break;
 
     case FLOPPY_COMMAND_RECALIBRATE:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD RECALIBRATE 0x%02hx\r\n"), (uint16_t)m_command[1]);
@@ -372,7 +372,7 @@ void CFloppyController::PrepareTrack()
 
     if (m_pDrive == nullptr) return;
 
-    if (m_okTrace) DebugLogFormat(_T("Floppy PREP  %hu TR %hu SD %hu\r\n"), m_drive, m_track, m_side);
+    //if (m_okTrace) DebugLogFormat(_T("Floppy PREP  %hu TR %hu SD %hu\r\n"), m_drive, m_track, m_side);
 
     m_trackchanged = false;
     //NOTE: Not changing m_pDrive->dataptr
