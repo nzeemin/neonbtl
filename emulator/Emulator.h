@@ -67,7 +67,7 @@ void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
 
 // Update cached values after Run or Step
 void Emulator_OnUpdate();
-uint16_t Emulator_GetChangeRamStatus(uint16_t address);
+uint16_t Emulator_GetChangeRamStatus(uint32_t address);
 
 bool Emulator_SaveImage(LPCTSTR sFilePath);
 bool Emulator_LoadImage(LPCTSTR sFilePath);

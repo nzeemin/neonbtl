@@ -117,10 +117,6 @@ bool Emulator_Init()
 
     g_pBoard = new CMotherboard();
 
-    // Allocate memory for old RAM values
-    g_pEmulatorRam = static_cast<uint8_t*>(::calloc(65536, 1));
-    g_pEmulatorChangedRam = static_cast<uint8_t*>(::calloc(65536, 1));
-
     g_pBoard->Reset();
 
     if (m_okEmulatorSound)
@@ -167,6 +163,12 @@ bool Emulator_InitConfiguration(NeonConfiguration configuration)
 
     m_nUptimeFrameCount = 0;
     m_dwEmulatorUptime = 0;
+
+    // Allocate memory for old RAM values
+    ::free(g_pEmulatorRam);
+    g_pEmulatorRam = static_cast<uint8_t*>(::calloc(g_pBoard->GetRamSizeBytes(), 1));
+    ::free(g_pEmulatorChangedRam);
+    g_pEmulatorChangedRam = static_cast<uint8_t*>(::calloc(g_pBoard->GetRamSizeBytes(), 1));
 
     return true;
 }
@@ -484,27 +486,27 @@ void Emulator_OnUpdate()
     g_wEmulatorCpuPC = g_pBoard->GetCPU()->GetPC();
 
     // Update memory change flags
+    uint32_t ramSize = g_pBoard->GetRamSizeBytes();
+    uint8_t* pOld = g_pEmulatorRam;
+    uint8_t* pChanged = g_pEmulatorChangedRam;
+    uint32_t addr = 0;
+    do
     {
-        uint8_t* pOld = g_pEmulatorRam;
-        uint8_t* pChanged = g_pEmulatorChangedRam;
-        uint16_t addr = 0;
-        do
-        {
-            uint8_t newvalue = g_pBoard->GetRAMByte(addr);
-            uint8_t oldvalue = *pOld;
-            *pChanged = (newvalue != oldvalue) ? 255 : 0;
-            *pOld = newvalue;
-            addr++;
-            pOld++;  pChanged++;
-        }
-        while (addr < 65535);
+        uint8_t newvalue = g_pBoard->GetRAMByte(addr);
+        uint8_t oldvalue = *pOld;
+        *pChanged = newvalue ^ oldvalue;
+        *pOld = newvalue;
+        addr++;
+        pOld++;  pChanged++;
     }
+    while (addr < ramSize);
 }
 
 // Get RAM change flag
-//   addrtype - address mode - see ADDRTYPE_XXX constants
-uint16_t Emulator_GetChangeRamStatus(uint16_t address)
+uint16_t Emulator_GetChangeRamStatus(uint32_t address)
 {
+    if (address >= g_pBoard->GetRamSizeBytes() - 1)
+        return 0;
     return *((uint16_t*)(g_pEmulatorChangedRam + address));
 }
 

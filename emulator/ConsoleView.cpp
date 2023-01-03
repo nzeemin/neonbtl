@@ -353,11 +353,11 @@ void ConsoleView_PrintMemoryDump(const CProcessor* pProc, WORD address, int line
         {
             WORD word = dump[i];
             BYTE ch1 = LOBYTE(word);
-            TCHAR wch1 = Translate_BK_Unicode(ch1);
+            TCHAR wch1 = TranslateDeviceCharToUnicode(ch1);
             if (ch1 < 32) wch1 = _T('·');
             *pBuf = wch1;  pBuf++;
             BYTE ch2 = HIBYTE(word);
-            TCHAR wch2 = Translate_BK_Unicode(ch2);
+            TCHAR wch2 = TranslateDeviceCharToUnicode(ch2);
             if (ch2 < 32) wch2 = _T('·');
             *pBuf = wch2;  pBuf++;
         }
