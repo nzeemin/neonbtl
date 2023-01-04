@@ -386,7 +386,7 @@ bool CProcessor::InterruptProcessing()
     else if (m_haltpin && (m_psw & 0400) != 0400)  // HALT signal in USER mode, priority 5
     {
         intrVector = 0170;  intrMode = true;
-        m_haltpinreset = true;
+        //m_haltpinreset = true;
     }
     else if (m_EVNTrq && (m_psw & 0200) != 0200)  // EVNT signal, priority 6
     {
@@ -396,9 +396,27 @@ bool CProcessor::InterruptProcessing()
     else if (m_VIRQrq && (m_psw & 0200) != 0200)  // VIRQ, priority 7
     {
         //NOTE: Special case just for PK11/16
-        intrVector = 0000274;  intrMode = true;
+        intrVector = (m_pBoard->GetSelRegister() & 0x0ff00) | 0000274;  intrMode = true;
         m_VIRQrq = false;
+
+        SetSP(GetSP() - 2);
+        SetWord(GetSP(), GetCPSW());
+        SetSP(GetSP() - 2);
+        SetWord(GetSP(), GetCPC());
+
+        m_psw |= 0400;
+        SetHALT(true);
+
+        uint16_t new_pc = GetWord(intrVector);
+        uint16_t new_psw = GetWord(intrVector + 2);
+
+        DebugLogFormat(_T("%06ho CPU VIRQ INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+
+        SetPSW(new_psw);
+        SetPC(new_pc);
+        return true;
     }
+
     if (intrVector != 0xFFFF)
     {
         if (m_internalTick == 0) m_internalTick = EMT_TIMING;  //ANYTHING UNKNOWN WILL CAUSE EXCEPTION (EMT)
@@ -2515,9 +2533,7 @@ void CProcessor::ExecuteMARK ()  // MARK
 //   2   byte       Stopped flag: 1 - stopped, 0 - not stopped
 //   2   bytes      Internal tick count
 //   3   bytes      Flags
-//   1   byte       VIRQ reset request
-//   2   bytes      Reserved
-//  32   bytes      VIRQ vectors
+//  35   byte       Reserved
 
 void CProcessor::SaveToImage(uint8_t* pImage) const
 {

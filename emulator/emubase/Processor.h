@@ -25,6 +25,7 @@ public:  // Constructor / initialization
     CProcessor(CMotherboard* pBoard);
     void        SetHALTPin(bool value) { m_haltpin = value; }
     bool        GetHALTPin() const { return m_haltpin; }
+    bool        GetVIRQPin() const { return m_VIRQrq; }
     void        SetDCLOPin(bool value);
     void        SetACLOPin(bool value);
     void        MemoryError();

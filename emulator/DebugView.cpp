@@ -370,7 +370,7 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     TextOut(hdc, x, y + 10 * cyLine, _T("PS"), 2);
     WORD psw = arrR[8]; // pProc->GetPSW();
     DrawOctalValue(hdc, x + cxChar * 3, y + 10 * cyLine, psw);
-    //DrawHexValue(hdc, x + cxChar * 10, y + 10 * cyLine, psw);
+    DrawHexValue(hdc, x + cxChar * 10, y + 10 * cyLine, psw);
     ::SetTextColor(hdc, colorText);
     TextOut(hdc, x + cxChar * 15, y + 9 * cyLine, _T("       HP  TNZVC"), 16);
 
@@ -399,13 +399,27 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
     TextOut(hdc, x, y + 13 * cyLine, okHaltMode ? _T("HALT") : _T("USER"), 4);
 
     // Processor HALT pin
-    BOOL okHaltPin = pProc->GetHALTPin();
-    TextOut(hdc, x, y + 14 * cyLine, okHaltPin ? _T("HALTpin 1") : _T("HALTpin 0"), 9);
+    if (pProc->GetHALTPin())
+    {
+        uint16_t ppib = g_pBoard->GetPortView(0161032);
+        TCHAR bufhp[32];
+        _sntprintf(bufhp, 32, _T("HALTpin:%s%s%s%s"),
+                (ppib & 1) == 0 ? _T(" EF0") : _T(""),
+                (ppib & 2) == 0 ? _T(" EF1") : _T(""),
+                (ppib & 8) == 0 ? _T(" IHLT") : _T(""),
+                (ppib & 4) == 4 ? _T(" IOINT") : _T(""));
+        TextOut(hdc, x, y + 14 * cyLine, bufhp, (int)_tcslen(bufhp));
+    }
 
-    // "Stopped" flag
-    BOOL okStopped = pProc->IsStopped();
-    if (okStopped)
-        TextOut(hdc, x + 6 * cxChar, y + 14 * cyLine, _T("STOP"), 4);
+    if (pProc->GetVIRQPin())
+    {
+        TextOut(hdc, x, y + 15 * cyLine, _T("VIRQrq"), 4);
+    }
+
+    //// "Stopped" flag
+    //BOOL okStopped = pProc->IsStopped();
+    //if (okStopped)
+    //    TextOut(hdc, x + 6 * cxChar, y + 14 * cyLine, _T("STOP"), 4);
 }
 
 void DebugView_DrawAddressAndValue(HDC hdc, const CProcessor* pProc, uint16_t address, int x, int y, int cxChar)
