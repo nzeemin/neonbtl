@@ -1131,7 +1131,7 @@ void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pL
 //   4 bytes        NEON_IMAGE_HEADER1
 //   4 bytes        NEON_IMAGE_HEADER2
 //   4 bytes        NEON_IMAGE_VERSION
-//   4 bytes        NEON_IMAGE_SIZE = 18K + 512/1024/2048/4096 KB
+//   4 bytes        NEON_IMAGE_SIZE = 20K + 512/1024/2048/4096 KB
 //   4 bytes        NEON uptime
 //   12 bytes       Not used
 
@@ -1148,8 +1148,8 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
     }
 
     //// Allocate memory
-    //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  memset(pImage, 0, BKIMAGE_SIZE);
-    //::memset(pImage, 0, BKIMAGE_SIZE);
+    //BYTE* pImage = (BYTE*) ::malloc(NEON_IMAGE_SIZE);  memset(pImage, 0, NEON_IMAGE_SIZE);
+    //::memset(pImage, 0, NEON_IMAGE_SIZE);
     //// Prepare header
     //uint32_t* pHeader = (uint32_t*) pImage;
     //*pHeader++ = BKIMAGE_HEADER1;

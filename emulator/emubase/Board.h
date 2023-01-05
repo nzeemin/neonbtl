@@ -66,6 +66,9 @@ typedef void (CALLBACK* SOUNDGENCALLBACK)(unsigned short L, unsigned short R);
 // Serial port output callback
 typedef void (CALLBACK* SERIALOUTCALLBACK)(uint8_t byte);
 
+// Parallel port output callback
+typedef void (CALLBACK* PARALLELOUTCALLBACK)(uint8_t byte);
+
 
 //////////////////////////////////////////////////////////////////////
 
@@ -152,6 +155,7 @@ public:  // Floppy
 public:  // Callbacks
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetSerialOutCallback(SERIALOUTCALLBACK outcallback);
+    void        SetParallelOutCallback(PARALLELOUTCALLBACK outcallback);
 public:  // Memory
     // Read command for execution
     uint16_t GetWordExec(uint16_t address, bool okHaltMode) { return GetWord(address, okHaltMode, true); }
@@ -191,6 +195,7 @@ private:  // Ports: implementation
     uint16_t    m_PICflags;         // PIC 8259A flags, see PIC_Xxx constants
     uint8_t     m_PICRR;            // PIC interrupt request register
     uint8_t     m_PICMR;            // PIC mask register
+    uint16_t    m_PortPPIA;
     uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
     uint16_t    m_PortPPIC;         // 161034
     uint16_t    m_PortHDsdh;
@@ -218,6 +223,7 @@ private:
 private:
     SOUNDGENCALLBACK m_SoundGenCallback;
     SERIALOUTCALLBACK m_SerialOutCallback;
+    PARALLELOUTCALLBACK m_ParallelOutCallback;
 };
 
 

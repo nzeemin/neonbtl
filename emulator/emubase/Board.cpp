@@ -33,11 +33,13 @@ CMotherboard::CMotherboard()
 
     m_dwTrace = 0;
     m_SoundGenCallback = nullptr;
+    m_SerialOutCallback = nullptr;
+    m_ParallelOutCallback = nullptr;
 
     ::memset(m_HR, 0, sizeof(m_HR));
     ::memset(m_UR, 0, sizeof(m_UR));
 
-    // Allocate memory for ROM
+    // Allocate memory
     m_nRamSizeBytes = 0;
     m_pRAM = nullptr;  // RAM allocation in SetConfiguration() method
     m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
@@ -358,7 +360,6 @@ bool CMotherboard::SystemFrame()
         if (frameticks % 32 == 0)  // FDD tick
         {
             m_pFloppyCtl->Periodic();
-            //TODO: OR interrupt from HD controller
             SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
         }
 
@@ -367,6 +368,11 @@ bool CMotherboard::SystemFrame()
         {
             soundBrasErr -= 20000;
             DoSound();
+        }
+
+        if (m_ParallelOutCallback != nullptr && frameticks % 1000 == 0)
+        {
+            //TODO
         }
     }
 
@@ -657,6 +663,11 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%c%06ho\tGETPORT SNL -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)resb);
         return resb;
 
+    case 0161030:  // PPIA -- Parallel port
+        result = 0;//TODO
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIA -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
+        return result;
+
     case 0161032:  // PPIB
         result = m_PortPPIB;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIB -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
@@ -700,14 +711,12 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt());
         return 0x41;
 
-    case 0161060:
+    case 0161060:  // DLBUF
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho DLBUF\n"), HU_INSTRUCTION_PC, address);
-        //TODO: DLBUF -- Programmable parallel port
         return 0;
     case 0161062:  // DLCSR
-        //TODO: DLCSR -- Programmable parallel port
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho DLCSR\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return (m_SerialOutCallback == nullptr) ? 0 : 1;
 
     case 0161064:  // KBDCSR
         resb = m_keymatrix[m_keypos & 7];
@@ -768,7 +777,9 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161450: case 0161451: case 0161452: case 0161453: case 0161454: case 0161455: case 0161456: case 0161457:
     case 0161460: case 0161461: case 0161462: case 0161463: case 0161464: case 0161465: case 0161466: case 0161467:
     case 0161470: case 0161471: case 0161472: case 0161473: case 0161474: case 0161475: case 0161476: case 0161477:
-        return ProcessRtcRead(address);
+        result = ProcessRtcRead(address);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho RTC -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
+        return result;
 
     default:
         DebugLogFormat(_T("%c%06ho\tGETPORT Unknown (%06ho)\n"), HU_INSTRUCTION_PC, address);
@@ -908,9 +919,10 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         ProcessTimerWrite(address, word & 0xff);
         break;
 
-    case 0161030:
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA\n"), HU_INSTRUCTION_PC, word, address);
-        //TODO: PPIA -- Parallel port
+    case 0161030:  // PPIA
+        PrintBinaryValue(buffer, word);
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
+        m_PortPPIA = word;
         break;
     case 0161032:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIB\n"), HU_INSTRUCTION_PC, word, address);
@@ -921,12 +933,12 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12,
                 (word & 010) ? _T("") : _T("VIRQ"));
         m_PortPPIC = word;
+        m_PortPPIB = (m_PortPPIB & ~8) | ((m_PortPPIC & 4) == 0 ? 0 : 8);  // IHLT
         if ((m_PortPPIC & 010) == 0)
             m_pCPU->InterruptVIRQ();
         break;
-    case 0161036:
+    case 0161036:  // PPIP -- Parallel port mode control
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);
-        //TODO: PPIP -- Parallel port mode control
         break;
 
     case 0161040:
@@ -956,17 +968,18 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);
         if (word == 020)  // RESTORE
         {
+            //NOTE: Контроллер винчестера не реализован, но он должен отдать сигнал на прерывание в ответ на команду RESTORE
             SetPICInterrupt(1);//DEBUG
             m_hdint = true;
         }
         break;
 
-    case 0161060:
+    case 0161060:  // DLBUF
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) DLBUF\n"), HU_INSTRUCTION_PC, word, address);
         if (m_SerialOutCallback != nullptr)
             (*m_SerialOutCallback)(word & 0xff);
         break;
-    case 0161062:  // DLCSR -- Programmable Parallel port control
+    case 0161062:  // DLCSR
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) DLCSR\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
@@ -983,15 +996,15 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         }
         break;
 
-    case 0161070:
+    case 0161070:  // FD.CSR
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CSR\n"), HU_INSTRUCTION_PC, word, address);
         break;
-    case 0161072:
+    case 0161072:  // FD.BUF
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.BUF\n"), HU_INSTRUCTION_PC, word, address);
         if ((m_PortHDsdh & 010) == 0)
             m_pFloppyCtl->FifoWrite(word & 0xff);
         break;
-    case 0161076:
+    case 0161076:  // FD.CNT
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) FD.CNT\n"), HU_INSTRUCTION_PC, word, address);
         m_nHDbuff = (word & 3);
         m_nHDbuffpos = 0;
@@ -1172,12 +1185,14 @@ uint8_t CMotherboard::ProcessRtcRead(uint16_t address) const
 //  Offset Length
 //       0     32 bytes  - Header
 //      32    480 bytes  - Board status
-//     512     32 bytes  - CPU status
-//     544   1504 bytes  - RESERVED
-//    2048  16384 bytes  - ROM image 16K
-//   18432               - RAM image 512/1024/2048/4096 KB
+//     512     64 bytes  - CPU status
+//     576    448 bytes  - RESERVED
+//    1024   2048 bytes  - HD buffers 2K
+//    3072   1024 bytes  - RESERVED
+//    4096  16384 bytes  - ROM image 16K
+//   20480               - RAM image 512/1024/2048/4096 KB
 //
-//  Board status (480 bytes):
+//  Board status (448 bytes):
 //      32      4 bytes  - RAM size bytes
 //      36     28 bytes  - RESERVED
 //      64     32 bytes  - HR[8]
@@ -1193,7 +1208,8 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     memcpy(pwImage, &m_nRamSizeBytes, sizeof(m_nRamSizeBytes));  // 4 bytes
     pwImage += sizeof(m_nRamSizeBytes) / 2;
     pwImage += 28 / 2;  // RESERVED
-    //TODO: m_PortPPIB, m_PortPPIC
+    //TODO: PIC data
+    //TODO: PPIA, PPIB, PPIC data
     memcpy(pwImage, m_HR, sizeof(m_HR));  // 32 bytes
     pwImage += sizeof(m_HR) / 2;
     memcpy(pwImage, m_UR, sizeof(m_UR));  // 32 bytes
@@ -1219,16 +1235,15 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     *pImageTimer++ = 0;
     memcpy(pImageTimer, m_timermemory, sizeof(m_timermemory));  // 50 bytes
 
-    //TODO
-
     // CPU status
-    uint8_t* pImageCPU = pImage + 256;
+    uint8_t* pImageCPU = pImage + 512;
     m_pCPU->SaveToImage(pImageCPU);
+    //TODO: HD buffers 2K
     // ROM
-    uint8_t* pImageRom = pImage + 2048;
+    uint8_t* pImageRom = pImage + 4096;
     memcpy(pImageRom, m_pROM, 16 * 1024);
     // RAM
-    uint8_t* pImageRam = pImage + 18432;
+    uint8_t* pImageRam = pImage + 20480;
     memcpy(pImageRam, m_pRAM, m_nRamSizeBytes);
 }
 void CMotherboard::LoadFromImage(const uint8_t* pImage)
@@ -1242,18 +1257,19 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     memcpy(m_HR, pwImage, sizeof(m_HR));  // 32 bytes
     pwImage += sizeof(m_HR) / 2;
     memcpy(m_UR, pwImage, sizeof(m_UR));  // 32 bytes
-    pwImage += sizeof(m_UR) / 2;
-    //TODO
+    //pwImage += sizeof(m_UR) / 2;
+
+    //TODO: Timer
 
     // CPU status
-    const uint8_t* pImageCPU = pImage + 256;
+    const uint8_t* pImageCPU = pImage + 512;
     m_pCPU->LoadFromImage(pImageCPU);
-
+    //TODO: HD buffers 2K
     // ROM
-    const uint8_t* pImageRom = pImage + 2048;
+    const uint8_t* pImageRom = pImage + 4096;
     memcpy(m_pROM, pImageRom, 16 * 1024);
     // RAM
-    const uint8_t* pImageRam = pImage + 18432;
+    const uint8_t* pImageRam = pImage + 20480;
     memcpy(m_pRAM, pImageRam, m_nRamSizeBytes);
 }
 
@@ -1298,6 +1314,20 @@ void CMotherboard::SetSoundGenCallback(SOUNDGENCALLBACK callback)
 void CMotherboard::SetSerialOutCallback(SERIALOUTCALLBACK outcallback)
 {
     m_SerialOutCallback = outcallback;
+}
+
+void CMotherboard::SetParallelOutCallback(PARALLELOUTCALLBACK outcallback)
+{
+    if (outcallback == nullptr)  // Reset callback
+    {
+        //m_Port177101 &= ~2;  // Reset OnLine flag
+        m_ParallelOutCallback = nullptr;
+    }
+    else
+    {
+        //m_Port177101 |= 2;  // Set OnLine flag
+        m_ParallelOutCallback = outcallback;
+    }
 }
 
 
