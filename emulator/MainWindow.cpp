@@ -277,7 +277,7 @@ void MainWindow_RestorePositionAndShow()
     {
         hmonitor = ::MonitorFromRect(&rc, MONITOR_DEFAULTTOPRIMARY);
         MONITORINFO info;
-        VERIFY(::GetMonitorInfo(hmonitor, &info));
+        ::GetMonitorInfo(hmonitor, &info);
         rc = info.rcMonitor;
     }
 

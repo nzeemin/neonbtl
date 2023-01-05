@@ -347,6 +347,18 @@ uint16_t DisassembleInstruction(const uint16_t* pMemory, uint16_t addr, TCHAR* s
     switch (instr & ~(uint16_t)0107777)
     {
     case PI_MOV:
+        if (!okByte && GetDigit(instr, 0) == 6 && GetDigit(instr, 1) == 4)
+        {
+            _tcscpy(strInstr, _T("PUSH"));
+            _sntprintf(strArg, strArgSize - 1, _T("%s"), strSrc);  // strArg = strSrc;
+            return length;
+        }
+        if (!okByte && GetDigit(instr, 2) == 6 && GetDigit(instr, 3) == 2)
+        {
+            _tcscpy(strInstr, _T("POP"));
+            _sntprintf(strArg, strArgSize - 1, _T("%s"), strDst);  // strArg = strDst;
+            return length;
+        }
         _tcscpy(strInstr, okByte ? _T("MOVB") : _T("MOV"));
         _sntprintf(strArg, strArgSize - 1, _T("%s, %s"), strSrc, strDst);  // strArg = strSrc + ", " + strDst;
         return length;

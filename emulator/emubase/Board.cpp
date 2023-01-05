@@ -16,7 +16,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Board.h"
 #include <ctime>
 
-void TraceInstruction(const CProcessor* pProc, CMotherboard* pBoard, uint16_t address);
+void TraceInstruction(const CProcessor* pProc, const CMotherboard* pBoard, uint16_t address);
 
 
 // Macro to printf current instruction address along with H/U flag
@@ -303,7 +303,7 @@ void CMotherboard::DebugTicks()
     m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 
 #if !defined(PRODUCT)
-    if (m_dwTrace)
+    if (m_dwTrace & TRACE_CPU)
         TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
 
@@ -338,7 +338,7 @@ bool CMotherboard::SystemFrame()
             m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 
 #if !defined(PRODUCT)
-            if (m_dwTrace && m_pCPU->GetInternalTick() == 0)
+            if ((m_dwTrace & TRACE_CPU) != 0 && m_pCPU->GetInternalTick() == 0)
                 TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
 
@@ -354,7 +354,7 @@ bool CMotherboard::SystemFrame()
                 TimerTick();
         }
 
-        if (frameticks % 10000 == 0)
+        if (frameticks % 10000 == 9000)
             Tick50();  // 1/50 timer event
 
         if (frameticks % 32 == 0)  // FDD tick
@@ -1128,8 +1128,10 @@ void CMotherboard::SetPICInterrupt(int signal, bool set)
     if (set)
     {
         if ((m_PICRR & s) == 0)
+        {
             m_PICRR |= s;
-        DebugLogFormat(_T("%c%06ho\tSET PIC INT%d, PICRR 0x%02hx PICMR 0x%02hx\n"), HU_INSTRUCTION_PC, signal, m_PICRR, m_PICMR);
+            DebugLogFormat(_T("%c%06ho\tSET PIC INT%d, PICRR 0x%02hx PICMR 0x%02hx\n"), HU_INSTRUCTION_PC, signal, m_PICRR, m_PICMR);
+        }
     }
     else
     {
@@ -1335,7 +1337,7 @@ void CMotherboard::SetParallelOutCallback(PARALLELOUTCALLBACK outcallback)
 
 #if !defined(PRODUCT)
 
-void TraceInstruction(const CProcessor* pProc, CMotherboard* pBoard, uint16_t address)
+void TraceInstruction(const CProcessor* pProc, const CMotherboard* pBoard, uint16_t address)
 {
     bool okHaltMode = pProc->IsHaltMode();
 
@@ -1351,10 +1353,8 @@ void TraceInstruction(const CProcessor* pProc, CMotherboard* pBoard, uint16_t ad
     TCHAR instr[8];
     TCHAR args[32];
     DisassembleInstruction(memory, address, instr, args);
-    TCHAR buffer[64];
-    _sntprintf(buffer, sizeof(buffer) - 1, _T("%s\t%s\t%s\r\n"), bufaddr, instr, args);
 
-    DebugLog(buffer);
+    DebugLogFormat(_T("%s\t%s\t%s\r\n"), bufaddr, instr, args);
 }
 
 #endif

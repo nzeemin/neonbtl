@@ -257,7 +257,7 @@ void PrintHexValue(TCHAR* buffer, WORD value)
     for (int p = 0; p < 4; p++)
     {
         int digit = value & 15;
-        buffer[3 - p] = (digit < 10) ? _T('0') + (TCHAR)digit : _T('a') + (TCHAR)(digit - 10);
+        buffer[3 - p] = (digit < 10) ? _T('0') + (TCHAR)digit : _T('A') + (TCHAR)(digit - 10);
         value = (value >> 4);
     }
     buffer[4] = 0;

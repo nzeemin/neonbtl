@@ -48,6 +48,7 @@ enum NeonConfiguration
 // Trace flags
 #define TRACE_NONE         0  // Turn off all tracing
 #define TRACE_FLOPPY    0100  // Trace floppies
+#define TRACE_CPU      01000  // Trace CPU instructions
 #define TRACE_ALL    0177777  // Trace all
 
 // PIC 8259A flags
