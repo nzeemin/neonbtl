@@ -526,6 +526,7 @@ void MemoryView_OnDraw(HDC hdc)
 
     m_nPageSize = rcClient.bottom / cyLine - 1;
 
+    bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
     WORD address = m_wBaseAddress;
     int y = 1 * cyLine;
     for (;;)    // Draw lines
@@ -540,10 +541,8 @@ void MemoryView_OnDraw(HDC hdc)
         {
             // Get word from memory
             int addrtype;
-            bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
             WORD word = g_pBoard->GetWordView(address, okHalt, FALSE, &addrtype);
             bool okValid = (addrtype != ADDRTYPE_IO) && (addrtype != ADDRTYPE_DENY);
-            WORD wChanged = Emulator_GetChangeRamStatus(address);
 
             if (address == m_wCurrentAddress)
                 ::PatBlt(hdc, x - cxChar / 2, y, cxChar * 7, cyLine, PATCOPY);
@@ -553,7 +552,11 @@ void MemoryView_OnDraw(HDC hdc)
                 if (addrtype == ADDRTYPE_ROM)
                     ::SetTextColor(hdc, colorMemoryRom);
                 else
+                {
+                    uint32_t offset = g_pBoard->GetRAMFullAddress(address, okHalt);
+                    WORD wChanged = Emulator_GetChangeRamStatus(offset);
                     ::SetTextColor(hdc, (wChanged != 0) ? colorChanged : colorText);
+                }
                 if (m_okMemoryByteMode)
                 {
                     PrintOctalValue(buffer, (word & 0xff));

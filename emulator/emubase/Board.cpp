@@ -67,7 +67,9 @@ CMotherboard::CMotherboard()
 
     SetConfiguration(0);  // Default configuration
 
-    //m_pFloppyCtl->SetTrace(true);//DEBUG
+#ifdef _DEBUG
+    m_pFloppyCtl->SetTrace(true);
+#endif
 
     Reset();
 }
@@ -89,8 +91,7 @@ void CMotherboard::SetConfiguration(uint16_t conf)
     m_Configuration = conf;
 
     // Allocate RAM; clean RAM/ROM
-    if (m_pRAM != nullptr)
-        ::free(m_pRAM);
+    ::free(m_pRAM);
     uint32_t nRamSizeKbytes = conf & NEON_COPT_RAMSIZE_MASK;
     if (nRamSizeKbytes == 0)
         nRamSizeKbytes = 512;
@@ -381,17 +382,17 @@ bool CMotherboard::SystemFrame()
 // Motherboard: memory management
 
 // Read word from memory for debugger
-uint8_t CMotherboard::GetRAMByteView(uint32_t address) const
+uint8_t CMotherboard::GetRAMByteView(uint32_t offset) const
 {
-    if (address >= m_nRamSizeBytes)
+    if (offset >= m_nRamSizeBytes)
         return 0;
-    return m_pRAM[address];
+    return m_pRAM[offset];
 }
-uint16_t CMotherboard::GetRAMWordView(uint32_t address) const
+uint16_t CMotherboard::GetRAMWordView(uint32_t offset) const
 {
-    if (address >= m_nRamSizeBytes)
+    if (offset >= m_nRamSizeBytes - 1)
         return 0;
-    return *((uint16_t*)(m_pRAM + address));
+    return *(uint16_t*)(m_pRAM + offset);
 }
 uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pAddrType) const
 {
@@ -418,6 +419,14 @@ uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExe
 
     ASSERT(false);  // If we are here - then addrtype has invalid value
     return 0;
+}
+uint32_t CMotherboard::GetRAMFullAddress(uint16_t address, bool okHaltMode) const
+{
+    int memregno = address >> 13;
+    uint16_t memreg = okHaltMode ? m_HR[memregno] : m_UR[memregno];
+    if (memreg & 8)  // Запрет доступа к ОЗУ
+        return _UI32_MAX;
+    return ((uint32_t)(address & 017777)) + (((uint32_t)(memreg & 037760)) << 8);
 }
 
 uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
@@ -1150,7 +1159,7 @@ uint8_t CMotherboard::ProcessRtcRead(uint16_t address) const
     time_t tnow = time(0);
     struct tm* lnow = localtime(&tnow);
 
-    switch (address & 0377)
+    switch (address)
     {
     case 0:  // Seconds 0..59
         return (uint8_t)lnow->tm_sec;

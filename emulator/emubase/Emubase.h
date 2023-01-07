@@ -91,11 +91,11 @@ class CMotherboard;
 struct CFloppyDrive
 {
     FILE*    fpFile;
-    bool     okReadOnly;    // Write protection flag
     uint8_t* data;          // Data image for the whole disk
     uint16_t dataptr;       // Data offset within m_data - "head" position
     uint16_t datatrack;     // Track number of data in m_data array
     uint16_t dataside;      // Disk side of data in m_data array
+    bool     okReadOnly;    // Write protection flag
 
 public:
     CFloppyDrive();
