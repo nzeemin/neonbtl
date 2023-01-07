@@ -67,7 +67,7 @@ CMotherboard::CMotherboard()
 
     SetConfiguration(0);  // Default configuration
 
-    m_pFloppyCtl->SetTrace(true);//DEBUG
+    //m_pFloppyCtl->SetTrace(true);//DEBUG
 
     Reset();
 }
