@@ -169,8 +169,9 @@ BEGIN
     LTEXT           "NEONBTL Version 1.0",IDC_STATIC,10,10,119,8,SS_NOPREFIX
     LTEXT           "Copyright (C) 2015-2023",IDC_STATIC,10,20,119,8
     DEFPUSHBUTTON   "OK",IDOK,211,10,57,15,WS_GROUP
-    LTEXT           "Author:\r\nNikita Zimin (nzeemin@gmail.com)",IDC_STATIC,10,47,174,36
-    LTEXT           "Source code:\r\nhttps://github.com/nzeemin/neonbtl",IDC_STATIC,10,77,193,28
+    LTEXT           "Author:\r\nNikita Zimin (nzeemin@gmail.com)",IDC_STATIC,10,36,188,36
+    LTEXT           "Special thanks to:\r\nAlexander Xolodov, Alexey Kisly, Andrey Titov AKA Titus",IDC_STATIC,10,54,188,22
+    LTEXT           "Source code:\r\nhttps://github.com/nzeemin/neonbtl",IDC_STATIC,10,80,193,28
     LTEXT           "Build date:",IDC_STATIC,10,120,53,8
     LTEXT           "????",IDC_BUILDDATE,71,120,139,8
 END

@@ -45,8 +45,14 @@ CMotherboard::CMotherboard()
     m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
     m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));
 
+    m_PortPPIA = 0;
+    m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
+    m_PortPPIC = 14;  // IHLT VIRQ - инверсные
+    m_PortHDsdh = 0;
+
     m_nHDbuff = 0;
     m_nHDbuffpos = 0;
+    m_hdint = false;
 
     m_PICRR = m_PICMR = 0;
     m_PICflags = PIC_MODE_ICW1;
@@ -57,6 +63,7 @@ CMotherboard::CMotherboard()
 
     ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
     m_keyint = false;
+    m_keypos = 0;
 
     SetConfiguration(0);  // Default configuration
 
@@ -110,17 +117,18 @@ void CMotherboard::Reset()
     m_pCPU->SetDCLOPin(true);
     m_pCPU->SetACLOPin(true);
 
-    // Reset ports
+    m_PortPPIA = 0;
     m_PortPPIB = 11;  // IHLT EF1 EF0 - инверсные
+    m_PortPPIC = 14;  // IHLT VIRQ - инверсные
     m_PortHDsdh = 0;
-    m_hdint = false;
-    m_keypos = 0;
 
     m_nHDbuff = 0;
     m_nHDbuffpos = 0;
+    m_hdint = false;
 
     ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
     m_keyint = false;
+    m_keypos = 0;
 
     m_timeralarmsec = m_timeralarmmin = m_timeralarmhour = 0;
 
@@ -233,9 +241,10 @@ void CMotherboard::ResetDevices()
     m_pFloppyCtl->Reset();
 
     // Reset PIC 8259A
-    m_PICRR = 0;
-    m_PICflags = PIC_MODE_ICW1;  // Waiting for ICW1
+    //m_PICRR = m_PICMR = 0;
+    //m_PICflags = PIC_MODE_ICW1;  // Waiting for ICW1
     SetPICInterrupt(0);  // Сигнал INIT или команда RESET приводит к прерыванию 0
+    UpdateInterrupts();
 
     // Reset timer
     //TODO
@@ -245,6 +254,7 @@ void CMotherboard::Tick50()  // 50 Hz timer
 {
     //NOTE: На разных платах на INT5 ВН59 идет либо сигнал от RTC 64 Гц либо кадровая синхронизация 50 Гц
     SetPICInterrupt(5);  // Сигнал 50 Гц приводит к прерыванию 5
+    UpdateInterrupts();
 }
 
 void CMotherboard::TimerTick() // Timer Tick - 2 MHz
@@ -287,20 +297,12 @@ void CMotherboard::UpdateKeyboardMatrix(const uint8_t matrix[8])
     ::memcpy(m_keymatrix, matrix, sizeof(m_keymatrix));
 
     if (hasChanges && !m_keyint)
-    {
         m_keyint = true;
-        SetPICInterrupt(4);
-    }
 }
 
 void CMotherboard::DebugTicks()
 {
     m_pCPU->ClearInternalTick();
-
-    // Update signals
-    bool ioint = ((m_PICRR & ~m_PICMR) != 0);
-    m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update IOINT signal
-    m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 
 #if !defined(PRODUCT)
     if (m_dwTrace & TRACE_CPU)
@@ -309,8 +311,9 @@ void CMotherboard::DebugTicks()
 
     m_pCPU->Execute();
 
+    UpdateInterrupts();
+
     m_pFloppyCtl->Periodic();
-    SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
 }
 
 
@@ -332,17 +335,14 @@ bool CMotherboard::SystemFrame()
     {
         for (int procticks = 0; procticks < 16; procticks++)  // CPU ticks
         {
-            // Update signals
-            bool ioint = ((m_PICRR & ~m_PICMR) != 0);
-            m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update IOINT signal
-            m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
-
 #if !defined(PRODUCT)
             if ((m_dwTrace & TRACE_CPU) != 0 && m_pCPU->GetInternalTick() == 0)
                 TraceInstruction(m_pCPU, this, m_pCPU->GetPC() & ~1);
 #endif
 
             m_pCPU->Execute();
+
+            UpdateInterrupts();
 
             if (m_CPUbps != nullptr)  // Check for breakpoints
             {
@@ -354,14 +354,11 @@ bool CMotherboard::SystemFrame()
                 TimerTick();
         }
 
-        if (frameticks % 10000 == 9000)
+        if (frameticks % 10000 == 5000)
             Tick50();  // 1/50 timer event
 
         if (frameticks % 32 == 0)  // FDD tick
-        {
             m_pFloppyCtl->Periodic();
-            SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
-        }
 
         soundBrasErr += soundSamplesPerFrame;
         if (2 * soundBrasErr >= 20000)
@@ -447,8 +444,8 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
             m_pCPU->SetHALTPin(true);
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            //else if (m_HR[1] == 0)
-            //    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         res = GetRAMWord(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETWORD %06ho EMUL -> %06ho\n"), HU_INSTRUCTION_PC, address, res);
@@ -485,8 +482,8 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
             m_pCPU->SetHALTPin(true);
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            //else if (m_HR[1] == 0)
-            //    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         resb = GetRAMByte(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETBYTE %06ho EMUL %03ho\n"), HU_INSTRUCTION_PC, address, resb);
@@ -529,8 +526,8 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
             m_pCPU->SetHALTPin(true);
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            //else if (m_HR[1] == 0)
-            //    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -568,8 +565,8 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
             m_pCPU->SetHALTPin(true);
             if (m_HR[0] == 0)
                 m_HR[0] = address;
-            //else if (m_HR[1] == 0)
-            //    m_HR[1] = address;
+            else if (m_HR[1] == 0)
+                m_HR[1] = address;
         }
         return;
     case ADDRTYPE_DENY:
@@ -708,7 +705,6 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CSR\n"), HU_INSTRUCTION_PC, address);
         m_hdint = false;
-        SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt());
         return 0x41;
 
     case 0161060:  // DLBUF
@@ -934,8 +930,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
                 (word & 010) ? _T("") : _T("VIRQ"));
         m_PortPPIC = word;
         m_PortPPIB = (m_PortPPIB & ~8) | ((m_PortPPIC & 4) == 0 ? 0 : 8);  // IHLT
-        if ((m_PortPPIC & 010) == 0)
-            m_pCPU->InterruptVIRQ();
+        m_pCPU->SetVIRQ((m_PortPPIC & 010) == 0);
         break;
     case 0161036:  // PPIP -- Parallel port mode control
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);
@@ -969,7 +964,6 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         if (word == 020)  // RESTORE
         {
             //NOTE: Контроллер винчестера не реализован, но он должен отдать сигнал на прерывание в ответ на команду RESTORE
-            SetPICInterrupt(1);//DEBUG
             m_hdint = true;
         }
         break;
@@ -990,10 +984,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         else if ((word & 0xe0) == 0xc0)  // Clear command
             m_keypos = 0;
         else if ((word & 0xe0) == 0xe0)  // End interrupt command
-        {
             m_keyint = false;
-            SetPICInterrupt(4, false);
-        }
         break;
 
     case 0161070:  // FD.CSR
@@ -1046,7 +1037,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
             break;
         }
 
-    case 0161412:  // Unknown port
+    case 0161412: case 0161413:  // RTC
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
@@ -1074,8 +1065,10 @@ void CMotherboard::ProcessPICWrite(bool a, uint8_t byte)
             else if (byte == 040)  // End of Interrupt command
             {
                 m_PICRR = 0;
-                //NOTE: HR0 и HR1 очищаются в конце обработчика прерывания HALT в BIOS, см. P16HLT.MAC
+                UpdateInterrupts();
             }
+            else
+                DebugLogFormat(_T("PIC Unknown command %03ho\n"), byte);
         }
     }
     else
@@ -1088,6 +1081,7 @@ void CMotherboard::ProcessPICWrite(bool a, uint8_t byte)
         else if (mode == 0)  // READY - set mask
         {
             m_PICMR = byte;
+            UpdateInterrupts();
         }
     }
 }
@@ -1124,6 +1118,19 @@ void CMotherboard::SetPICInterrupt(int signal, bool set)
     uint16_t mode = m_PICflags & PIC_MODE_MASK;
     if (mode != 0)  // not READY
         return;
+
+    //bool ioint = ((m_PICRR & ~m_PICMR) != 0);
+    //if (ioint)
+    //{
+    //    // Определяем приоритет прерывания
+    //    int pr;
+    //    for (pr = 0; pr < 8; pr++)
+    //        if ((m_PICRR & (1 << pr)) != 0)
+    //            break;
+    //    if (pr < signal)
+    //        return;
+    //}
+
     int s = (1 << signal);
     if (set)
     {
@@ -1139,8 +1146,15 @@ void CMotherboard::SetPICInterrupt(int signal, bool set)
             m_PICRR &= ~s;
     }
 
+}
+
+void CMotherboard::UpdateInterrupts()
+{
+    SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
+    SetPICInterrupt(4, m_keyint);
     bool ioint = ((m_PICRR & ~m_PICMR) != 0);
     m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update IOINT signal
+    m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 }
 
 // Get port value for Real Time Clock - ports 0161400..0161476 - КР512ВИ1 == MC146818

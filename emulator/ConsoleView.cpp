@@ -319,6 +319,7 @@ BOOL ConsoleView_SaveMemoryDump()
 
     ::CloseHandle(file);
 
+    ConsoleView_PrintFormat(_T("  Memory saved to %s\r\n"), fname);
     return TRUE;
 }
 

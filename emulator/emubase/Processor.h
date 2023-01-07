@@ -120,7 +120,7 @@ public:  // Processor state
 public:  // Processor control
     void        TickEVNT();  // EVNT signal
     // External interrupt via VIRQ signal
-    void        InterruptVIRQ();
+    void        SetVIRQ(bool value);
     // Execute one processor tick
     void        Execute();
     // Process pending interrupt requests
@@ -321,10 +321,9 @@ inline void CProcessor::SetHALT (bool bFlag)
     if (bFlag) m_psw |= PSW_HALT; else m_psw &= ~PSW_HALT;
 }
 
-inline void CProcessor::InterruptVIRQ()
+inline void CProcessor::SetVIRQ(bool value)
 {
-    if (m_okStopped) return;  // Processor is stopped - nothing to do
-    m_VIRQrq = true;
+    m_VIRQrq = value;
 }
 
 // PSW bits calculations - implementation

@@ -214,6 +214,7 @@ private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
     void        SetPICInterrupt(int signal, bool set = true);  // Set PIC interrupt signal 0..7
+    void        UpdateInterrupts();
     uint8_t     ProcessRtcRead(uint16_t address) const;
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);

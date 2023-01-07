@@ -272,7 +272,7 @@ CProcessor::CProcessor(CMotherboard* pBoard)
     m_buserror = false;
     m_STRTrq = m_RPLYrq = m_RSVDrq = m_TBITrq = m_ACLOrq = m_HALTrq = m_EVNTrq = false;
     m_ILLGrq = m_FIS_rq = m_BPT_rq = m_IOT_rq = m_EMT_rq = m_TRAPrq = m_VIRQrq = false;
-    m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
+    m_ACLOreset = m_EVNTreset = false;
     m_DCLOpin = m_ACLOpin = true;
     m_haltpin = false;
 
@@ -308,7 +308,7 @@ bool CProcessor::InterruptProcessing()
         return false;
     }
 
-    m_haltpinreset = m_ACLOreset = m_EVNTreset = false;
+    m_ACLOreset = m_EVNTreset = false;
     m_TBITrq = (m_psw & 020) != 0;  // T-bit
 
     if (m_STRTrq)
@@ -386,7 +386,6 @@ bool CProcessor::InterruptProcessing()
     else if (m_haltpin && (m_psw & 0400) != 0400)  // HALT signal in USER mode, priority 5
     {
         intrVector = 0170;  intrMode = true;
-        //m_haltpinreset = true;
     }
     else if (m_EVNTrq && (m_psw & 0200) != 0200)  // EVNT signal, priority 6
     {
@@ -396,12 +395,13 @@ bool CProcessor::InterruptProcessing()
     else if (m_VIRQrq && (m_psw & 0200) != 0200)  // VIRQ, priority 7
     {
         //NOTE: Special case just for PK11/16
-        m_VIRQrq = false;
 
+        SetHALT(false);
         SetSP(GetSP() - 2);
         SetWord(GetSP(), GetCPSW());
         SetSP(GetSP() - 2);
         SetWord(GetSP(), GetCPC());
+        if (m_RPLYrq) return true;
 
         m_internalTick += 54;
 
@@ -425,13 +425,11 @@ bool CProcessor::InterruptProcessing()
             SetHALT(true);
             uint16_t new_pc = GetWord(intrVector);
             uint16_t new_psw = GetWord(intrVector + 2);
-            if (!m_RPLYrq)
-            {
-                DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
-                if (m_haltpinreset) m_haltpin = false;
-                SetPSW(new_psw);
-                SetPC(new_pc);
-            }
+            if (m_RPLYrq) return true;
+
+            DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            SetPSW(new_psw);
+            SetPC(new_pc);
         }
         else  // USER mode interrupt
         {
@@ -440,23 +438,19 @@ bool CProcessor::InterruptProcessing()
             SetSP(GetSP() - 2);
             SetWord(GetSP(), GetCPSW());
             SetSP(GetSP() - 2);
-            if (!m_RPLYrq)
-            {
-                SetWord(GetSP(), GetCPC());
-                if (!m_RPLYrq)
-                {
-                    if (m_ACLOreset) m_ACLOrq = false;
-                    if (m_EVNTreset) m_EVNTrq = false;
-                    uint16_t new_pc = GetWord(intrVector);
-                    uint16_t new_psw = GetWord(intrVector + 2);
-                    if (!m_RPLYrq)
-                    {
-                        DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
-                        SetLPSW((uint8_t)(new_psw & 0xff));
-                        SetPC(new_pc);
-                    }
-                }
-            }
+            if (m_RPLYrq) return true;
+            SetWord(GetSP(), GetCPC());
+            if (m_RPLYrq) return true;
+
+            if (m_ACLOreset) m_ACLOrq = false;
+            if (m_EVNTreset) m_EVNTrq = false;
+            uint16_t new_pc = GetWord(intrVector);
+            uint16_t new_psw = GetWord(intrVector + 2);
+            if (m_RPLYrq) return true;
+
+            DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            SetLPSW((uint8_t)(new_psw & 0xff));
+            SetPC(new_pc);
         }
 
         return true;
