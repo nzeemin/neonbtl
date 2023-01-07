@@ -45,6 +45,8 @@ void CFloppyDrive::Reset()
 CFloppyController::CFloppyController(CMotherboard* pBoard)
     : m_pBoard(pBoard)
 {
+    ASSERT(pBoard != nullptr);
+
     m_drive = m_side = m_track = 0;
     m_pDrive = m_drivedata;
     m_phase = FLOPPY_PHASE_CMD;

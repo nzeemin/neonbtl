@@ -782,8 +782,6 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         m_pCPU->MemoryError();
         return 0;
     }
-
-    //return 0;
 }
 
 // Read word from port for debugger
@@ -961,11 +959,9 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);
+        //NOTE: Контроллер винчестера не реализован, но он должен отдать сигнал на прерывание в ответ на команду RESTORE
         if (word == 020)  // RESTORE
-        {
-            //NOTE: Контроллер винчестера не реализован, но он должен отдать сигнал на прерывание в ответ на команду RESTORE
             m_hdint = true;
-        }
         break;
 
     case 0161060:  // DLBUF
@@ -977,14 +973,21 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) DLCSR\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
-    case 0161066:  // KBDBUF -- Keyboard buffer
+    case 0161066:  // KBDBUF -- Keyboard buffer, Intel 8279
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) KBDBUF\n"), HU_INSTRUCTION_PC, word, address);
-        if ((word & 0xe0) == 0x40)  // Read FIFO command
+        switch (word & 0xe0)
+        {
+        case 0x00:  // Mode set, ignored
+        case 0x02:  // Clock set, ignored
+            break;
+        case 0x40:  // Read FIFO command
+        case 0xc0:  // Clear command
             m_keypos = 0;
-        else if ((word & 0xe0) == 0xc0)  // Clear command
-            m_keypos = 0;
-        else if ((word & 0xe0) == 0xe0)  // End interrupt command
+            break;
+        case 0xe0:  // End interrupt command
             m_keyint = false;
+            break;
+        }
         break;
 
     case 0161070:  // FD.CSR
@@ -1003,14 +1006,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
             m_pFloppyCtl->Reset();
         break;
 
-    case 0161200:
-    case 0161202:
-    case 0161204:
-    case 0161206:
-    case 0161210:
-    case 0161212:
-    case 0161214:
-    case 0161216:
+    case 0161200: case 0161202: case 0161204: case 0161206:
+    case 0161210: case 0161212: case 0161214: case 0161216:
         {
             DebugLogFormat(_T("%c%06ho\tSETPORT HR %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
             if (!m_pCPU->IsHaltMode())
@@ -1022,14 +1019,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
             break;
         }
 
-    case 0161220:
-    case 0161222:
-    case 0161224:
-    case 0161226:
-    case 0161230:
-    case 0161232:
-    case 0161234:
-    case 0161236:
+    case 0161220: case 0161222: case 0161224: case 0161226:
+    case 0161230: case 0161232: case 0161234: case 0161236:
         {
             DebugLogFormat(_T("%c%06ho\tSETPORT UR %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
             int chunk = (address >> 1) & 7;
@@ -1037,8 +1028,15 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
             break;
         }
 
-    case 0161412: case 0161413:  // RTC
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
+    case 0161400: case 0161401: case 0161402: case 0161403: case 0161404: case 0161405: case 0161406: case 0161407:
+    case 0161410: case 0161411: case 0161412: case 0161413: case 0161414: case 0161415: case 0161416: case 0161417:
+    case 0161420: case 0161421: case 0161422: case 0161423: case 0161424: case 0161425: case 0161426: case 0161427:
+    case 0161430: case 0161431: case 0161432: case 0161433: case 0161434: case 0161435: case 0161436: case 0161437:
+    case 0161440: case 0161441: case 0161442: case 0161443: case 0161444: case 0161445: case 0161446: case 0161447:
+    case 0161450: case 0161451: case 0161452: case 0161453: case 0161454: case 0161455: case 0161456: case 0161457:
+    case 0161460: case 0161461: case 0161462: case 0161463: case 0161464: case 0161465: case 0161466: case 0161467:
+    case 0161470: case 0161471: case 0161472: case 0161473: case 0161474: case 0161475: case 0161476: case 0161477:
+        DebugLogFormat(_T("%c%06ho\tSETPORT RTC %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
     default:

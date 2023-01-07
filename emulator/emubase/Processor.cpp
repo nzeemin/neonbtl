@@ -427,7 +427,7 @@ bool CProcessor::InterruptProcessing()
             uint16_t new_psw = GetWord(intrVector + 2);
             if (m_RPLYrq) return true;
 
-            DebugLogFormat(_T("%06ho CPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            DebugLogFormat(_T("%06ho\tCPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetPSW(new_psw);
             SetPC(new_pc);
         }
@@ -448,7 +448,7 @@ bool CProcessor::InterruptProcessing()
             uint16_t new_psw = GetWord(intrVector + 2);
             if (m_RPLYrq) return true;
 
-            DebugLogFormat(_T("%06ho CPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            DebugLogFormat(_T("%06ho\tCPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetLPSW((uint8_t)(new_psw & 0xff));
             SetPC(new_pc);
         }
