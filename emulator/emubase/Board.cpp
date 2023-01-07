@@ -438,15 +438,12 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
         //TODO: What to do if okExec == true ?
         return GetPortWord(address);
     case ADDRTYPE_EMUL:
-        if ((m_PortPPIB & 1) != 0)  // EF0 = 1
-        {
-            m_PortPPIB &= ~1;  // EF0 = 0
-            m_pCPU->SetHALTPin(true);
-            if (m_HR[0] == 0)
-                m_HR[0] = address;
-            else if (m_HR[1] == 0)
-                m_HR[1] = address;
-        }
+        if ((m_PortPPIB & 1) == 1)  // EF0 inactive?
+            m_HR[0] = address;
+        else
+            m_HR[1] = address;
+        m_PortPPIB &= ~1;  // set EF0 active
+        m_pCPU->SetHALTPin(true);
         res = GetRAMWord(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETWORD %06ho EMUL -> %06ho\n"), HU_INSTRUCTION_PC, address, res);
         return res;
@@ -476,15 +473,12 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
         //TODO: What to do if okExec == true ?
         return GetPortByte(address);
     case ADDRTYPE_EMUL:
-        if ((m_PortPPIB & 1) != 0)  // EF0 = 1
-        {
-            m_PortPPIB &= ~1;  // EF0 = 0
-            m_pCPU->SetHALTPin(true);
-            if (m_HR[0] == 0)
-                m_HR[0] = address;
-            else if (m_HR[1] == 0)
-                m_HR[1] = address;
-        }
+        if ((m_PortPPIB & 1) == 1)  // EF0 inactive?
+            m_HR[0] = address;
+        else
+            m_HR[1] = address;
+        m_PortPPIB &= ~1;  // set EF0 active
+        m_pCPU->SetHALTPin(true);
         resb = GetRAMByte(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETBYTE %06ho EMUL %03ho\n"), HU_INSTRUCTION_PC, address, resb);
         return resb;
@@ -520,15 +514,12 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETWORD %06ho -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, word, address);
         SetRAMWord(offset & 07777, word);
-        if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
-        {
-            m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_pCPU->SetHALTPin(true);
-            if (m_HR[0] == 0)
-                m_HR[0] = address;
-            else if (m_HR[1] == 0)
-                m_HR[1] = address;
-        }
+        if ((m_PortPPIB & 1) == 1)  // EF0 inactive?
+            m_HR[0] = address;
+        else
+            m_HR[1] = address;
+        m_PortPPIB &= ~3;  // set EF1,EF0 active
+        m_pCPU->SetHALTPin(true);
         return;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tSETWORD DENY (%06ho)\n"), HU_INSTRUCTION_PC, address);
@@ -559,15 +550,12 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETBYTE %03o -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, byte, address);
         SetRAMByte(offset & 07777, byte);
-        if ((m_PortPPIB & 3) != 0)  // EF1, EF0 = 1
-        {
-            m_PortPPIB &= ~3;  // EF1,EF0 = 0
-            m_pCPU->SetHALTPin(true);
-            if (m_HR[0] == 0)
-                m_HR[0] = address;
-            else if (m_HR[1] == 0)
-                m_HR[1] = address;
-        }
+        if ((m_PortPPIB & 1) == 1)  // EF0 inactive?
+            m_HR[0] = address;
+        else
+            m_HR[1] = address;
+        m_PortPPIB &= ~3;  // set EF1,EF0 active
+        m_pCPU->SetHALTPin(true);
         return;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tSETBYTE DENY (%06ho)\n"), HU_INSTRUCTION_PC, address);
