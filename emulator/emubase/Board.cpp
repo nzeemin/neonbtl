@@ -589,6 +589,12 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
             return ADDRTYPE_EMUL;
         }
 
+        if (!okHaltMode && address >= 0177700)
+        {
+            *pOffset = 0;
+            return ADDRTYPE_DENY;
+        }
+
         *pOffset = address & 0007777;
         return ADDRTYPE_RAM;
     }
@@ -906,16 +912,16 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
         m_PortPPIA = word;
         break;
-    case 0161032:
+    case 0161032:  // PPIB
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIB\n"), HU_INSTRUCTION_PC, word, address);
-        //TODO: PPIB -- Parallel port data
         break;
     case 0161034:  // PPIC
         PrintBinaryValue(buffer, word);
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12,
-                (word & 010) ? _T("") : _T("VIRQ"));
-        m_PortPPIC = word;
-        m_PortPPIB = (m_PortPPIB & ~8) | ((m_PortPPIC & 4) == 0 ? 0 : 8);  // IHLT
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s%s%s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12,
+                (word & 010) ? _T("") : _T(" VIRQ"),
+                (word & 4) ? _T("") : _T(" IHLT"));
+        m_PortPPIC = word & 0xff;
+        m_PortPPIB = (m_PortPPIB & ~8) | ((m_PortPPIC & 4) == 0 ? 0 : 8);  // PC2(IHLT) -> PB3
         m_pCPU->SetVIRQ((m_PortPPIC & 010) == 0);
         break;
     case 0161036:  // PPIP -- Parallel port mode control
@@ -969,8 +975,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         case 0x02:  // Clock set, ignored
             break;
         case 0x40:  // Read FIFO command
+            m_keypos = 0;
+            break;
         case 0xc0:  // Clear command
             m_keypos = 0;
+            m_keyint = false;
             break;
         case 0xe0:  // End interrupt command
             m_keyint = false;
@@ -1105,18 +1114,6 @@ void CMotherboard::SetPICInterrupt(int signal, bool set)
     if (mode != 0)  // not READY
         return;
 
-    //bool ioint = ((m_PICRR & ~m_PICMR) != 0);
-    //if (ioint)
-    //{
-    //    // Определяем приоритет прерывания
-    //    int pr;
-    //    for (pr = 0; pr < 8; pr++)
-    //        if ((m_PICRR & (1 << pr)) != 0)
-    //            break;
-    //    if (pr < signal)
-    //        return;
-    //}
-
     int s = (1 << signal);
     if (set)
     {
@@ -1131,7 +1128,6 @@ void CMotherboard::SetPICInterrupt(int signal, bool set)
         if ((m_PICRR & s) != 0)
             m_PICRR &= ~s;
     }
-
 }
 
 void CMotherboard::UpdateInterrupts()
@@ -1139,7 +1135,7 @@ void CMotherboard::UpdateInterrupts()
     SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
     SetPICInterrupt(4, m_keyint);
     bool ioint = ((m_PICRR & ~m_PICMR) != 0);
-    m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update IOINT signal
+    m_PortPPIB = (m_PortPPIB & ~4) | (ioint ? 4 : 0);  // Update PB2(IOINT) signal
     m_pCPU->SetHALTPin((m_PortPPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 }
 
