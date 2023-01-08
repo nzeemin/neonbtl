@@ -565,7 +565,7 @@ void MainWindow_ShowHideKeyboard()
         if (g_hwndKeyboard != INVALID_HANDLE_VALUE)
         {
             ::DestroyWindow(g_hwndKeyboard);
-            g_hwndKeyboard = (HWND) INVALID_HANDLE_VALUE;
+            g_hwndKeyboard = (HWND)INVALID_HANDLE_VALUE;
         }
     }
     else
@@ -575,6 +575,7 @@ void MainWindow_ShowHideKeyboard()
         RECT rcScreen;  GetWindowRect(g_hwndScreen, &rcScreen);
         int yKeyboardTop = rcScreen.bottom - rcScreen.top + 8;
         int cxKeyboardWidth = rcScreen.right - rcScreen.left;
+        cxKeyboardWidth = max(cxKeyboardWidth, 580);
         int cyKeyboardHeight = 200;
 
         if (g_hwndKeyboard == INVALID_HANDLE_VALUE)
