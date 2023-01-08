@@ -131,8 +131,8 @@ BEGIN
         MENUITEM "Debug Views",                 ID_VIEW_DEBUG
         MENUITEM "Disasm Subtitles",            ID_DEBUG_SUBTITLES
         MENUITEM SEPARATOR
-        MENUITEM "Step Into\tF11",              ID_DEBUG_STEPINTO
-        MENUITEM "Step Over\tShift+F11",        ID_DEBUG_STEPOVER
+        MENUITEM "Step Into\tF10",              ID_DEBUG_STEPINTO
+        MENUITEM "Step Over\tShift+F10",        ID_DEBUG_STEPOVER
         MENUITEM SEPARATOR
         MENUITEM "Clear Console Log",           ID_DEBUG_CLEARCONSOLE
         MENUITEM "Delete All Breakpoints",      ID_DEBUG_DELETEALLBREAKPTS
@@ -151,8 +151,8 @@ END
 
 IDC_APPLICATION ACCELERATORS 
 BEGIN
-    VK_F11,         ID_DEBUG_STEPINTO,      VIRTKEY, NOINVERT
-    VK_F11,         ID_DEBUG_STEPOVER,      VIRTKEY, SHIFT, NOINVERT
+    VK_F10,         ID_DEBUG_STEPINTO,      VIRTKEY, NOINVERT
+    VK_F10,         ID_DEBUG_STEPOVER,      VIRTKEY, SHIFT, NOINVERT
 END
 
 

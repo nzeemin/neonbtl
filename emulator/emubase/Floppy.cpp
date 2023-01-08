@@ -330,6 +330,22 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_phase = FLOPPY_PHASE_CMD;
         break;
 
+    case FLOPPY_COMMAND_WRITE_DATA:
+        if (m_okTrace) DebugLogFormat(_T("Floppy CMD WRITE_DATA C%02x H%02x R%02x N%02x EOT%02x GPL%02x DTL%02x\r\n"),
+                    m_command[2], m_command[3], m_command[4], m_command[5], m_command[6], m_command[7], m_command[8]);
+        //TODO: m_state = FLOPPY_STATE_WRITE_DATA;
+        m_phase = FLOPPY_PHASE_RESULT;//DEBUG
+        m_result[0] = 0x20 | (m_command[1] & 3);
+        m_result[1] = 0;//TODO
+        m_result[2] = 0;//TODO
+        m_result[3] = m_command[2];
+        m_result[4] = m_command[3];
+        m_result[5] = m_command[4];
+        m_result[6] = m_command[5];
+        m_resultlen = 7;
+        m_int = true;//DEBUG
+        break;
+
     default:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD 0x%02hx NOT IMPLEMENTED\r\n"), (uint16_t)m_command[0]);
     }

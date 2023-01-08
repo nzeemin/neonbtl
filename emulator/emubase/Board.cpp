@@ -803,6 +803,9 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
 
     default:
         DebugLogFormat(_T("%c%06ho\tGETPORT Unknown (%06ho)\n"), HU_INSTRUCTION_PC, address);
+        // "Неиспользуемые" регистры в диапазоне 161000-161776 при запросе отдают младший байт адреса
+        if (address >= 0161000 && address < 0162000)
+            return address & 0x00ff;
         m_pCPU->MemoryError();
         return 0;
     }
@@ -1052,6 +1055,8 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
 
     default:
         DebugLogFormat(_T("SETPORT Unknown %06ho = %06ho @ %c%06ho\n"), address, word, HU_INSTRUCTION_PC);
+        if (address >= 0161000 && address < 0162000)
+            break;
         m_pCPU->MemoryError();
         break;
     }

@@ -130,7 +130,7 @@ void ScreenView_Create(HWND hwndParent, int x, int y)
             hwndParent, NULL, g_hInst, NULL);
 
     // Initialize m_ScreenKeyState
-    VERIFY(::GetKeyboardState(m_ScreenKeyState));
+    ::memset(m_ScreenKeyState, 0, sizeof(m_ScreenKeyState));
 }
 
 LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -267,47 +267,48 @@ void ScreenView_PrepareScreen()
 
 #define NOKEY 0x0000
 
-// ¿–2 = Esc; «¡ = Backspace
-// —“Œœ = Pause/Break
-// Õ– = LShift
+// ¿–2 = Esc; “‡· = Tab; «¡ = Backspace;  1.. 5 = F1..F5
+// —¡–Œ— = F11; —“Œœ = F12; œŒÃ ”—“ »—œ = F6..F8
+// Õ– = LShift; ”œ– = LCtrl; ¿À‘ = RShift; √–¿‘ = RCtrl
+// +; = `~
 const uint16_t arrPcscan2VscanRus[256] =    // Device keys from PC keys, RUS
 {
     /*         0      1      2      3      4      5      6      7      8      9      a      b      c      d      e      f  */
-    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, NOKEY, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
-    /*1*/    NOKEY, NOKEY, NOKEY, 0x240, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*2*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
+    /*1*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*2*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x420, 0x610, 0x508, 0x510, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*3*/    0x720, 0x102, 0x104, 0x103, 0x008, 0x110, 0x105, 0x020, 0x006, 0x706, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*4*/    NOKEY, 0106, 0111, 0123, 0127, 0125, 0101, 0120, 0122, 0133, 0117, 0114, 0104, 0120, 0124, 0135,
-    /*5*/    0132, 0112, 0113, 0131, 0105, 0107, 0115, 0103, 0136, 0116, 0121, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*6*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*7*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*4*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*5*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*6*/    0x580, 0x501, 0x601, 0x701, 0x502, 0x602, 0x702, 0x540, 0x640, 0x740, NOKEY, 0x504, NOKEY, 0x140, 0x680, NOKEY,
+    /*7*/    0x002, 0x004, 0x003, 0x010, 0x005, 0x703, 0x603, 0x604, NOKEY, NOKEY, 0x704, 0x240, NOKEY, NOKEY, NOKEY, NOKEY,
     /*8*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*9*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*a*/    0x440, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*a*/    0x440, 0x480, 0x280, 0x380, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*b*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*c*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*c*/    0x001, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*d*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*e*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*f*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
 };
-// @ = '
+// @ = '; \ = \; / = /?; _ = -_; -= = =+; :* = ;:
 const uint16_t arrPcscan2VscanLat[256] =    // Device keys from PC keys, LAT
 {
     /*         0      1      2      3      4      5      6      7      8      9      a      b      c      d      e      f  */
-    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, NOKEY, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
-    /*1*/    NOKEY, NOKEY, NOKEY, 0x240, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x080, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*2*/    0x408, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
+    /*1*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x080, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*2*/    0x408, NOKEY, NOKEY, NOKEY, NOKEY, 0x420, 0x610, 0x508, 0x510, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*3*/    0x720, 0x102, 0x104, 0x103, 0x008, 0x110, 0x105, 0x020, 0x006, 0x706, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*4*/    NOKEY, 0x303, 0x320, 0x202, 0x206, 0x108, 0x201, 0x205, 0x620, 0x308, 0x101, 0x203, 0x220, 0x403, 0x210, 0x305,
     /*5*/    0x208, 0x301, 0x310, 0x404, 0x410, 0x204, 0x506, 0x304, 0x405, 0x302, 0x606, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*6*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*7*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*6*/    0x580, 0x501, 0x601, 0x701, 0x502, 0x602, 0x702, 0x540, 0x640, 0x740, NOKEY, 0x504, NOKEY, 0x140, 0x680, NOKEY,
+    /*7*/    0x002, 0x004, 0x003, 0x010, 0x005, 0x703, 0x603, 0x604, NOKEY, NOKEY, 0x704, 0x240, NOKEY, NOKEY, NOKEY, NOKEY,
     /*8*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*9*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*a*/    0x440, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*b*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x406, NOKEY, 0x505, NOKEY,
-    /*c*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
-    /*d*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x306, NOKEY,
+    /*a*/    0x440, 0x480, 0x280, 0x380, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*b*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x708, 0x705, 0x406, 0x605, 0x505, 0x710,
+    /*c*/    0x001, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
+    /*d*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x120, 0x520, 0x106, 0x306, NOKEY,
     /*e*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*f*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
 };
@@ -331,13 +332,14 @@ void ScreenView_ScanKeyboard()
     // Check every key for state change
     for (int scan = 0; scan < 256; scan++)
     {
-        uint16_t vscan = pTable[scan];
+        WORD vscan = pTable[scan];
         BYTE newstate = keys[scan];
         BYTE oldstate = m_ScreenKeyState[scan];
         if ((newstate & 128) != (oldstate & 128))  // Key state changed - key pressed or released
         {
             if ((newstate & 128) != 0 && scan > 2)
                 DebugPrintFormat(_T("Key PC: 0x%02x 0x%04x\r\n"), scan, vscan);
+            KeyboardView_KeyEvent(vscan, (newstate & 128) != 0);
         }
         if (vscan != 0 && (newstate & 128) != 0)
         {
@@ -345,10 +347,15 @@ void ScreenView_ScanKeyboard()
         }
     }
 
+    // Check if we have a key pressed on KeyboardView
+    WORD kvkey = KeyboardView_GetKeyPressed();
+    if (kvkey != 0)
+    {
+        matrix[(kvkey >> 8) & 7] |= (kvkey & 0xff);
+    }
+
     // Save keyboard state
     ::memcpy(m_ScreenKeyState, keys, 256);
-
-    //TODO: Update matrix with KeyboardView keys
 
     ::memcpy(m_KeyboardMatrix, matrix, sizeof(matrix));
 

@@ -10,7 +10,7 @@ Status: Work in progress.
 ![](screenshot/NEONBTL.png)
 
 
-### In Russian / На русском
+### Neon Back to Life!
 
 Это проект эмуляции компьютера [Союз-Неон ПК-11/16](https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16).
 
@@ -18,6 +18,17 @@ Status: Work in progress.
 
 **Союз-Неон ПК 11/16** – советский 16-разрядный персональный компьютер на процессоре Н1806ВМ2.
 По системе команд совместим с Электроника-60, ДВК, т.е. повторяет систему команд DEC PDP-11.
+
+
+### Маппинг клавиатуры
+Используется следующий маппинг клавиатуры Союз-Неон на клавиатуру PC:
+ - <kbd>К1</kbd>..<kbd>К5</kbd> = <kbd>F1</kbd>..<kbd>F5</kbd>
+ - <kbd>ПОМ</kbd> <kbd>УСТ</kbd> <kbd>ИСП</kbd> = <kbd>F6</kbd>..<kbd>F8</kbd>
+ - <kbd>СБРОС</kbd> = <kbd>F11</kbd>, <kbd>СТОП</kbd> = <kbd>F12</kbd>
+ - <kbd>АР2</kbd> = <kbd>Esc</kbd>, <kbd>ЗБ</kbd> = <kbd>Backspace</kbd>
+ - <kbd>Таб</kbd> = <kbd>Tab</kbd>, <kbd>ВВОД</kbd> = <kbd>Enter</kbd>
+ - <kbd>НР</kbd> = <kbd>LShift</kbd>, <kbd>УПР</kbd> = <kbd>LCtrl</kbd>
+ - <kbd>АЛФ</kbd> = <kbd>RShift</kbd>, <kbd>ГРАФ</kbd> = <kbd>RCtrl</kbd>
 
 
 ### Благодарности

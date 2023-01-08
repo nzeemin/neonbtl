@@ -22,11 +22,11 @@ HWND g_hwndKeyboard = (HWND)INVALID_HANDLE_VALUE;  // Keyboard View window handl
 
 int m_nKeyboardBitmapLeft = 0;
 int m_nKeyboardBitmapTop = 0;
-BYTE m_nKeyboardKeyPressed = 0;  // NEON scan-code for the key pressed, or 0
+WORD m_nKeyboardKeyPressed = 0;  // NEON scan-code for the key pressed, or 0
 
 void KeyboardView_OnDraw(HDC hdc);
-BYTE KeyboardView_GetKeyByPoint(int x, int y);
-void Keyboard_DrawKey(HDC hdc, BYTE keyscan);
+WORD KeyboardView_GetKeyByPoint(int x, int y);
+void Keyboard_DrawKey(HDC hdc, WORD keyscan);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -35,102 +35,102 @@ void Keyboard_DrawKey(HDC hdc, BYTE keyscan);
 const WORD m_arrKeyboardKeys[] =
 {
     /*   x1,y1    w,h    NEONscan  */
-    18,  15,  42, 27,    0010, // K1
-    62,  15,  42, 27,    0011, // K2
-    106, 15,  42, 27,    0012, // K3
-    151, 15,  42, 27,    0014, // K4
-    195, 15,  42, 27,    0015, // K5
-    343, 15,  42, 27,    0172, // POM
-    387, 15,  42, 27,    0152, // UST
-    431, 15,  42, 27,    0151, // ISP
-    506, 15,  42, 27,    0171, // SBROS (RESET)
-    551, 15,  42, 27,    0004, // STOP
+    18,  15,  42, 27,    0x002,     // K1
+    62,  15,  42, 27,    0x004,     // K2
+    106, 15,  42, 27,    0x003,     // K3
+    151, 15,  42, 27,    0x010,     // K4
+    195, 15,  42, 27,    0x005,     // K5
+    343, 15,  42, 27,    0x703,     // POM
+    387, 15,  42, 27,    0x603,     // UST
+    431, 15,  42, 27,    0x604,     // ISP
+    506, 15,  42, 27,    0x704,     // SBROS (RESET)
+    551, 15,  42, 27,    0x240,     // STOP
 
-    18,  56,  28, 27,    0006, // AR2
-    47,  56,  28, 27,    0007, // ; +
-    77,  56,  27, 27,    0030, // 1
-    106, 56,  28, 27,    0031, // 2
-    136, 56,  27, 27,    0032, // 3
-    165, 56,  28, 27,    0013, // 4
-    195, 56,  27, 27,    0034, // 5
-    224, 56,  28, 27,    0035, // 6
-    254, 56,  27, 27,    0016, // 7
-    283, 56,  28, 27,    0017, // 8
-    313, 56,  27, 27,    0177, // 9
-    342, 56,  28, 27,    0176, // 0
-    372, 56,  27, 27,    0175, // - =
-    401, 56,  28, 27,    0173, // / ?
-    431, 56,  42, 27,    0132, // Backspace
+    18,  56,  28, 27,    0x080,     // AR2
+    47,  56,  28, 27,    0x001,     // ; +
+    77,  56,  27, 27,    0x102,     // 1
+    106, 56,  28, 27,    0x104,     // 2
+    136, 56,  27, 27,    0x103,     // 3
+    165, 56,  28, 27,    0x008,     // 4
+    195, 56,  27, 27,    0x110,     // 5
+    224, 56,  28, 27,    0x105,     // 6
+    254, 56,  27, 27,    0x540,     // 7
+    283, 56,  28, 27,    0x006,     // 8
+    313, 56,  27, 27,    0x706,     // 9
+    342, 56,  28, 27,    0x720,     // 0
+    372, 56,  27, 27,    0x705,     // - =
+    401, 56,  28, 27,    0x710,     // / ?
+    431, 56,  42, 27,    0x503,     // Backspace
 
-    18,  86,  42, 27,    0026, // TAB
-    62,  86,  27, 27,    0027, // É J
-    91,  86,  28, 27,    0050, // Ö C
-    121, 86,  27, 27,    0051, // Ó U
-    150, 86,  28, 27,    0052, // Ê K
-    180, 86,  27, 27,    0033, // Å E
-    210, 86,  28, 27,    0054, // Í N
-    239, 86,  27, 27,    0055, // Ã G
-    269, 86,  27, 27,    0036, // Ø [
-    298, 86,  28, 27,    0037, // Ù ]
-    328, 86,  27, 27,    0157, // Ç Z
-    357, 86,  28, 27,    0156, // Õ H
-    387, 86,  27, 27,    0155, // Ú
-    416, 86,  28, 27,    0174, // : *
+    18,  86,  42, 27,    0x180,     // TAB
+    62,  86,  27, 27,    0x101,     // É J
+    91,  86,  28, 27,    0x202,     // Ö C
+    121, 86,  27, 27,    0x204,     // Ó U
+    150, 86,  28, 27,    0x203,     // Ê K
+    180, 86,  27, 27,    0x108,     // Å E
+    210, 86,  28, 27,    0x210,     // Í N
+    239, 86,  27, 27,    0x205,     // Ã G
+    269, 86,  27, 27,    0x120,     // Ø [
+    298, 86,  28, 27,    0x106,     // Ù ]
+    328, 86,  27, 27,    0x606,     // Ç Z
+    357, 86,  28, 27,    0x620,     // Õ H
+    387, 86,  27, 27,    0x605,     // Ú
+    416, 86,  28, 27,    0x708,     // : *
 
-    18,  115, 49, 27,    0046, // UPR
-    69,  115, 28, 27,    0047, // Ô F
-    99,  115, 27, 27,    0070, // Û Y
-    128, 115, 28, 27,    0071, // Â W
-    158, 115, 27, 27,    0072, // À A
-    187, 115, 28, 27,    0053, // Ï P
-    217, 115, 27, 27,    0074, // Ð R
-    246, 115, 28, 27,    0075, // Î O
-    276, 115, 27, 27,    0056, // Ë L
-    305, 115, 28, 27,    0057, // Ä D
-    335, 115, 27, 27,    0137, // Æ V
-    364, 115, 28, 27,    0136, // Ý Backslash
-    394, 115, 35, 27,    0135, // . >
-    431, 115, 16, 27,    0153, // ENTER - left part
-    446, 86,  27, 56,    0153, // ENTER - right part
+    18,  115, 49, 27,    0x280,     // UPR
+    69,  115, 28, 27,    0x201,     // Ô F
+    99,  115, 27, 27,    0x302,     // Û Y
+    128, 115, 28, 27,    0x304,     // Â W
+    158, 115, 27, 27,    0x303,     // À A
+    187, 115, 28, 27,    0x208,     // Ï P
+    217, 115, 27, 27,    0x310,     // Ð R
+    246, 115, 28, 27,    0x305,     // Î O
+    276, 115, 27, 27,    0x220,     // Ë L
+    305, 115, 28, 27,    0x206,     // Ä D
+    335, 115, 27, 27,    0x506,     // Æ V
+    364, 115, 28, 27,    0x520,     // Ý Backslash
+    394, 115, 35, 27,    0x505,     // . >
+    431, 115, 15, 27,    0x608,     // ENTER - left part
+    446, 86,  27, 56,    0x608,     // ENTER - right part
 
-    18,  145, 34, 27,    0106, // ALF
-    55,  145, 27, 27,    0066, // GRAF
-    84,  145, 27, 27,    0067, // ß Q
-    114, 145, 27, 27,    0110, // × ^
-    143, 145, 27, 27,    0111, // Ñ S
-    173, 145, 27, 27,    0112, // Ì
-    202, 145, 27, 27,    0073, // È I
-    232, 145, 27, 27,    0114, // Ò
-    261, 145, 27, 27,    0115, // Ü X
-    291, 145, 27, 27,    0076, // Á B
-    320, 145, 28, 27,    0077, // Þ @
-    350, 145, 34, 27,    0117, // , <
+    18,  145, 34, 27,    0x480,     // ALF
+    55,  145, 27, 27,    0x380,     // GRAF
+    84,  145, 27, 27,    0x301,     // ß Q
+    114, 145, 27, 27,    0x402,     // × ^
+    143, 145, 27, 27,    0x404,     // Ñ S
+    173, 145, 27, 27,    0x403,     // Ì
+    202, 145, 27, 27,    0x308,     // È I
+    232, 145, 27, 27,    0x410,     // Ò
+    261, 145, 27, 27,    0x405,     // Ü X
+    291, 145, 27, 27,    0x320,     // Á B
+    320, 145, 28, 27,    0x306,     // Þ @
+    350, 145, 34, 27,    0x406,     // , <
 
-    18,  174, 56, 27,    0105, // Left Shift
-    77,  174, 34, 27,    0107, // FIKS
-    114, 174, 211, 27,    0113, // Space bar
-    328, 174, 56, 27,    0105, // Right Shift
+    18,  174, 56, 27,    0x440,     // Left Shift
+    77,  174, 34, 27,    0x401,     // FIKS
+    114, 174, 211, 27,   0x408,     // Space bar
+    328, 174, 56, 27,    0x440,     // Right Shift
 
-    387, 145, 27, 56,    0116, // Left
-    416, 145, 28, 27,    0154, // Up
-    416, 174, 28, 27,    0134, // Down
-    446, 145, 27, 56,    0133, // Right
+    387, 145, 27, 56,    0x420,     // Left
+    416, 145, 28, 27,    0x610,     // Up
+    416, 174, 28, 27,    0x510,     // Down
+    446, 145, 27, 56,    0x508,     // Right
 
-    506, 56,  28, 27,    0131, // + NumPad
-    536, 56,  27, 27,    0025, // - NumPad
-    565, 56,  28, 27,    0005, // , NumPad
-    506, 86,  28, 27,    0125, // 7 NumPad
-    536, 86,  27, 27,    0145, // 8 NumPad
-    565, 86,  28, 27,    0165, // 9 NumPad
-    506, 115, 28, 27,    0130, // 4 NumPad
-    536, 115, 27, 27,    0150, // 5 NumPad
-    565, 115, 28, 27,    0170, // 6 NumPad
-    506, 145, 28, 27,    0127, // 1 NumPad
-    536, 145, 27, 27,    0147, // 2 NumPad
-    565, 145, 28, 27,    0167, // 3 NumPad
-    506, 174, 28, 27,    0126, // 0 NumPad
-    536, 174, 27, 27,    0146, // . NumPad
-    565, 174, 28, 27,    0166, // ENTER NumPad
+    506, 56,  28, 27,    0x504,     // + NumPad
+    536, 56,  27, 27,    0x140,     // - NumPad
+    565, 56,  28, 27,    0x040,     // , NumPad
+    506, 86,  28, 27,    0x540,     // 7 NumPad
+    536, 86,  27, 27,    0x640,     // 8 NumPad
+    565, 86,  28, 27,    0x740,     // 9 NumPad
+    506, 115, 28, 27,    0x502,     // 4 NumPad
+    536, 115, 27, 27,    0x110,     // 5 NumPad
+    565, 115, 28, 27,    0x105,     // 6 NumPad
+    506, 145, 28, 27,    0x501,     // 1 NumPad
+    536, 145, 27, 27,    0x601,     // 2 NumPad
+    565, 145, 28, 27,    0x701,     // 3 NumPad
+    506, 174, 28, 27,    0x580,     // 0 NumPad
+    536, 174, 27, 27,    0x680,     // . NumPad
+    565, 174, 28, 27,    0x780,     // ENTER NumPad
 
 };
 const int m_nKeyboardKeysCount = sizeof(m_arrKeyboardKeys) / sizeof(WORD) / 5;
@@ -196,7 +196,7 @@ LRESULT CALLBACK KeyboardViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
         {
             POINT ptCursor;  ::GetCursorPos(&ptCursor);
             ::ScreenToClient(g_hwndKeyboard, &ptCursor);
-            BYTE keyscan = KeyboardView_GetKeyByPoint(ptCursor.x, ptCursor.y);
+            WORD keyscan = KeyboardView_GetKeyByPoint(ptCursor.x, ptCursor.y);
             LPCTSTR cursor = (keyscan == 0) ? IDC_ARROW : IDC_HAND;
             ::SetCursor(::LoadCursor(NULL, cursor));
         }
@@ -205,7 +205,7 @@ LRESULT CALLBACK KeyboardViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPA
         {
             int x = LOWORD(lParam);
             int y = HIWORD(lParam);
-            BYTE keyscan = KeyboardView_GetKeyByPoint(x, y);
+            WORD keyscan = KeyboardView_GetKeyByPoint(x, y);
             if (keyscan != 0)
             {
                 // Fire keydown event and capture mouse
@@ -270,20 +270,32 @@ void KeyboardView_OnDraw(HDC hdc)
         Keyboard_DrawKey(hdc, m_nKeyboardKeyPressed);
 
     //// Show key mappings
+    //HFONT hfont = CreateDialogFont();
+    //HGDIOBJ hOldFont = ::SelectObject(hdc, hfont);
+    //::SetBkMode(hdc, TRANSPARENT);
+    //::SetTextColor(hdc, RGB(240, 0, 0));
     //for (int i = 0; i < m_nKeyboardKeysCount; i++)
     //{
+    //    if (m_arrKeyboardKeys[i * 5 + 4] == 0)
+    //        continue;
+    //    TCHAR text[10];
+    //    _sntprintf(text, sizeof(text) / sizeof(TCHAR) - 1, _T("%03x"), (int)m_arrKeyboardKeys[i * 5 + 4]);
+
     //    RECT rcKey;
     //    rcKey.left = m_nKeyboardBitmapLeft + m_arrKeyboardKeys[i * 5];
     //    rcKey.top = m_nKeyboardBitmapTop + m_arrKeyboardKeys[i * 5 + 1];
     //    rcKey.right = rcKey.left + m_arrKeyboardKeys[i * 5 + 2];
     //    rcKey.bottom = rcKey.top + m_arrKeyboardKeys[i * 5 + 3];
 
-    //    ::DrawFocusRect(hdc, &rcKey);
+    //    //::DrawFocusRect(hdc, &rcKey);
+    //    ::DrawText(hdc, text, wcslen(text), &rcKey, DT_NOPREFIX | DT_SINGLELINE | DT_RIGHT | DT_BOTTOM);
     //}
+    //::SelectObject(hdc, hOldFont);
+    //VERIFY(::DeleteObject(hfont));
 }
 
 // Returns: NEON scan-code of key under the cursor position, or 0 if not found
-BYTE KeyboardView_GetKeyByPoint(int x, int y)
+WORD KeyboardView_GetKeyByPoint(int x, int y)
 {
     for (int i = 0; i < m_nKeyboardKeysCount; i++)
     {
@@ -295,24 +307,36 @@ BYTE KeyboardView_GetKeyByPoint(int x, int y)
 
         if (x >= rcKey.left && x < rcKey.right && y >= rcKey.top && y < rcKey.bottom)
         {
-            return (BYTE) m_arrKeyboardKeys[i * 5 + 4];
+            return m_arrKeyboardKeys[i * 5 + 4];
         }
     }
     return 0;
 }
 
-void Keyboard_DrawKey(HDC hdc, BYTE keyscan)
+void Keyboard_DrawKey(HDC hdc, WORD keyscan)
 {
     for (int i = 0; i < m_nKeyboardKeysCount; i++)
         if (keyscan == m_arrKeyboardKeys[i * 5 + 4])
         {
-            RECT rcKey;
-            rcKey.left = m_nKeyboardBitmapLeft + m_arrKeyboardKeys[i * 5];
-            rcKey.top = m_nKeyboardBitmapTop + m_arrKeyboardKeys[i * 5 + 1];
-            rcKey.right = rcKey.left + m_arrKeyboardKeys[i * 5 + 2];
-            rcKey.bottom = rcKey.top + m_arrKeyboardKeys[i * 5 + 3];
-            ::DrawFocusRect(hdc, &rcKey);
+            int x = m_nKeyboardBitmapLeft + m_arrKeyboardKeys[i * 5];
+            int y = m_nKeyboardBitmapTop + m_arrKeyboardKeys[i * 5 + 1];
+            int w = m_arrKeyboardKeys[i * 5 + 2];
+            int h = m_arrKeyboardKeys[i * 5 + 3];
+            ::PatBlt(hdc, x, y, w, h, PATINVERT);
         }
+}
+
+// Get pressed key if any, to call from ScreenView
+WORD KeyboardView_GetKeyPressed()
+{
+    return m_nKeyboardKeyPressed;
+}
+// Display key pressed, to call from ScreenView
+void KeyboardView_KeyEvent(WORD keyscan, BOOL pressed)
+{
+    HDC hdc = ::GetDC(g_hwndKeyboard);
+    Keyboard_DrawKey(hdc, keyscan);
+    ::ReleaseDC(g_hwndKeyboard, hdc);
 }
 
 

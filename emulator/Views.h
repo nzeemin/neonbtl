@@ -57,6 +57,8 @@ void KeyboardView_Init();
 void KeyboardView_Done();
 void KeyboardView_Create(HWND hwndParent, int x, int y, int width, int height);
 LRESULT CALLBACK KeyboardViewWndProc(HWND, UINT, WPARAM, LPARAM);
+void KeyboardView_KeyEvent(WORD keyscan, BOOL pressed);
+WORD KeyboardView_GetKeyPressed();
 
 
 //////////////////////////////////////////////////////////////////////
@@ -71,7 +73,6 @@ void DebugView_Redraw();
 LRESULT CALLBACK DebugViewWndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK DebugViewViewerWndProc(HWND, UINT, WPARAM, LPARAM);
 void DebugView_OnUpdate();
-BOOL DebugView_IsRegisterChanged(int regno);
 
 
 //////////////////////////////////////////////////////////////////////
