@@ -193,32 +193,32 @@ private:  // Access to I/O ports
 public:  // Saving/loading emulator status
     void        SaveToImage(uint8_t* pImage);
     void        LoadFromImage(const uint8_t* pImage);
-private:  // Ports: implementation
+private:  // Ports/devices: implementation
     uint16_t    m_PICflags;         // PIC 8259A flags, see PIC_Xxx constants
     uint8_t     m_PICRR;            // PIC interrupt request register
     uint8_t     m_PICMR;            // PIC mask register
-    uint16_t    m_PortPPIA;
-    uint16_t    m_PortPPIB;         // 161032 Printer data - bits 0..7
-    uint16_t    m_PortPPIC;         // 161034
-    uint16_t    m_PortHDsdh;
+    uint16_t    m_PPIA;
+    uint16_t    m_PPIB;             // 161032 Printer data - bits 0..7
+    uint16_t    m_PPIC;             // 161034
+    uint16_t    m_hdsdh;
     bool        m_hdint;            // HDD interrupt flag
-    uint8_t     m_nHDbuff;          // Number of the current HD buffer, 0..3
+    uint8_t     m_nHDbuff;          // Index of the current HD buffer, 0..3
     uint16_t    m_nHDbuffpos;       // Current position in the current HD buffer, 0..511
-    uint8_t     m_keymatrix[8];     // Keyboard key matrix
-    bool        m_keyint;           // Keyboard interrupt flag
+    uint8_t     m_keymatrix[8];     // Keyboard matrix
     uint16_t    m_keypos;           // Keyboard reading position 0..7
-private:  // Timer implementation
+    bool        m_keyint;           // Keyboard interrupt flag
     PIT8253     m_snd, m_snl;
-    uint8_t     m_timeralarmsec, m_timeralarmmin, m_timeralarmhour;
-    uint8_t     m_timermemory[50];
+    uint8_t     m_rtcalarmsec, m_rtcalarmmin, m_rtcalarmhour;
+    uint8_t     m_rtcmemory[50];
 private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
-    void        SetPICInterrupt(int signal, bool set = true);  // Set PIC interrupt signal 0..7
+    void        SetPICInterrupt(int signal, bool set = true);  // Set/reset PIC interrupt signal 0..7
     void        UpdateInterrupts();
     uint8_t     ProcessRtcRead(uint16_t address) const;
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);
+    void        ProcessKeyboardWrite(uint8_t byte);
     void        DoSound();
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
