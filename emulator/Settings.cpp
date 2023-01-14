@@ -307,6 +307,7 @@ struct ColorDescriptorStruct
 }
 static ColorDescriptors[ColorIndicesCount] =
 {
+    { _T("ColorScreenBack"),        RGB(40,  40,  40),  FALSE, _T("Screen Background") },
     { _T("ColorDebugText"),         RGB(0,   0,   0),   FALSE, _T("Debug Text") },
     { _T("ColorDebugBackCurrent"),  RGB(255, 255, 224), FALSE, _T("Debug Current Line Background") },
     { _T("ColorDebugValueChanged"), RGB(255, 0,   0),   FALSE, _T("Debug Value Changed") },
@@ -336,7 +337,7 @@ LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex)
 
 COLORREF Settings_GetColor(ColorIndices colorIndex)
 {
-    if (colorIndex < 0 || colorIndex >= ColorIndicesCount)
+    if (colorIndex >= ColorIndicesCount)
         return 0;
 
     ColorDescriptorStruct* desc = ColorDescriptors + colorIndex;

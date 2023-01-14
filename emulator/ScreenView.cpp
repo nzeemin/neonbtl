@@ -22,9 +22,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 //////////////////////////////////////////////////////////////////////
 
 
-#define COLOR_BK_BACKGROUND RGB(115,115,115)
-
-
 HWND g_hwndScreen = NULL;  // Screen View window handle
 
 HDRAWDIB m_hdd = NULL;
@@ -219,7 +216,8 @@ void ScreenView_OnDraw(HDC hdc)
 {
     if (m_bits == NULL) return;
 
-    HBRUSH hBrush = ::CreateSolidBrush(COLOR_BK_BACKGROUND);
+    COLORREF colorBack = Settings_GetColor(ColorScreenBack);
+    HBRUSH hBrush = ::CreateSolidBrush(colorBack);
     HGDIOBJ hOldBrush = ::SelectObject(hdc, hBrush);
 
     RECT rc;  ::GetClientRect(g_hwndScreen, &rc);
