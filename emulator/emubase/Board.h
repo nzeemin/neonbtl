@@ -216,6 +216,7 @@ private:
     void        SetPICInterrupt(int signal, bool set = true);  // Set/reset PIC interrupt signal 0..7
     void        UpdateInterrupts();
     uint8_t     ProcessRtcRead(uint16_t address) const;
+    void        ProcessRtcWrite(uint16_t address, uint8_t byte);
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);
     void        ProcessKeyboardWrite(uint8_t byte);

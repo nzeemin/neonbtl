@@ -452,8 +452,6 @@ uint32_t CMotherboard::GetRAMFullAddress(uint16_t address, bool okHaltMode) cons
 
 uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
 {
-    address &= ~1;
-
     uint32_t offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
     uint16_t res;
@@ -461,9 +459,9 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
     switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        return GetRAMWord(offset);
+        return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
-        return GetROMWord(LOWORD(offset));
+        return GetROMWord(LOWORD(offset & ~1));
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == true ?
         return GetPortWord(address);
@@ -474,7 +472,7 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
             m_HR[1] = address;
         m_PPIB &= ~1;  // set EF0 active
         m_pCPU->SetHALTPin(true);
-        res = GetRAMWord(offset & 07777);
+        res = GetRAMWord(offset & 07776);
         DebugLogFormat(_T("%c%06ho\tGETWORD %06ho EMUL -> %06ho\n"), HU_INSTRUCTION_PC, address, res);
         return res;
     case ADDRTYPE_DENY:
@@ -1051,6 +1049,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161460: case 0161461: case 0161462: case 0161463: case 0161464: case 0161465: case 0161466: case 0161467:
     case 0161470: case 0161471: case 0161472: case 0161473: case 0161474: case 0161475: case 0161476: case 0161477:
         DebugLogFormat(_T("%c%06ho\tSETPORT RTC %06ho -> (%06ho)\n"), HU_INSTRUCTION_PC, word, address);
+        ProcessRtcWrite(address, word & 0xff);
         break;
 
     default:
@@ -1183,17 +1182,25 @@ uint8_t CMotherboard::ProcessRtcRead(uint16_t address) const
         return (uint8_t)lnow->tm_hour;
     case 5:  // Hours alarm
         return m_rtcalarmhour;
-    case 6:  // Day of week
-        return (uint8_t)(lnow->tm_wday + 1);  // 1..7 - Вс..Сб
+    case 6:  // Day of week 1..7 Su..Sa
+        return (uint8_t)(lnow->tm_wday + 1);
     case 7:  // Day of month 1..31
         return (uint8_t)lnow->tm_mday;
     case 8:  // Month 1..12
-        return (uint8_t)lnow->tm_mon;
+        return (uint8_t)(lnow->tm_mon + 1);
     case 9:  // Year 0..99
         return (uint8_t)(lnow->tm_year % 100);
     default:
         return 0;
     }
+}
+
+void CMotherboard::ProcessRtcWrite(uint16_t address, uint8_t byte)
+{
+    address = address & 0377;
+
+    if (address >= 14 && address < 64)
+        m_rtcmemory[address - 14] = byte;
 }
 
 
