@@ -224,10 +224,11 @@ BOOL MainWindow_InitStatusbar()
     if (!m_hwndStatusbar)
         return FALSE;
 
-    int statusbarParts[3];
+    int statusbarParts[4];
     statusbarParts[0] = 300;
-    statusbarParts[1] = 380;
-    statusbarParts[2] = -1;
+    statusbarParts[1] = 370;
+    statusbarParts[2] = 440;
+    statusbarParts[3] = -1;
     SendMessage(m_hwndStatusbar, SB_SETPARTS, sizeof(statusbarParts) / sizeof(int), (LPARAM) statusbarParts);
 
     return TRUE;

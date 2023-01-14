@@ -151,6 +151,8 @@ public:  // Floppy
     void        DetachFloppyImage(int slot);
     bool        IsFloppyImageAttached(int slot) const;
     bool        IsFloppyReadOnly(int slot) const;
+    // Check if the floppy drive engine rotates the disks.
+    bool        IsFloppyEngineOn() const;
     // Fill the current HD buffer, to call from floppy controller only
     bool        FillHDBuffer(const uint8_t* data);
 public:  // Callbacks

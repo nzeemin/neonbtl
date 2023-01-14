@@ -120,6 +120,7 @@ protected:
     uint8_t  m_track;       // Track number: 0 to 79
     uint8_t  m_side;        // Disk side: 0 or 1
     bool     m_int;         // Interrupt flag
+    bool     m_motor;       // Motor on/off
     bool     m_okTrace;     // Trace mode on/off
 
 public:
@@ -136,8 +137,10 @@ public:
     bool IsAttached(int drive) const { return (m_drivedata[drive].fpFile != nullptr); }
     // Check if the drive's attached image is read-only
     bool IsReadOnly(int drive) const { return m_drivedata[drive].okReadOnly; }
+    // Check if floppy engine now rotates
+    bool IsEngineOn() const { return m_motor; }
 public:
-    void     SetParams(uint8_t side, uint8_t density, uint8_t drive);
+    void     SetParams(uint8_t side, uint8_t density, uint8_t drive, uint8_t motor);
     uint8_t  GetState();        // Reading status
     uint16_t GetStateView() const { return m_state; }  // Get status value for debugger
     void     FifoWrite(uint8_t cmd);  // Writing commands

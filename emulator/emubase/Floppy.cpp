@@ -51,7 +51,7 @@ CFloppyController::CFloppyController(CMotherboard* pBoard)
     m_pDrive = m_drivedata;
     m_phase = FLOPPY_PHASE_CMD;
     m_state = FLOPPY_STATE_IDLE;
-    m_int = false;
+    m_int = m_motor = false;
     m_commandlen = m_resultlen = m_resultpos = 0;
     m_okTrace = false;
 }
@@ -123,13 +123,13 @@ void CFloppyController::DetachImage(int drive)
 //////////////////////////////////////////////////////////////////////
 
 
-void CFloppyController::SetParams(uint8_t side, uint8_t /*density*/, uint8_t drive)
+void CFloppyController::SetParams(uint8_t side, uint8_t /*density*/, uint8_t drive, uint8_t motor)
 {
-    if (m_okTrace) DebugLogFormat(_T("Floppy SETPARAMS drive:%d side:%d\r\n"), drive, side);
+    if (m_okTrace) DebugLogFormat(_T("Floppy SETPARAMS drive:%d side:%d motor:%d\r\n"), drive, side, motor);
     m_drive = drive & 1;
     m_pDrive = m_drivedata + m_drive;
     m_side = side & 1;
-    //TODO
+    m_motor = motor != 0;
 }
 
 uint8_t CFloppyController::GetState()

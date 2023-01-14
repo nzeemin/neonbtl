@@ -450,6 +450,9 @@ bool Emulator_SystemFrame()
         swprintf_s(buffer, 16, _T("FPS: %05.2f"), dFramesPerSecond);
         MainWindow_SetStatusbarText(StatusbarPartFPS, buffer);
 
+        bool floppyEngine = g_pBoard->IsFloppyEngineOn();
+        MainWindow_SetStatusbarText(StatusbarPartFloppyEngine, floppyEngine ? _T("FD Motor") : nullptr);
+
         m_nFrameCount = 0;
         m_dwTickCount = dwCurrentTicks;
     }
