@@ -137,6 +137,7 @@ public:
     // Check if the drive's attached image is read-only
     bool IsReadOnly(int drive) const { return m_drivedata[drive].okReadOnly; }
 public:
+    void     SetParams(uint8_t side, uint8_t density, uint8_t drive);
     uint8_t  GetState();        // Reading status
     uint16_t GetStateView() const { return m_state; }  // Get status value for debugger
     void     FifoWrite(uint8_t cmd);  // Writing commands

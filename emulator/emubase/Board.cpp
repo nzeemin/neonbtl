@@ -113,6 +113,12 @@ void CMotherboard::SetConfiguration(uint16_t conf)
     //}
 }
 
+void CMotherboard::SetTrace(uint32_t dwTrace)
+{
+    m_dwTrace = dwTrace;
+    m_pFloppyCtl->SetTrace((dwTrace & TRACE_FLOPPY) != 0);
+}
+
 void CMotherboard::Reset()
 {
     m_pCPU->SetDCLOPin(true);
@@ -976,10 +982,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161052:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNHI\n"), HU_INSTRUCTION_PC, word, address);
         break;
-    case 0161054:
+    case 0161054:  // HD.SDH
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SDH\n"), HU_INSTRUCTION_PC, word, address);
         m_hdsdh = word;
-        //if ((m_PortHDsdh & 010) == 0)
+        if ((m_hdsdh & 010) == 0)
+            m_pFloppyCtl->SetParams(m_hdsdh & 1, (m_hdsdh >> 1) & 1, (m_hdsdh >> 2) & 1);
         break;
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);

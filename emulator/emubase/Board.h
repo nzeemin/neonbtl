@@ -135,7 +135,7 @@ public:  // Debug
     void        DebugTicks();  // One Debug CPU tick -- use for debug step or debug breakpoint
     void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
-    void        SetTrace(uint32_t dwTraceCPU) { m_dwTrace = dwTraceCPU; }
+    void        SetTrace(uint32_t dwTrace);
     void        LoadRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);

@@ -97,7 +97,7 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
 
     m_drivedata[drive].data = (uint8_t*)::calloc(800 * 1024, 1);
 
-    ::fread(m_drivedata[drive].data, 1, 800 * 1024, m_pDrive->fpFile);
+    ::fread(m_drivedata[drive].data, 1, 800 * 1024, m_drivedata[drive].fpFile);
     //TODO: Контроль ошибок чтения
 
     m_side = m_track = 0;
@@ -122,6 +122,15 @@ void CFloppyController::DetachImage(int drive)
 
 //////////////////////////////////////////////////////////////////////
 
+
+void CFloppyController::SetParams(uint8_t side, uint8_t /*density*/, uint8_t drive)
+{
+    if (m_okTrace) DebugLogFormat(_T("Floppy SETPARAMS drive:%d side:%d\r\n"), drive, side);
+    m_drive = drive & 1;
+    m_pDrive = m_drivedata + m_drive;
+    m_side = side & 1;
+    //TODO
+}
 
 uint8_t CFloppyController::GetState()
 {
@@ -254,12 +263,6 @@ void CFloppyController::StartCommand(uint8_t cmd)
     m_resultlen = 0;  m_resultpos = 0;
     m_phase = FLOPPY_PHASE_EXEC;
 
-    if (cmd != FLOPPY_COMMAND_SPECIFY && cmd != FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS)
-    {
-        m_drive = m_command[1] & 3;
-        m_pDrive = m_drivedata + m_drive;
-    }
-
     ExecuteCommand(cmd);
 }
 
@@ -282,7 +285,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_result[6] = m_command[5];
         m_resultlen = 7;
         m_int = true;//DEBUG
-        if (m_drive != 0xff && !IsAttached(m_drive))
+        if (m_drive == 0xff || m_pDrive == nullptr || !IsAttached(m_drive))
         {
             m_result[0] = 0xC8 | (m_command[1] & 3);  // Not ready
         }
@@ -294,7 +297,7 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
                 size_t offset = (m_command[2] * 2 + m_command[3]) * 5120 + sector * 512;
                 int block = offset / 512;
                 if (m_okTrace) DebugLogFormat(_T("Floppy CMD READ_DATA sent to buffer at pos 0x%06x block %d.\r\n"), offset, block);
-                bool contflag = m_pBoard->FillHDBuffer(m_drivedata[0].data + offset);
+                bool contflag = m_pBoard->FillHDBuffer(m_pDrive->data + offset);
                 if (!contflag)
                     break;
                 sector = (sector + 1) % 10;
@@ -318,8 +321,11 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
     case FLOPPY_COMMAND_SENSE_INTERRUPT_STATUS:
         if (m_okTrace) DebugLogFormat(_T("Floppy CMD SENSE_INTERRUPT\r\n"));
         m_phase = FLOPPY_PHASE_RESULT;
-        m_result[0] = 0x20;
-        m_result[1] = 0x00;//TODO
+        if (m_drive == 0xff || !IsAttached(m_drive))
+            m_result[0] = 0x60;  // Abnormal termination
+        else
+            m_result[0] = 0x20;  // Normal termination
+        m_result[1] = 0x00;
         m_resultlen = 2;
         m_int = false;
         break;
