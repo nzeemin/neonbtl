@@ -155,6 +155,7 @@ public:  // Floppy
     bool        IsFloppyEngineOn() const;
     // Fill the current HD buffer, to call from floppy controller only
     bool        FillHDBuffer(const uint8_t* data);
+    const uint8_t* GetHDBuffer();
 public:  // Callbacks
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetSerialOutCallback(SERIALOUTCALLBACK outcallback);
@@ -202,7 +203,10 @@ private:  // Ports/devices: implementation
     uint16_t    m_PPIA;
     uint16_t    m_PPIB;             // 161032 Printer data - bits 0..7
     uint16_t    m_PPIC;             // 161034
-    uint16_t    m_hdsdh;
+    uint16_t    m_hdsdh;            // 161054 HD.SDH
+    uint8_t     m_hdscnt;
+    uint8_t     m_hdsnum;           // HDD sector number
+    uint16_t    m_hdcnum;           // HDD cylinder number
     bool        m_hdint;            // HDD interrupt flag
     uint8_t     m_nHDbuff;          // Index of the current HD buffer, 0..3
     uint16_t    m_nHDbuffpos;       // Current position in the current HD buffer, 0..511

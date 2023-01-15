@@ -92,14 +92,19 @@ struct CFloppyDrive
 {
     FILE*    fpFile;
     uint8_t* data;          // Data image for the whole disk
-    uint16_t dataptr;       // Data offset within m_data - "head" position
-    uint16_t datatrack;     // Track number of data in m_data array
-    uint16_t dataside;      // Disk side of data in m_data array
+    uint32_t datasize;
+    uint32_t dirtystart, dirtyend;  // Range of unsaved data; dirtyend == 0 means everything saved
+    uint16_t dirtycount;
     bool     okReadOnly;    // Write protection flag
 
 public:
     CFloppyDrive();
-    void Reset();       // Reset the device
+    void Reset();           // Reset the device
+
+    void WriteBlock(uint16_t block, const uint8_t* src);
+
+    bool IsDirty() const { return dirtyend != 0; }  // Has unsaved data
+    void Flush();  // Save any unsaved data
 };
 
 // Floppy controller
@@ -110,13 +115,13 @@ protected:
     CFloppyDrive m_drivedata[4];  // Floppy drives
     CFloppyDrive* m_pDrive; // Current drive; nullptr if not selected
     uint8_t  m_drive;       // Current drive number: 0 to 3; 0xff if not selected
-    uint8_t  m_phase;
+    uint8_t  m_phase;       // See FLOPPY_PHASE_XXX defines
     uint8_t  m_state;       // See FLOPPY_STATE_XXX defines
-    uint8_t  m_command[9];
+    uint8_t  m_command[9];  // Buffer for command bytes
     uint8_t  m_commandlen;
-    uint8_t  m_result[9];
+    uint8_t  m_result[9];   // Buffer for command result bytes
     uint8_t  m_resultlen;
-    uint8_t  m_resultpos;
+    uint8_t  m_resultpos;   // Current position in the result buffer
     uint8_t  m_track;       // Track number: 0 to 79
     uint8_t  m_side;        // Disk side: 0 or 1
     bool     m_int;         // Interrupt flag
@@ -153,7 +158,7 @@ private:
     uint8_t CheckCommand();
     void StartCommand(uint8_t cmd);
     void ExecuteCommand(uint8_t cmd);
-    void FlushChanges();  // If current track was changed - save it
+    void FlushChanges();  // Save all unsaved data
 };
 
 

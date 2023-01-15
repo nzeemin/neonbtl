@@ -2047,9 +2047,13 @@ void CProcessor::ExecuteMOVB()  // MOVB - move byte
     {
         dst_addr = GetByteAddr(m_methdest, m_regdest);
         if (m_RPLYrq) return;
-        GetByte(dst_addr);
+        uint16_t wdst = GetWord(dst_addr & ~1);
         if (m_RPLYrq) return;
-        SetByte(dst_addr, dst);
+        if (dst_addr & 1)
+            wdst = (uint16_t)((wdst & 0x00ff) | (dst << 8));
+        else
+            wdst = (wdst & 0xff00) | dst;
+        SetWord(dst_addr & ~1, wdst);
         if (m_RPLYrq) return;
     }
     else

@@ -210,6 +210,16 @@ bool CMotherboard::FillHDBuffer(const uint8_t* data)
     return true;
 }
 
+const uint8_t* CMotherboard::GetHDBuffer()
+{
+    if (m_hdscnt == 0)
+        return nullptr;  // Nothing to write
+
+    m_hdscnt--;
+    const uint8_t* pBuffer = m_pHDbuff + (3 - (m_hdscnt & 3)) * 512;
+    return pBuffer;
+}
+
 
 // Работа с памятью //////////////////////////////////////////////////
 
@@ -722,19 +732,19 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return 0xff;
     case 0161044:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SCNT\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return m_hdscnt;
     case 0161046:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SNUM\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return m_hdsnum;
     case 0161050:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CNLO\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return m_hdcnum & 0xff;
     case 0161052:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CNHI\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return m_hdcnum >> 8;
     case 0161054:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SDH\n"), HU_INSTRUCTION_PC, address);
-        return 0;
+        return m_hdsdh;
     case 0161056:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CSR\n"), HU_INSTRUCTION_PC, address);
         m_hdint = false;
@@ -969,23 +979,38 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIP\n"), HU_INSTRUCTION_PC, word, address);
         break;
 
-    case 0161040:
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.BUFF\n"), HU_INSTRUCTION_PC, word, address);
+    case 0161040:  // HD.BUFF
+        {
+            // Write byte at previous position
+            uint8_t hdbuff = m_nHDbuff;
+            uint16_t hdbuffpos = m_nHDbuffpos - 1;
+            if (hdbuffpos == 0xffff)
+            {
+                hdbuffpos = 512 - 1;
+                hdbuff = (hdbuff - 1) & 3;
+            }
+            DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.BUFF buf%d %03x\n"), HU_INSTRUCTION_PC, word, address, hdbuff, hdbuffpos);
+            m_pHDbuff[hdbuff * 512 + hdbuffpos % 512] = word & 0xff;
+        }
         break;
     case 0161042:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.ERR\n"), HU_INSTRUCTION_PC, word, address);
         break;
     case 0161044:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SCNT\n"), HU_INSTRUCTION_PC, word, address);
+        m_hdscnt = word & 0xff;
         break;
     case 0161046:
-        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNUM\n"), HU_INSTRUCTION_PC, word, address);
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SNUM\n"), HU_INSTRUCTION_PC, word, address);
+        m_hdsnum = word & 0xff;
         break;
     case 0161050:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNLO\n"), HU_INSTRUCTION_PC, word, address);
+        m_hdcnum = (m_hdcnum & 0xff00) | (word & 0xff);
         break;
     case 0161052:
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CNHI\n"), HU_INSTRUCTION_PC, word, address);
+        m_hdcnum = (uint16_t)((m_hdcnum & 0x00ff) | ((word & 0xff) << 8));
         break;
     case 0161054:  // HD.SDH
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SDH\n"), HU_INSTRUCTION_PC, word, address);
