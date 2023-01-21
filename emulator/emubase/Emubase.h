@@ -52,6 +52,8 @@ int Disasm_GetInstructionHint(
 
 class CMotherboard;
 
+#define FLOPPY_MAX_TRACKS       83
+
 #define FLOPPY_PHASE_CMD        1
 #define FLOPPY_PHASE_EXEC       2
 #define FLOPPY_PHASE_RESULT     3

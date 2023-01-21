@@ -208,8 +208,9 @@ private:  // Ports/devices: implementation
     uint8_t     m_hdsnum;           // HDD sector number
     uint16_t    m_hdcnum;           // HDD cylinder number
     bool        m_hdint;            // HDD interrupt flag
-    uint8_t     m_nHDbuff;          // Index of the current HD buffer, 0..3
-    uint16_t    m_nHDbuffpos;       // Current position in the current HD buffer, 0..511
+    uint8_t     m_nHDbuff;          // Index of the current FD/HD buffer, 0..3
+    uint16_t    m_nHDbuffpos;       // Current position in the current FD/HD buffer, 0..511
+    bool        m_HDbuffdir;        // FD/HD buffer current direction: false = read, true = write
     uint8_t     m_keymatrix[8];     // Keyboard matrix
     uint16_t    m_keypos;           // Keyboard reading position 0..7
     bool        m_keyint;           // Keyboard interrupt flag

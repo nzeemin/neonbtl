@@ -120,10 +120,23 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
     if (m_drivedata[drive].fpFile == nullptr)
         return false;
 
-    m_drivedata[drive].data = (uint8_t*)::calloc(800 * 1024, 1);
+    size_t imageSize = FLOPPY_MAX_TRACKS * 2 * 10 * 512;
+    m_drivedata[drive].data = (uint8_t*)::calloc(imageSize, 1);
 
-    ::fread(m_drivedata[drive].data, 1, 800 * 1024, m_drivedata[drive].fpFile);
-    //TODO: Контроль ошибок чтения
+    ::fseek(m_drivedata[drive].fpFile, 0, SEEK_END);
+    size_t fileSize = (size_t)::ftell(m_drivedata[drive].fpFile);
+    size_t bytesToRead = (fileSize > imageSize) ? imageSize : fileSize;
+
+    ::fseek(m_drivedata[drive].fpFile, 0, SEEK_SET);
+    size_t bytesRead = ::fread(m_drivedata[drive].data, 1, bytesToRead, m_drivedata[drive].fpFile);
+    if (bytesRead < bytesToRead)  // read error
+    {
+        ::fclose(m_drivedata[drive].fpFile);  m_drivedata[drive].fpFile = nullptr;
+        ::free(m_drivedata[drive].data);  m_drivedata[drive].data = nullptr;
+        return false;
+    }
+
+    m_drivedata[drive].datasize = imageSize;
 
     m_side = m_track = 0;
 
@@ -311,7 +324,8 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_result[6] = m_command[5];
         m_resultlen = 7;
         m_int = true;//DEBUG
-        if (m_drive == 0xff || m_pDrive == nullptr || !IsAttached(m_drive))
+        if (m_drive == 0xff || m_pDrive == nullptr || !IsAttached(m_drive) ||
+            m_command[2] >= FLOPPY_MAX_TRACKS - 1)
         {
             m_result[0] = 0xC8 | (m_command[1] & 3);  // Not ready
         }
@@ -376,7 +390,8 @@ void CFloppyController::ExecuteCommand(uint8_t cmd)
         m_result[6] = m_command[5];
         m_resultlen = 7;
         m_int = true;//DEBUG
-        if (m_drive == 0xff || m_pDrive == nullptr || !IsAttached(m_drive))
+        if (m_drive == 0xff || m_pDrive == nullptr || !IsAttached(m_drive) ||
+            m_command[2] >= FLOPPY_MAX_TRACKS - 1)
         {
             m_result[0] = 0xC8;  // Not ready
         }

@@ -2047,13 +2047,9 @@ void CProcessor::ExecuteMOVB()  // MOVB - move byte
     {
         dst_addr = GetByteAddr(m_methdest, m_regdest);
         if (m_RPLYrq) return;
-        uint16_t wdst = GetWord(dst_addr & ~1);
+        GetByte(dst_addr);
         if (m_RPLYrq) return;
-        if (dst_addr & 1)
-            wdst = (uint16_t)((wdst & 0x00ff) | (dst << 8));
-        else
-            wdst = (wdst & 0xff00) | dst;
-        SetWord(dst_addr & ~1, wdst);
+        SetByte(dst_addr, dst);
         if (m_RPLYrq) return;
     }
     else
@@ -2525,7 +2521,7 @@ void CProcessor::ExecuteMARK ()  // MARK
 //   2   byte       Stopped flag: 1 - stopped, 0 - not stopped
 //   2   bytes      Internal tick count
 //   3   bytes      Flags
-//  35   byte       Reserved
+//  35   bytes      Reserved
 
 void CProcessor::SaveToImage(uint8_t* pImage) const
 {

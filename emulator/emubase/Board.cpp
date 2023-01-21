@@ -52,6 +52,7 @@ CMotherboard::CMotherboard()
 
     m_nHDbuff = 0;
     m_nHDbuffpos = 0;
+    m_HDbuffdir = false;
     m_hdint = false;
 
     m_PICRR = m_PICMR = 0;
@@ -716,14 +717,19 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return m_PPIC;
 
     case 0161040:
-        result = m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512];
-        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx buf%d %03x\n"), HU_INSTRUCTION_PC, address, result, m_nHDbuff, m_nHDbuffpos);
-        m_nHDbuffpos++;
-        if (m_nHDbuffpos >= 512)
+        if (m_HDbuffdir)  // Buffer in write mode
+            result = 0;
+        else
         {
-            m_nHDbuffpos = 0;
-            m_nHDbuff = (m_nHDbuff + 1) & 3;
+            result = m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512];
+            m_nHDbuffpos++;
+            if (m_nHDbuffpos >= 512)
+            {
+                m_nHDbuffpos = 0;
+                m_nHDbuff = (m_nHDbuff + 1) & 3;
+            }
         }
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.BUFF -> 0x%02hx buf%d %03x %s\n"), HU_INSTRUCTION_PC, address, result, m_nHDbuff, m_nHDbuffpos, m_HDbuffdir ? _T("wr") : _T("rd"));
         return result;
     case 0161042:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.ERR\n"), HU_INSTRUCTION_PC, address);
@@ -740,11 +746,13 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161052:
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CNHI\n"), HU_INSTRUCTION_PC, address);
         return m_hdcnum >> 8;
-    case 0161054:
+    case 0161054:  // HD.SDH
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.SDH\n"), HU_INSTRUCTION_PC, address);
+        m_HDbuffdir = true;  // Обращение к HD.SDH переводит буфер в режим записи
         return m_hdsdh;
-    case 0161056:
+    case 0161056:  // HD.CSR
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HD.CSR\n"), HU_INSTRUCTION_PC, address);
+        m_HDbuffdir = false;  // Обращение к HD.CSR переводит буфер в режим чтения
         m_hdint = false;
         return 0x41;
 
@@ -764,18 +772,18 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho KBDBUF\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
-    case 0161070:
+    case 0161070:  // FD.CSR
         resb = m_pFloppyCtl->GetState();
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CSR -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
-    case 0161072:
+    case 0161072:  // FD.BUF
         if ((m_hdsdh & 010) == 0)
             resb = m_pFloppyCtl->FifoRead();
         else
             resb = 0;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.BUF -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
-    case 0161076:
+    case 0161076:  // FD.CNT
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CNT\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
@@ -978,23 +986,22 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
 
     case 0161040:  // HD.BUFF
+        DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.BUFF buf%d %03x %s\n"), HU_INSTRUCTION_PC, word, address, m_nHDbuff, m_nHDbuffpos, m_HDbuffdir ? _T("wr") : _T("rd"));
+        if (m_HDbuffdir)  // Buffer in write mode
         {
-            // Write byte at previous position
-            uint8_t hdbuff = m_nHDbuff;
-            uint16_t hdbuffpos = m_nHDbuffpos - 1;
-            if (hdbuffpos == 0xffff)
+            m_pHDbuff[m_nHDbuff * 512 + m_nHDbuffpos % 512] = word & 0xff;
+            m_nHDbuffpos++;
+            if (m_nHDbuffpos >= 512)
             {
-                hdbuffpos = 512 - 1;
-                hdbuff = (hdbuff - 1) & 3;
+                m_nHDbuffpos = 0;
+                m_nHDbuff = (m_nHDbuff + 1) & 3;
             }
-            DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.BUFF buf%d %03x\n"), HU_INSTRUCTION_PC, word, address, hdbuff, hdbuffpos);
-            m_pHDbuff[hdbuff * 512 + hdbuffpos % 512] = word & 0xff;
         }
         break;
-    case 0161042:
+    case 0161042:  // HD.ERR
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.ERR\n"), HU_INSTRUCTION_PC, word, address);
         break;
-    case 0161044:
+    case 0161044:  // HD.SCNT
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SCNT\n"), HU_INSTRUCTION_PC, word, address);
         m_hdscnt = word & 0xff;
         break;
@@ -1012,12 +1019,14 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161054:  // HD.SDH
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.SDH\n"), HU_INSTRUCTION_PC, word, address);
+        m_HDbuffdir = true;  // Обращение к HD.SDH переводит буфер в режим записи
         m_hdsdh = word;
         if ((m_hdsdh & 010) == 0)
             m_pFloppyCtl->SetParams(m_hdsdh & 1, (m_hdsdh >> 1) & 1, (m_hdsdh >> 2) & 1, (m_hdsdh >> 4) & 1);
         break;
-    case 0161056:
+    case 0161056:  // HD.CSR
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) HD.CSR\n"), HU_INSTRUCTION_PC, word, address);
+        m_HDbuffdir = false;  // Обращение к HD.CSR переводит буфер в режим чтения
         //NOTE: Контроллер винчестера не реализован, но он должен отдать сигнал на прерывание в ответ на команду RESTORE
         if (word == 020)  // RESTORE
             m_hdint = true;
