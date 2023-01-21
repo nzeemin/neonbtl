@@ -41,9 +41,9 @@ void CFloppyDrive::WriteBlock(uint16_t block, const uint8_t* src)
     uint32_t offset = (uint32_t)block * 512;
     //TODO: Check if offset is out of range
     ::memcpy(data + offset, src, 512);
-    dirtystart = (dirtyend == 0) ? offset : min(dirtystart, offset);
-    dirtyend = max(dirtyend, offset + 512);
-
+    if (dirtyend == 0 || offset < dirtystart)
+        dirtystart = offset;
+    if (dirtyend < offset + 512) dirtyend = offset + 512;
     dirtycount = 15625 * 3;  // 3 sec
 }
 

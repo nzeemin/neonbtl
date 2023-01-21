@@ -438,8 +438,6 @@ uint16_t CMotherboard::GetRAMWordView(uint32_t offset) const
 }
 uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExec, int* pAddrType) const
 {
-    address &= ~1;
-
     uint32_t offset;
     int addrtype = TranslateAddress(address, okHaltMode, okExec, &offset);
 
@@ -448,13 +446,13 @@ uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExe
     switch (addrtype)
     {
     case ADDRTYPE_RAM:
-        return GetRAMWord(offset);
+        return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
-        return GetROMWord(LOWORD(offset));
+        return GetROMWord(offset & 0xfffe);
     case ADDRTYPE_IO:
         return 0;  // I/O port, not memory
     case ADDRTYPE_EMUL:
-        return GetRAMWord(offset & 07777);  // I/O port emulation
+        return GetRAMWord(offset & 07776);  // I/O port emulation
     case ADDRTYPE_DENY:
         return 0;  // This memory is inaccessible for reading
     }
@@ -482,7 +480,7 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
     case ADDRTYPE_RAM:
         return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
-        return GetROMWord(LOWORD(offset & ~1));
+        return GetROMWord(offset & 0xfffe);
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == true ?
         return GetPortWord(address);
@@ -517,7 +515,7 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
     case ADDRTYPE_RAM:
         return GetRAMByte(offset);
     case ADDRTYPE_ROM:
-        return GetROMByte(LOWORD(offset));
+        return GetROMByte(offset & 0xffff);
     case ADDRTYPE_IO:
         //TODO: What to do if okExec == true ?
         return GetPortByte(address);
