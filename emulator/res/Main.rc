@@ -123,8 +123,8 @@ BEGIN
     END
     POPUP "&Drives"
     BEGIN
-        MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0, INACTIVE
-        MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1, INACTIVE
+        MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0
+        MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1
     END
     POPUP "Debug"
     BEGIN

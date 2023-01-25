@@ -35,6 +35,7 @@ int m_xScreenOffset = 0;
 int m_yScreenOffset = 0;
 BYTE m_ScreenKeyState[256];
 uint8_t m_KeyboardMatrix[8];
+POINT m_LastMousePos;
 
 void ScreenView_CreateDisplay();
 void ScreenView_OnDraw(HDC hdc);
@@ -68,6 +69,8 @@ void ScreenView_Init()
 {
     m_hdd = DrawDibOpen();
     ScreenView_CreateDisplay();
+
+    ::GetCursorPos(&m_LastMousePos);
 }
 
 void ScreenView_Done()
@@ -358,6 +361,24 @@ void ScreenView_ScanKeyboard()
     ::memcpy(m_KeyboardMatrix, matrix, sizeof(matrix));
 
     Emulator_UpdateKeyboardMatrix(m_KeyboardMatrix);
+}
+
+void ScreenView_UpdateMouse()
+{
+    POINT mousepos;
+    ::GetCursorPos(&mousepos);
+
+    int dx = (short)(mousepos.x - m_LastMousePos.x);
+    if (m_cxScreenWidth != 832)
+        dx = dx * 832 / m_cxScreenWidth;
+    int dy = (short)(mousepos.y - m_LastMousePos.y);
+    if (m_cyScreenHeight != 300)
+        dy = dy * 300 / m_cyScreenHeight;
+
+    if (dx != 0 || dy != 0)
+        g_pBoard->MouseMove((short)dx, (short)dy);
+
+    m_LastMousePos = mousepos;
 }
 
 BOOL ScreenView_SaveScreenshot(LPCTSTR sFileName)

@@ -65,6 +65,7 @@ CMotherboard::CMotherboard()
     ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
     m_keyint = false;
     m_keypos = 0;
+    m_mousest = m_mousedx = m_mousedy = 0;
 
     SetConfiguration(0);  // Default configuration
 
@@ -342,6 +343,42 @@ void CMotherboard::UpdateKeyboardMatrix(const uint8_t matrix[8])
 
     if (hasChanges && !m_keyint)
         m_keyint = true;
+}
+
+void CMotherboard::ProcessMouseWrite(uint8_t byte)
+{
+    m_PPIC = m_PPIC & 0x0f;
+    if ((byte & 0x80) == 0)
+        m_mousest = 0;
+    else
+        switch (m_mousest)
+        {
+        case 0:
+            m_PPIC |= m_mousedx & 0xf0;
+            m_mousest++;
+            break;
+        case 1:
+            m_PPIC |= (m_mousedx << 4) & 0xf0;
+            m_mousedx = 0;
+            m_mousest++;
+            break;
+        case 2:
+            m_PPIC |= m_mousedy & 0xf0;
+            m_mousest++;
+            break;
+        case 3:
+            m_PPIC |= (m_mousedy << 4) & 0xf0;
+            m_mousest++;
+            m_mousedy = 0;
+            break;
+        }
+}
+
+void CMotherboard::MouseMove(short dx, short dy)
+{
+    m_mousedx = (signed char)(-dx);
+    m_mousedy = (signed char)(-dy);
+    //TODO
 }
 
 void CMotherboard::DebugTicks()
@@ -968,6 +1005,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         PrintBinaryValue(buffer, word);
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
         m_PPIA = word;
+        ProcessMouseWrite(word & 0x00f0);
         break;
     case 0161032:  // PPIB
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIB\n"), HU_INSTRUCTION_PC, word, address);

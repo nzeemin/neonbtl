@@ -430,6 +430,7 @@ bool Emulator_SystemFrame()
     g_pBoard->SetCPUBreakpoints(m_wEmulatorCPUBpsCount > 0 ? m_EmulatorCPUBps : nullptr);
 
     ScreenView_ScanKeyboard();
+    ScreenView_UpdateMouse();
 
     if (!g_pBoard->SystemFrame())
     {

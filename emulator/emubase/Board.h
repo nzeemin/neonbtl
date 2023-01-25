@@ -146,6 +146,7 @@ public:  // System control
     void        ResetDevices();     // INIT signal
     bool        SystemFrame();  // Do one frame -- use for normal run
     void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
+    void        MouseMove(short dx, short dy);
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
@@ -214,6 +215,7 @@ private:  // Ports/devices: implementation
     uint8_t     m_keymatrix[8];     // Keyboard matrix
     uint16_t    m_keypos;           // Keyboard reading position 0..7
     bool        m_keyint;           // Keyboard interrupt flag
+    uint8_t     m_mousedx, m_mousedy, m_mousest; // Mouse delta X, Y, state
     PIT8253     m_snd, m_snl;
     uint8_t     m_rtcalarmsec, m_rtcalarmmin, m_rtcalarmhour;
     uint8_t     m_rtcmemory[50];
@@ -227,6 +229,7 @@ private:
     void        ProcessTimerWrite(uint16_t address, uint8_t byte);
     uint8_t     ProcessTimerRead(uint16_t address);
     void        ProcessKeyboardWrite(uint8_t byte);
+    void        ProcessMouseWrite(uint8_t byte);
     void        DoSound();
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
