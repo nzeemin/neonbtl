@@ -146,7 +146,7 @@ public:  // System control
     void        ResetDevices();     // INIT signal
     bool        SystemFrame();  // Do one frame -- use for normal run
     void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
-    void        MouseMove(short dx, short dy);
+    void        MouseMove(short dx, short dy, bool btnLeft, bool btnRight);
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
@@ -201,7 +201,7 @@ private:  // Ports/devices: implementation
     uint16_t    m_PICflags;         // PIC 8259A flags, see PIC_Xxx constants
     uint8_t     m_PICRR;            // PIC interrupt request register
     uint8_t     m_PICMR;            // PIC mask register
-    uint16_t    m_PPIA;
+    uint8_t     m_PPIAwr, m_PPIArd;
     uint16_t    m_PPIB;             // 161032 Printer data - bits 0..7
     uint16_t    m_PPIC;             // 161034
     uint16_t    m_hdsdh;            // 161054 HD.SDH

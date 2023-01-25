@@ -45,7 +45,7 @@ CMotherboard::CMotherboard()
     m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
     m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));
 
-    m_PPIA = 0;
+    m_PPIAwr = m_PPIArd = 0;
     m_PPIB = 11;  // IHLT EF1 EF0 - инверсные
     m_PPIC = 14;  // IHLT VIRQ - инверсные
     m_hdsdh = 0;
@@ -126,7 +126,7 @@ void CMotherboard::Reset()
     m_pCPU->SetDCLOPin(true);
     m_pCPU->SetACLOPin(true);
 
-    m_PPIA = 0;
+    m_PPIAwr = m_PPIArd = 0;
     m_PPIB = 11;  // IHLT EF1 EF0 - инверсные
     m_PPIC = 14;  // IHLT VIRQ - инверсные
     m_hdsdh = 0;
@@ -374,11 +374,12 @@ void CMotherboard::ProcessMouseWrite(uint8_t byte)
         }
 }
 
-void CMotherboard::MouseMove(short dx, short dy)
+void CMotherboard::MouseMove(short dx, short dy, bool btnLeft, bool btnRight)
 {
     m_mousedx = (signed char)(-dx);
     m_mousedy = (signed char)(-dy);
-    //TODO
+
+    m_PPIArd = (m_PPIArd & ~0xe0) | (btnLeft ? 0x20 : 0) | (btnRight ? 0x40 : 0);
 }
 
 void CMotherboard::DebugTicks()
@@ -739,8 +740,8 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%c%06ho\tGETPORT SNL -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)resb);
         return resb;
 
-    case 0161030:  // PPIA -- Parallel port
-        result = 0;//TODO
+    case 0161030:  // PPIA
+        result = m_PPIArd;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIA -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
         return result;
 
@@ -1004,7 +1005,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
     case 0161030:  // PPIA
         PrintBinaryValue(buffer, word);
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
-        m_PPIA = word;
+        m_PPIAwr = word & 0xff;
         ProcessMouseWrite(word & 0x00f0);
         break;
     case 0161032:  // PPIB

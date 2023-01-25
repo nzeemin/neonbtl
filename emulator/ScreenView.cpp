@@ -375,8 +375,10 @@ void ScreenView_UpdateMouse()
     if (m_cyScreenHeight != 300)
         dy = dy * 300 / m_cyScreenHeight;
 
-    if (dx != 0 || dy != 0)
-        g_pBoard->MouseMove((short)dx, (short)dy);
+    bool btnLeft = ::GetAsyncKeyState(VK_LBUTTON) != 0;
+    bool btnRight = ::GetAsyncKeyState(VK_RBUTTON) != 0;
+
+    g_pBoard->MouseMove((short)dx, (short)dy, btnLeft, btnRight);
 
     m_LastMousePos = mousepos;
 }
