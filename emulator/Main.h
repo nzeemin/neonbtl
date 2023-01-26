@@ -153,6 +153,8 @@ void Settings_SetToolbar(BOOL flag);
 BOOL Settings_GetToolbar();
 void Settings_SetKeyboard(BOOL flag);
 BOOL Settings_GetKeyboard();
+void Settings_SetMouse(BOOL flag);
+BOOL Settings_GetMouse();
 
 LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex);
 COLORREF Settings_GetColor(ColorIndices colorIndex);

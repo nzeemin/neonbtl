@@ -120,6 +120,8 @@ BEGIN
         MENUITEM "RAM 1024 KB",                 ID_CONF_RAM1024
         MENUITEM "RAM 2048 KB",                 ID_CONF_RAM2048
         MENUITEM "RAM 4096 KB",                 ID_CONF_RAM4096
+        MENUITEM SEPARATOR
+        MENUITEM "MSX Mouse",                   ID_EMULATOR_MOUSE
     END
     POPUP "&Drives"
     BEGIN

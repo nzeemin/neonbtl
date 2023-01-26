@@ -379,7 +379,7 @@ void CMotherboard::MouseMove(short dx, short dy, bool btnLeft, bool btnRight)
     m_mousedx = (signed char)(-dx);
     m_mousedy = (signed char)(-dy);
 
-    m_PPIArd = (m_PPIArd & ~0xe0) | (btnLeft ? 0x20 : 0) | (btnRight ? 0x40 : 0);
+    m_PPIArd = (m_PPIArd & ~0xe0) | (btnLeft ? 0 : 0x20) | (btnRight ? 0 : 0x40);
 }
 
 void CMotherboard::DebugTicks()

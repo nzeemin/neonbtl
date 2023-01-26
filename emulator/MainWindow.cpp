@@ -57,6 +57,7 @@ void MainWindow_DoEmulatorAutostart();
 void MainWindow_DoEmulatorReset();
 void MainWindow_DoEmulatorRealSpeed();
 void MainWindow_DoEmulatorSound();
+void MainWindow_DoEmulatorMouse();
 void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
 void MainWindow_DoFileLoadMemory();
@@ -615,6 +616,7 @@ void MainWindow_UpdateMenu()
     // Emulator menu options
     CheckMenuItem(hMenu, ID_EMULATOR_AUTOSTART, (Settings_GetAutostart() ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(hMenu, ID_EMULATOR_SOUND, (Settings_GetSound() ? MF_CHECKED : MF_UNCHECKED));
+    CheckMenuItem(hMenu, ID_EMULATOR_MOUSE, (Settings_GetMouse() ? MF_CHECKED : MF_UNCHECKED));
 
     MainWindow_SetToolbarImage(ID_EMULATOR_SOUND, (Settings_GetSound() ? ToolbarImageSoundOn : ToolbarImageSoundOff));
     EnableMenuItem(hMenu, ID_DEBUG_STEPINTO, (g_okEmulatorRunning ? MF_DISABLED : MF_ENABLED));
@@ -722,6 +724,9 @@ bool MainWindow_DoCommand(int commandId)
     case ID_CONF_RAM4096:
         MainWindow_DoEmulatorConfRam(commandId);
         break;
+    case ID_EMULATOR_MOUSE:
+        MainWindow_DoEmulatorMouse();
+        break;
     case ID_EMULATOR_FLOPPY0:
         MainWindow_DoEmulatorFloppy(0);
         break;
@@ -828,6 +833,13 @@ void MainWindow_DoEmulatorSound()
     Settings_SetSound(!Settings_GetSound());
 
     Emulator_SetSound(Settings_GetSound() != 0);
+
+    MainWindow_UpdateMenu();
+}
+
+void MainWindow_DoEmulatorMouse()
+{
+    Settings_SetMouse(!Settings_GetMouse());
 
     MainWindow_UpdateMenu();
 }

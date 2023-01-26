@@ -39,7 +39,6 @@ POINT m_LastMousePos;
 
 void ScreenView_CreateDisplay();
 void ScreenView_OnDraw(HDC hdc);
-//BOOL ScreenView_OnKeyEvent(WPARAM vkey, BOOL okExtKey, BOOL okPressed);
 void ScreenView_OnRButtonDown(int mousex, int mousey);
 
 
@@ -158,14 +157,6 @@ LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     case WM_RBUTTONDOWN:
         ScreenView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
-        //case WM_KEYDOWN:
-        //    //if ((lParam & (1 << 30)) != 0)  // Auto-repeats should be ignored
-        //    //    return (LRESULT) TRUE;
-        //    //return (LRESULT) ScreenView_OnKeyEvent(wParam, (lParam & (1 << 24)) != 0, TRUE);
-        //    return (LRESULT) TRUE;
-        //case WM_KEYUP:
-        //    //return (LRESULT) ScreenView_OnKeyEvent(wParam, (lParam & (1 << 24)) != 0, FALSE);
-        //    return (LRESULT) TRUE;
     case WM_SETCURSOR:
         if (::GetFocus() == g_hwndScreen)
         {
@@ -184,15 +175,15 @@ void ScreenView_OnRButtonDown(int mousex, int mousey)
 {
     ::SetFocus(g_hwndScreen);
 
-    HMENU hMenu = ::CreatePopupMenu();
-    ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
-    ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
+    //HMENU hMenu = ::CreatePopupMenu();
+    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
+    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
 
-    POINT pt = { mousex, mousey };
-    ::ClientToScreen(g_hwndScreen, &pt);
-    ::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, g_hwndScreen, NULL);
+    //POINT pt = { mousex, mousey };
+    //::ClientToScreen(g_hwndScreen, &pt);
+    //::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, g_hwndScreen, NULL);
 
-    VERIFY(::DestroyMenu(hMenu));
+    //VERIFY(::DestroyMenu(hMenu));
 }
 
 int ScreenView_GetScreenMode()

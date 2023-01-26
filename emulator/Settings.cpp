@@ -293,6 +293,8 @@ SETTINGS_GETSET_DWORD(SoundVolume, _T("SoundVolume"), WORD, 0x3fff);
 
 SETTINGS_GETSET_DWORD(Keyboard, _T("Keyboard"), BOOL, TRUE);
 
+SETTINGS_GETSET_DWORD(Mouse, _T("Mouse"), BOOL, TRUE);
+
 
 //////////////////////////////////////////////////////////////////////
 // Colors
