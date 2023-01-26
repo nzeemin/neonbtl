@@ -175,15 +175,18 @@ void ScreenView_OnRButtonDown(int mousex, int mousey)
 {
     ::SetFocus(g_hwndScreen);
 
-    //HMENU hMenu = ::CreatePopupMenu();
-    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
-    //::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
+    if (!Settings_GetMouse())
+    {
+        HMENU hMenu = ::CreatePopupMenu();
+        ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOT, _T("Screenshot"));
+        ::AppendMenu(hMenu, 0, ID_FILE_SCREENSHOTTOCLIPBOARD, _T("Screenshot to Clipboard"));
 
-    //POINT pt = { mousex, mousey };
-    //::ClientToScreen(g_hwndScreen, &pt);
-    //::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, g_hwndScreen, NULL);
+        POINT pt = { mousex, mousey };
+        ::ClientToScreen(g_hwndScreen, &pt);
+        ::TrackPopupMenu(hMenu, 0, pt.x, pt.y, 0, g_hwndScreen, NULL);
 
-    //VERIFY(::DestroyMenu(hMenu));
+        VERIFY(::DestroyMenu(hMenu));
+    }
 }
 
 int ScreenView_GetScreenMode()
@@ -360,14 +363,40 @@ void ScreenView_UpdateMouse()
     ::GetCursorPos(&mousepos);
 
     int dx = (short)(mousepos.x - m_LastMousePos.x);
+    int dy = (short)(mousepos.y - m_LastMousePos.y);
+
+    RECT rcScreen = { m_xScreenOffset, m_yScreenOffset, m_xScreenOffset + m_cxScreenWidth, m_yScreenOffset + m_cyScreenHeight };
+    ::MapWindowPoints(g_hwndScreen, NULL, (LPPOINT)&rcScreen, 2);
+    if (mousepos.x < rcScreen.left)
+        dx -= rcScreen.left - mousepos.x;
+    if (mousepos.x > rcScreen.right)
+        dx += mousepos.x - rcScreen.right;
+    if (mousepos.y < rcScreen.top)
+        dy -= rcScreen.top - mousepos.y;
+    if (mousepos.y > rcScreen.bottom)
+        dy += mousepos.y - rcScreen.bottom;
+
     if (m_cxScreenWidth != 832)
         dx = dx * 832 / m_cxScreenWidth;
-    int dy = (short)(mousepos.y - m_LastMousePos.y);
     if (m_cyScreenHeight != 300)
         dy = dy * 300 / m_cyScreenHeight;
 
-    bool btnLeft = ::GetAsyncKeyState(VK_LBUTTON) != 0;
-    bool btnRight = ::GetAsyncKeyState(VK_RBUTTON) != 0;
+    if (dx < -127)
+        dx = -127;
+    else if (dx > 127)
+        dx = 127;
+    if (dy < -127)
+        dy = -127;
+    else if (dy > 127)
+        dy = 127;
+
+    bool btnLeft = false;
+    bool btnRight = false;
+    if (::GetFocus() == g_hwndScreen)
+    {
+        btnLeft = ::GetAsyncKeyState(VK_LBUTTON) != 0;
+        btnRight = ::GetAsyncKeyState(VK_RBUTTON) != 0;
+    }
 
     g_pBoard->MouseMove((short)dx, (short)dy, btnLeft, btnRight);
 
