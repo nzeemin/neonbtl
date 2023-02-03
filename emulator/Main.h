@@ -66,9 +66,10 @@ enum ToolbarButtonImages
     ToolbarImageSoundOn = 7,
     ToolbarImageSoundOff = 8,
     ToolbarImageFloppyDiskWP = 9,
-    ToolbarImageColorScreen = 10,
-    ToolbarImageBWScreen = 11,
-    ToolbarImageScreenshot = 12,
+    ToolbarImageHardSlot = 10,
+    ToolbarImageHardDrive = 11,
+    ToolbarImageHardDriveWP = 12,
+    ToolbarImageScreenshot = 13,
     ToolbarImageDebugger = 14,
     ToolbarImageStepInto = 15,
     ToolbarImageStepOver = 16,
@@ -125,8 +126,8 @@ void Settings_SetConfiguration(int configuration);
 int  Settings_GetConfiguration();
 void Settings_SetFloppyFilePath(int slot, LPCTSTR sFilePath);
 void Settings_GetFloppyFilePath(int slot, LPTSTR buffer);
-void Settings_SetCartridgeFilePath(int slot, LPCTSTR sFilePath);
-void Settings_GetCartridgeFilePath(int slot, LPTSTR buffer);
+void Settings_SetHardFilePath(LPCTSTR sFilePath);
+void Settings_GetHardFilePath(LPTSTR buffer);
 void Settings_SetScreenViewMode(int mode);
 int  Settings_GetScreenViewMode();
 void Settings_SetScreenHeightMode(int mode);

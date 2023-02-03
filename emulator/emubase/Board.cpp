@@ -30,6 +30,7 @@ CMotherboard::CMotherboard()
     // Create devices
     m_pCPU = new CProcessor(this);
     m_pFloppyCtl = new CFloppyController(this);
+    m_pHardDrive = nullptr;
 
     m_dwTrace = 0;
     m_SoundGenCallback = nullptr;
@@ -81,6 +82,7 @@ CMotherboard::~CMotherboard()
     // Delete devices
     delete m_pCPU;
     delete m_pFloppyCtl;
+    delete m_pHardDrive;
 
     // Free memory
     ::free(m_pRAM);
@@ -223,6 +225,54 @@ const uint8_t* CMotherboard::GetHDBuffer()
 }
 
 
+// IDE Hard Drive ////////////////////////////////////////////////////
+
+bool CMotherboard::IsHardImageAttached() const
+{
+    return (m_pHardDrive != nullptr);
+}
+
+bool CMotherboard::IsHardImageReadOnly() const
+{
+    CHardDrive* pHardDrive = m_pHardDrive;
+    if (pHardDrive == nullptr) return false;
+    return pHardDrive->IsReadOnly();
+}
+
+bool CMotherboard::AttachHardImage(LPCTSTR sFileName)
+{
+    m_pHardDrive = new CHardDrive();
+    bool success = m_pHardDrive->AttachImage(sFileName);
+    if (success)
+    {
+        m_pHardDrive->Reset();
+    }
+
+    return success;
+}
+void CMotherboard::DetachHardImage()
+{
+    delete m_pHardDrive;
+    m_pHardDrive = nullptr;
+}
+
+uint16_t CMotherboard::GetHardPortWord(uint16_t port)
+{
+    if (m_pHardDrive == nullptr) return 0;
+    port = (uint16_t)((port >> 1) & 7) | 0x1f0;
+    uint16_t data = m_pHardDrive->ReadPort(port);
+    DebugLogFormat(_T("%c%06ho\tIDE GET %03hx -> 0x%04hx\n"), HU_INSTRUCTION_PC, port, data);
+    return data;
+}
+void CMotherboard::SetHardPortWord(uint16_t port, uint16_t data)
+{
+    if (m_pHardDrive == nullptr) return;
+    port = (uint16_t)((port >> 1) & 7) | 0x1f0;
+    DebugLogFormat(_T("%c%06ho\tIDE SET 0x%04hx -> %03hx\n"), HU_INSTRUCTION_PC, data, port);
+    m_pHardDrive->WritePort(port, data);
+}
+
+
 // Работа с памятью //////////////////////////////////////////////////
 
 uint16_t CMotherboard::GetRAMWord(uint32_t offset) const
@@ -263,6 +313,9 @@ void CMotherboard::ResetDevices()
     DebugLogFormat(_T("%c%06ho\tRESET\n"), HU_INSTRUCTION_PC);
 
     m_pFloppyCtl->Reset();
+
+    if (m_pHardDrive != nullptr)
+        m_pHardDrive->Reset();
 
     // Reset PIC 8259A
     //m_PICRR = m_PICMR = 0;
@@ -441,6 +494,9 @@ bool CMotherboard::SystemFrame()
 
         if (frameticks % 32 == 0)  // FDD tick
             m_pFloppyCtl->Periodic();
+
+        if (m_pHardDrive != nullptr)
+            m_pHardDrive->Periodic();
 
         soundBrasErr += soundSamplesPerFrame;
         if (2 * soundBrasErr >= 20000)
@@ -825,6 +881,11 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho FD.CNT\n"), HU_INSTRUCTION_PC, address);
         return 0;
 
+    case 0161120: case 0161122: case 0161124: case 0161126: case 0161130: case 0161132: case 0161134: case 0161136:
+        result = GetHardPortWord(address);
+        //DebugLogFormat(_T("%c%06ho\tGETPORT %06ho IDE %03hx -> 0x%04hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)((address >> 1) & 7) | 0x1f0, result);
+        return result;
+
     case 0161200:
     case 0161202:
     case 0161204:
@@ -1099,6 +1160,11 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         m_nHDbuffpos = 0;
         if (word & 020) // reset floppy controller
             m_pFloppyCtl->Reset();
+        break;
+
+    case 0161120: case 0161122: case 0161124: case 0161126: case 0161130: case 0161132: case 0161134: case 0161136:
+        //DebugLogFormat(_T("%c%06ho\tSETPORT %06ho %03hx -> (%06ho) IDE\n"), HU_INSTRUCTION_PC, word, (uint16_t)((address >> 1) & 7) | 0x1f0, address);
+        SetHardPortWord(address, word);
         break;
 
     case 0161200: case 0161202: case 0161204: case 0161206:

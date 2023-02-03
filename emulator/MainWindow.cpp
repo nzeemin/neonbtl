@@ -62,6 +62,7 @@ void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
 void MainWindow_DoFileLoadMemory();
 void MainWindow_DoEmulatorFloppy(int slot);
+void MainWindow_DoEmulatorHardDrive();
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
 void MainWindow_DoEmulatorConfRam(int command);
 void MainWindow_DoFileScreenshot();
@@ -172,7 +173,7 @@ BOOL MainWindow_InitToolbar()
     addbitmap.nID = IDB_TOOLBAR;
     SendMessage(m_hwndToolbar, TB_ADDBITMAP, 2, (LPARAM)&addbitmap);
 
-    TBBUTTON buttons[8];
+    TBBUTTON buttons[10];
     ZeroMemory(buttons, sizeof(buttons));
     for (size_t i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -197,12 +198,17 @@ BOOL MainWindow_InitToolbar()
     buttons[4].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
     buttons[4].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("1"));
     buttons[5].fsStyle = BTNS_SEP;
-    buttons[6].idCommand = ID_EMULATOR_SOUND;
-    buttons[6].iBitmap = 8;
+    buttons[6].idCommand = ID_EMULATOR_HARDDRIVE;
+    buttons[6].iBitmap = ToolbarImageHardSlot;
     buttons[6].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
-    buttons[7].idCommand = ID_FILE_SCREENSHOT;
-    buttons[7].iBitmap = ToolbarImageScreenshot;
-    buttons[7].fsStyle = BTNS_BUTTON;
+    buttons[6].iString = (int)SendMessage(m_hwndToolbar, TB_ADDSTRING, (WPARAM)0, (LPARAM)_T("IDE"));
+    buttons[7].fsStyle = BTNS_SEP;
+    buttons[8].idCommand = ID_EMULATOR_SOUND;
+    buttons[8].iBitmap = 8;
+    buttons[8].fsStyle = BTNS_BUTTON | BTNS_SHOWTEXT;
+    buttons[9].idCommand = ID_FILE_SCREENSHOT;
+    buttons[9].iBitmap = ToolbarImageScreenshot;
+    buttons[9].fsStyle = BTNS_BUTTON;
 
     SendMessage(m_hwndToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -249,6 +255,13 @@ void MainWindow_RestoreSettings()
             if (! g_pBoard->AttachFloppyImage(slot, buf))
                 Settings_SetFloppyFilePath(slot, NULL);
         }
+    }
+
+    Settings_GetHardFilePath(buf);
+    if (buf[0] != _T('\0'))
+    {
+        if (!g_pBoard->AttachHardImage(buf))
+            Settings_SetHardFilePath(NULL);
     }
 
     // Restore ScreenViewMode
@@ -638,6 +651,8 @@ void MainWindow_UpdateMenu()
             g_pBoard->IsFloppyImageAttached(0) ? (g_pBoard->IsFloppyReadOnly(0) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
     MainWindow_SetToolbarImage(ID_EMULATOR_FLOPPY1,
             g_pBoard->IsFloppyImageAttached(1) ? (g_pBoard->IsFloppyReadOnly(1) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
+    MainWindow_SetToolbarImage(ID_EMULATOR_HARDDRIVE,
+        g_pBoard->IsHardImageAttached() ? (g_pBoard->IsHardImageReadOnly() ? ToolbarImageHardDriveWP : ToolbarImageHardDrive) : ToolbarImageHardSlot);
 
     // Debug menu
     BOOL okDebug = Settings_GetDebug();
@@ -732,6 +747,9 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_EMULATOR_FLOPPY1:
         MainWindow_DoEmulatorFloppy(1);
+        break;
+    case ID_EMULATOR_HARDDRIVE:
+        MainWindow_DoEmulatorHardDrive();
         break;
     case ID_VIEW_DEBUG:
         MainWindow_DoViewDebug();
@@ -998,6 +1016,37 @@ void MainWindow_DoEmulatorFloppy(int slot)
             return;
         }
         Settings_SetFloppyFilePath(slot, bufFileName);
+    }
+    MainWindow_UpdateMenu();
+}
+
+
+void MainWindow_DoEmulatorHardDrive()
+{
+    BOOL okLoaded = g_pBoard->IsHardImageAttached();
+    if (okLoaded)
+    {
+        g_pBoard->DetachHardImage();
+        Settings_SetHardFilePath(NULL);
+    }
+    else
+    {
+        // Select HDD disk image
+        TCHAR bufFileName[MAX_PATH];
+        BOOL okResult = ShowOpenDialog(g_hwnd,
+                _T("Open HDD image"),
+                _T("UKNC HDD images (*.img)\0*.img\0All Files (*.*)\0*.*\0\0"),
+                bufFileName);
+        if (! okResult) return;
+
+        // Attach HDD disk image
+        if (!g_pBoard->AttachHardImage(bufFileName))
+        {
+            AlertWarning(_T("Failed to attach the HDD image."));
+            return;
+        }
+
+        Settings_SetHardFilePath(bufFileName);
     }
     MainWindow_UpdateMenu();
 }

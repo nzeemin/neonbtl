@@ -48,6 +48,7 @@
       <Filter>emubase</Filter>
     </ClCompile>
     <ClCompile Include="SoundGen.cpp" />
+    <ClCompile Include="emubase\Hard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="emubase\Board.h">

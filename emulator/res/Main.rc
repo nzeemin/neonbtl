@@ -127,6 +127,8 @@ BEGIN
     BEGIN
         MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0
         MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1
+        MENUITEM SEPARATOR
+        MENUITEM "IDE HDD",                     ID_EMULATOR_HARDDRIVE
     END
     POPUP "Debug"
     BEGIN

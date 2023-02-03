@@ -245,6 +245,15 @@ void Settings_SetFloppyFilePath(int slot, LPCTSTR sFilePath)
     Settings_SaveStringValue(bufValueName, sFilePath);
 }
 
+void Settings_GetHardFilePath(LPTSTR buffer)
+{
+    Settings_LoadStringValue(_T("HardIde"), buffer, MAX_PATH);
+}
+void Settings_SetHardFilePath(LPCTSTR sFilePath)
+{
+    Settings_SaveStringValue(_T("HardIde"), sFilePath);
+}
+
 void Settings_GetCartridgeFilePath(int slot, LPTSTR buffer)
 {
     TCHAR bufValueName[11];

@@ -18,6 +18,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 class CProcessor;
 class Motherboard;
 class CFloppyController;
+class CHardDrive;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -114,6 +115,7 @@ private:  // Devices
     uint16_t    m_Configuration;  // See NEON_COPT_Xxx flag constants
     CProcessor* m_pCPU;  // CPU device
     CFloppyController* m_pFloppyCtl;  // FDD control
+    CHardDrive* m_pHardDrive;  // HDD control
 public:  // Getting devices
     CProcessor* GetCPU() { return m_pCPU; }
 private:  // Memory
@@ -157,6 +159,17 @@ public:  // Floppy
     // Fill the current HD buffer, to call from floppy controller only
     bool        FillHDBuffer(const uint8_t* data);
     const uint8_t* GetHDBuffer();
+public:  // IDE HDD
+    // Attach hard drive image
+    bool        AttachHardImage(LPCTSTR sFileName);
+    // Detach hard drive image
+    void        DetachHardImage();
+    // Check if the hard drive attached
+    bool        IsHardImageAttached() const;
+    // Check if the attached hard drive image is read-only
+    bool        IsHardImageReadOnly() const;
+    uint16_t    GetHardPortWord(uint16_t port);  // To use from CMotherboard only
+    void        SetHardPortWord(uint16_t port, uint16_t data);  // To use from CMotherboard only
 public:  // Callbacks
     void        SetSoundGenCallback(SOUNDGENCALLBACK callback);
     void        SetSerialOutCallback(SERIALOUTCALLBACK outcallback);
