@@ -1,4 +1,4 @@
-/*  This file is part of NEONBTL.
+п»ї/*  This file is part of NEONBTL.
     NEONBTL is free software: you can redistribute it and/or modify it under the terms
 of the GNU Lesser General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version.
@@ -515,7 +515,7 @@ uint16_t Emulator_GetChangeRamStatus(uint32_t address)
     return *((uint16_t*)(g_pEmulatorChangedRam + address));
 }
 
-// Прототип функции, вызываемой для каждой сформированной строки экрана
+// РџСЂРѕС‚РѕС‚РёРї С„СѓРЅРєС†РёРё, РІС‹Р·С‹РІР°РµРјРѕР№ РґР»СЏ РєР°Р¶РґРѕР№ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ СЃС‚СЂРѕРєРё СЌРєСЂР°РЅР°
 typedef void (CALLBACK* SCREEN_LINE_CALLBACK)(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 void CALLBACK PrepareScreenLine416x300(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
@@ -575,15 +575,15 @@ uint32_t Color16Convert(uint16_t color)
     *plinebits++ = color; *plinebits++ = color; *plinebits++ = color; *plinebits++ = color; \
     *plinebits++ = color; *plinebits++ = color; *plinebits++ = color; *plinebits++ = color; \
 }
-// Выражение для получения 16-разрядного цвета из палитры; pala = адрес старшего байта
+// Р’С‹СЂР°Р¶РµРЅРёРµ РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ 16-СЂР°Р·СЂСЏРґРЅРѕРіРѕ С†РІРµС‚Р° РёР· РїР°Р»РёС‚СЂС‹; pala = Р°РґСЂРµСЃ СЃС‚Р°СЂС€РµРіРѕ Р±Р°Р№С‚Р°
 #define GETPALETTEHILO(pala) ((uint16_t)(pBoard->GetRAMByteView(pala) << 8) | pBoard->GetRAMByteView((pala) + 256))
 
-// Формирует 300 строк экрана; для каждой сформированной строки вызывает функцию lineCallback
+// Р¤РѕСЂРјРёСЂСѓРµС‚ 300 СЃС‚СЂРѕРє СЌРєСЂР°РЅР°; РґР»СЏ РєР°Р¶РґРѕР№ СЃС„РѕСЂРјРёСЂРѕРІР°РЅРЅРѕР№ СЃС‚СЂРѕРєРё РІС‹Р·С‹РІР°РµС‚ С„СѓРЅРєС†РёСЋ lineCallback
 void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCallback)
 {
     if (pImageBits == nullptr || lineCallback == nullptr || g_pBoard == nullptr) return;
 
-    uint32_t linebits[NEON_SCREEN_WIDTH];  // буфер под строку
+    uint32_t linebits[NEON_SCREEN_WIDTH];  // Р±СѓС„РµСЂ РїРѕРґ СЃС‚СЂРѕРєСѓ
 
     const CMotherboard* pBoard = g_pBoard;
 
@@ -595,9 +595,9 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
     uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 0x000f)) << 18);
     uint32_t tapaddr = (((uint32_t)vdptaplo) << 2) | (((uint32_t)(vdptaphi & 0x000f)) << 18);
     uint16_t pal0 = GETPALETTEHILO(tapaddr);
-    uint32_t colorBorder = Color16Convert(pal0);  // Глобальный цвет бордюра
+    uint32_t colorBorder = Color16Convert(pal0);  // Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ С†РІРµС‚ Р±РѕСЂРґСЋСЂР°
 
-    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам 0..299
+    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Р¦РёРєР» РїРѕ СЃС‚СЂРѕРєР°Рј 0..299
     {
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
@@ -605,52 +605,52 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
 
         uint32_t* plinebits = linebits;
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
-        bool firstOtr = true;  // Признак первого отрезка в строке
-        uint32_t colorbprev = 0;  // Цвет бордюра предыдущего отрезка
-        int bar = 52;  // Счётчик полосок от 52 к 0
-        for (;;)  // Цикл по видеоотрезкам строки, до полного заполнения строки
+        bool firstOtr = true;  // РџСЂРёР·РЅР°Рє РїРµСЂРІРѕРіРѕ РѕС‚СЂРµР·РєР° РІ СЃС‚СЂРѕРєРµ
+        uint32_t colorbprev = 0;  // Р¦РІРµС‚ Р±РѕСЂРґСЋСЂР° РїСЂРµРґС‹РґСѓС‰РµРіРѕ РѕС‚СЂРµР·РєР°
+        int bar = 52;  // РЎС‡С‘С‚С‡РёРє РїРѕР»РѕСЃРѕРє РѕС‚ 52 Рє 0
+        for (;;)  // Р¦РёРєР» РїРѕ РІРёРґРµРѕРѕС‚СЂРµР·РєР°Рј СЃС‚СЂРѕРєРё, РґРѕ РїРѕР»РЅРѕРіРѕ Р·Р°РїРѕР»РЅРµРЅРёСЏ СЃС‚СЂРѕРєРё
         {
             uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
             uint16_t otrhi = pBoard->GetRAMWordView(lineaddr + 2);
             lineaddr += 4;
-            // Получаем параметры отрезка
-            int otrcount = 32 - (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
+            // РџРѕР»СѓС‡Р°РµРј РїР°СЂР°РјРµС‚СЂС‹ РѕС‚СЂРµР·РєР°
+            int otrcount = 32 - (otrhi >> 10) & 037;  // Р”Р»РёРЅР° РѕС‚СЂРµР·РєР° РІ 32-СЂР°Р·СЂСЏРґРЅС‹С… СЃР»РѕРІР°С…
             if (otrcount == 0) otrcount = 32;
             uint32_t otraddr = (((uint32_t)otrlo) << 2) | (((uint32_t)otrhi & 0x000f) << 18);
-            uint16_t otrvn = (otrhi >> 6) & 3;  // VN1 VN0 - бит/точку
+            uint16_t otrvn = (otrhi >> 6) & 3;  // VN1 VN0 - Р±РёС‚/С‚РѕС‡РєСѓ
             bool otrpb = (otrhi & 0x8000) != 0;
-            uint16_t vmode = (otrhi >> 6) & 0x0f;  // биты VD1 VD0 VN1 VN0
-            // Получить адрес палитры
+            uint16_t vmode = (otrhi >> 6) & 0x0f;  // Р±РёС‚С‹ VD1 VD0 VN1 VN0
+            // РџРѕР»СѓС‡РёС‚СЊ Р°РґСЂРµСЃ РїР°Р»РёС‚СЂС‹
             uint32_t paladdr = tapaddr;
-            if (otrvn == 3 && otrpb)  // Многоцветный режим
+            if (otrvn == 3 && otrpb)  // РњРЅРѕРіРѕС†РІРµС‚РЅС‹Р№ СЂРµР¶РёРј
             {
                 paladdr += (otrhi & 0x10) ? 1024 + 512 : 1024;
             }
             else
             {
                 paladdr += (otrpb ? 512 : 0) + (otrvn * 64);
-                uint32_t otrpn = (otrhi >> 4) & 3;  // PN1 PN0 - номер палитры
+                uint32_t otrpn = (otrhi >> 4) & 3;  // PN1 PN0 - РЅРѕРјРµСЂ РїР°Р»РёС‚СЂС‹
                 paladdr += otrpn * 16;
             }
-            // Бордюр
+            // Р‘РѕСЂРґСЋСЂ
             uint16_t palbhi = pBoard->GetRAMWordView(paladdr);
             uint16_t palblo = pBoard->GetRAMWordView(paladdr + 256);
             uint32_t colorb = Color16Convert((uint16_t)((palbhi & 0xff) << 8 | (palblo & 0xff)));
-            if (!firstOtr)  // Это не первый отрезок - будет бордюр, цвета по пикселям: AAAAAAAAABBCCCCC
+            if (!firstOtr)  // Р­С‚Рѕ РЅРµ РїРµСЂРІС‹Р№ РѕС‚СЂРµР·РѕРє - Р±СѓРґРµС‚ Р±РѕСЂРґСЋСЂ, С†РІРµС‚Р° РїРѕ РїРёРєСЃРµР»СЏРј: AAAAAAAAABBCCCCC
             {
                 FILL8PIXELS(colorbprev)  FILL1PIXEL(colorbprev)
                 FILL2PIXELS(colorBorder)
                 FILL4PIXELS(colorb)  FILL1PIXEL(colorb)
                 bar--;  if (bar == 0) break;
             }
-            colorbprev = colorb;  // Запоминаем цвет бордюра
-            // Определяем, сколько 16-пиксельных полосок нужно заполнить
+            colorbprev = colorb;  // Р—Р°РїРѕРјРёРЅР°РµРј С†РІРµС‚ Р±РѕСЂРґСЋСЂР°
+            // РћРїСЂРµРґРµР»СЏРµРј, СЃРєРѕР»СЊРєРѕ 16-РїРёРєСЃРµР»СЊРЅС‹С… РїРѕР»РѕСЃРѕРє РЅСѓР¶РЅРѕ Р·Р°РїРѕР»РЅРёС‚СЊ
             int barcount = otrcount * 2;
             if (!firstOtr) barcount--;
             if (barcount > bar) barcount = bar;
             bar -= barcount;
-            // Заполняем отрезок
-            if (vmode == 0)  // VM1, плотность видео-строки 52 байта, со сдвигом влево на 2 байта
+            // Р—Р°РїРѕР»РЅСЏРµРј РѕС‚СЂРµР·РѕРє
+            if (vmode == 0)  // VM1, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°, СЃРѕ СЃРґРІРёРіРѕРј РІР»РµРІРѕ РЅР° 2 Р±Р°Р№С‚Р°
             {
                 uint16_t pal14hi = pBoard->GetRAMWordView(paladdr + 14);
                 uint16_t pal14lo = pBoard->GetRAMWordView(paladdr + 14 + 256);
@@ -669,11 +669,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 1)  // VM2, плотность видео-строки 52 байта
+            else if (vmode == 1)  // VM2, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // читаем байт - выводим 16 пикселей
+                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // С‡РёС‚Р°РµРј Р±Р°Р№С‚ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr++;
                     uint32_t palc = paladdr + (bits & 3);
                     uint16_t c = GETPALETTEHILO(palc);
@@ -696,11 +696,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             }
             else if (vmode == 2 || vmode == 6 ||
                     vmode == 3 && !otrpb ||
-                    vmode == 7 && !otrpb)  // VM4, плотность видео-строки 52 байта
+                    vmode == 7 && !otrpb)  // VM4, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // читаем байт - выводим 16 пикселей
+                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // С‡РёС‚Р°РµРј Р±Р°Р№С‚ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr++;
                     uint32_t palc = paladdr + (bits & 15);
                     uint16_t c = GETPALETTEHILO(palc);
@@ -714,11 +714,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 }
             }
             else if (vmode == 3 && otrpb ||
-                    vmode == 7 && otrpb)  // VM8, плотность видео-строки 52 байта
+                    vmode == 7 && otrpb)  // VM8, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // читаем байт - выводим 16 пикселей
+                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // С‡РёС‚Р°РµРј Р±Р°Р№С‚ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr++;
                     uint32_t palc = paladdr + bits;
                     uint16_t c = GETPALETTEHILO(palc);
@@ -728,7 +728,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 4)  // VM1, плотность видео-строки 52 байта
+            else if (vmode == 4)  // VM1, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°
             {
                 uint16_t pal14hi = pBoard->GetRAMWordView(paladdr + 14);
                 uint16_t pal14lo = pBoard->GetRAMWordView(paladdr + 14 + 256);
@@ -748,11 +748,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 5)  // VM2, плотность видео-строки 52 байта
+            else if (vmode == 5)  // VM2, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 52 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // читаем байт - выводим 16 пикселей
+                    uint8_t bits = pBoard->GetRAMByteView(otraddr);  // С‡РёС‚Р°РµРј Р±Р°Р№С‚ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr++;
                     uint32_t palc0 = (paladdr + 12 + (bits & 3));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -773,7 +773,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 8)  // VM1, плотность видео-строки 104 байта
+            else if (vmode == 8)  // VM1, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 104 Р±Р°Р№С‚Р°
             {
                 uint16_t pal14hi = pBoard->GetRAMWordView(paladdr + 14);
                 uint16_t pal14lo = pBoard->GetRAMWordView(paladdr + 14 + 256);
@@ -796,7 +796,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             {
                 while (barcount > 0)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 16 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + 12 + (bits & 3));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -833,11 +833,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 10)  // VM4, плотность видео-строки 104 байта
+            else if (vmode == 10)  // VM4, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 104 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 16 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc = paladdr + (bits & 15);
                     uint16_t c = GETPALETTEHILO(palc);
@@ -858,11 +858,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 11 && !otrpb)  // VM41, плотность видео-строки 104 байта
+            else if (vmode == 11 && !otrpb)  // VM41, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 104 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 16 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + (bits & 15));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -883,11 +883,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 11 && otrpb)  // VM8, плотность видео-строки 104 байта
+            else if (vmode == 11 && otrpb)  // VM8, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 104 Р±Р°Р№С‚Р°
             {
                 while (barcount > 0)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 16 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 16 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + (bits & 0xff));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -900,11 +900,11 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 13)  // VM2, плотность видео-строки 208 байт
+            else if (vmode == 13)  // VM2, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 208 Р±Р°Р№С‚
             {
                 for (int j = 0; j < barcount * 2; j++)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 8 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + 12 + (bits & 3));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -940,12 +940,12 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     FILL1PIXEL(color7)
                 }
             }
-            else if ((vmode == 14) ||  // VM4, плотность видео-строки 208 байт
-                    vmode == 15 && !otrpb)  // VM41, плотность видео-строки 208 байт
+            else if ((vmode == 14) ||  // VM4, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 208 Р±Р°Р№С‚
+                    vmode == 15 && !otrpb)  // VM41, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 208 Р±Р°Р№С‚
             {
                 for (int j = 0; j < barcount * 2; j++)
                 {
-                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 8 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + (bits & 15));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -969,7 +969,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             {
                 while (barcount > 0)
                 {
-                    uint16_t bits0 = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
+                    uint16_t bits0 = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 8 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc0 = (paladdr + (bits0 & 15));
                     uint16_t c0 = GETPALETTEHILO(palc0);
@@ -979,7 +979,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     uint16_t c1 = GETPALETTEHILO(palc1);
                     uint32_t color1 = Color16Convert(c1);
                     FILL4PIXELS(color1)
-                    uint16_t bits1 = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
+                    uint16_t bits1 = pBoard->GetRAMWordView(otraddr);  // С‡РёС‚Р°РµРј СЃР»РѕРІРѕ - РІС‹РІРѕРґРёРј 8 РїРёРєСЃРµР»РµР№
                     otraddr += 2;
                     uint32_t palc2 = (paladdr + (bits1 & 15));
                     uint16_t c2 = GETPALETTEHILO(palc2);
@@ -992,7 +992,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else //if (vmode == 12)  // VM1, плотность видео-строки 208 байт - запрещенный режим
+            else //if (vmode == 12)  // VM1, РїР»РѕС‚РЅРѕСЃС‚СЊ РІРёРґРµРѕ-СЃС‚СЂРѕРєРё 208 Р±Р°Р№С‚ - Р·Р°РїСЂРµС‰РµРЅРЅС‹Р№ СЂРµР¶РёРј
             {
                 while (barcount > 0)
                 {

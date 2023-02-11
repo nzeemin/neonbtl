@@ -1,4 +1,4 @@
-/*  This file is part of NEONBTL.
+Ôªø/*  This file is part of NEONBTL.
     NEONBTL is free software: you can redistribute it and/or modify it under the terms
 of the GNU Lesser General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version.
@@ -262,9 +262,9 @@ void ScreenView_PrepareScreen()
 
 #define NOKEY 0x0000
 
-// ¿–2 = Esc; “‡· = Tab; «¡ = Backspace;  1.. 5 = F1..F5
-// —¡–Œ— = F11; —“Œœ = F12; œŒÃ ”—“ »—œ = F6..F8
-// Õ– = LShift; ”œ– = LCtrl; ¿À‘ = RShift; √–¿‘ = RCtrl
+// –ê–†2 = Esc; –¢–∞–± = Tab; –ó–ë = Backspace; –ö1..–ö5 = F1..F5
+// –°–ë–†–û–° = F11; –°–¢–û–ü = F12; –ü–û–ú –£–°–¢ –ò–°–ü = F6..F8
+// –ù–† = LShift; –£–ü–† = LCtrl; –ê–õ–§ = RShift; –ì–†–ê–§ = RCtrl
 // +; = `~
 const uint16_t arrPcscan2VscanRus[256] =    // Device keys from PC keys, RUS
 {
@@ -318,7 +318,7 @@ void ScreenView_ScanKeyboard()
     BYTE keys[256];
     VERIFY(::GetKeyboardState(keys));
 
-    //TODO: ¬˚·Ë‡ÂÏ Ú‡·ÎËˆÛ Ï‡ÔÔËÌ„‡ ‚ Á‡‚ËÒËÏÓÒÚË ÓÚ ÙÎ‡„‡ –”—/À¿“
+    //TODO: –í—ã–±–∏—Ä–∞–µ–º —Ç–∞–±–ª–∏—Ü—É –º–∞–ø–ø–∏–Ω–≥–∞ –≤ –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏ –æ—Ç —Ñ–ª–∞–≥–∞ –†–£–°/–õ–ê–¢
     const uint16_t* pTable = arrPcscan2VscanLat;
 
     uint8_t matrix[8];
