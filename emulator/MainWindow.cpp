@@ -652,7 +652,7 @@ void MainWindow_UpdateMenu()
     MainWindow_SetToolbarImage(ID_EMULATOR_FLOPPY1,
             g_pBoard->IsFloppyImageAttached(1) ? (g_pBoard->IsFloppyReadOnly(1) ? ToolbarImageFloppyDiskWP : ToolbarImageFloppyDisk) : ToolbarImageFloppySlot);
     MainWindow_SetToolbarImage(ID_EMULATOR_HARDDRIVE,
-        g_pBoard->IsHardImageAttached() ? (g_pBoard->IsHardImageReadOnly() ? ToolbarImageHardDriveWP : ToolbarImageHardDrive) : ToolbarImageHardSlot);
+            g_pBoard->IsHardImageAttached() ? (g_pBoard->IsHardImageReadOnly() ? ToolbarImageHardDriveWP : ToolbarImageHardDrive) : ToolbarImageHardSlot);
 
     // Debug menu
     BOOL okDebug = Settings_GetDebug();

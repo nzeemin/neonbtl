@@ -303,13 +303,13 @@ void CHardDrive::HandleCommand(uint8_t command)
         m_timeoutevent = TIMEEVT_READ_SECTOR_DONE;
         break;
 
-    //case IDE_COMMAND_SET_CONFIG:
-    //    //DebugLogFormat(_T("HDD COMMAND %02x (SET CONFIG): H=%d, SC=%d\r\n"),
-    //    //        command, m_curhead, m_sectorcount);
+        //case IDE_COMMAND_SET_CONFIG:
+        //    //DebugLogFormat(_T("HDD COMMAND %02x (SET CONFIG): H=%d, SC=%d\r\n"),
+        //    //        command, m_curhead, m_sectorcount);
 
-    //    m_numsectors = m_sectorcount;
-    //    m_numheads = m_curhead + 1;
-    //    break;
+        //    m_numsectors = m_sectorcount;
+        //    m_numheads = m_curhead + 1;
+        //    break;
 
     case IDE_COMMAND_WRITE_MULTIPLE:
     case IDE_COMMAND_WRITE_MULTIPLE1:

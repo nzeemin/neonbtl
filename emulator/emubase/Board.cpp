@@ -560,7 +560,7 @@ uint32_t CMotherboard::GetRAMFullAddress(uint16_t address, bool okHaltMode) cons
     int memregno = address >> 13;
     uint16_t memreg = okHaltMode ? m_HR[memregno] : m_UR[memregno];
     if (memreg & 8)  // Запрет доступа к ОЗУ
-        return _UI32_MAX;
+        return 0xffffffff;
     return ((uint32_t)(address & 017777)) + (((uint32_t)(memreg & 037760)) << 8);
 }
 

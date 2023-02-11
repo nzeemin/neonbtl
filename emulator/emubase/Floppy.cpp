@@ -15,7 +15,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <share.h>
 #include "Emubase.h"
 
 
@@ -111,11 +110,11 @@ bool CFloppyController::AttachImage(int drive, LPCTSTR sFileName)
 
     // Open file
     m_drivedata[drive].okReadOnly = false;
-    m_drivedata[drive].fpFile = ::_tfsopen(sFileName, _T("r+b"), _SH_DENYNO);
+    m_drivedata[drive].fpFile = ::_tfopen(sFileName, _T("r+b"));
     if (m_drivedata[drive].fpFile == nullptr)
     {
         m_drivedata[drive].okReadOnly = true;
-        m_drivedata[drive].fpFile = ::_tfsopen(sFileName, _T("rb"), _SH_DENYNO);
+        m_drivedata[drive].fpFile = ::_tfopen(sFileName, _T("rb"));
     }
     if (m_drivedata[drive].fpFile == nullptr)
         return false;
