@@ -505,23 +505,23 @@ bool CMotherboard::SystemFrame()
             DoSound();
         }
 
-        if (m_ParallelOutCallback != nullptr)
-        {
-            if ((m_PPIAwr & 2) != 0 && (m_PPIBrd & 0x40) != 0)
-            {
-                // Strobe set, Printer Ack set => reset Printer Ack
-                m_PPIBrd &= ~0x40;
-                // Now printer waits for a next byte
-            }
-            else if ((m_PPIAwr & 2) == 0 && (m_PPIBrd & 0x40) == 0)
-            {
-                // Strobe reset, Printer Ack reset => byte is ready, print it
-                (*m_ParallelOutCallback)(m_PPIBwr);
-                // Set Printer Acknowledge
-                m_PPIBrd |= 0x40;
-                // Now the printer waits for Strobe
-            }
-        }
+        //if (m_ParallelOutCallback != nullptr)
+        //{
+        //    if ((m_PPIAwr & 2) != 0 && (m_PPIBrd & 0x40) != 0)
+        //    {
+        //        // Strobe set, Printer Ack set => reset Printer Ack
+        //        m_PPIBrd &= ~0x40;
+        //        // Now printer waits for a next byte
+        //    }
+        //    else if ((m_PPIAwr & 2) == 0 && (m_PPIBrd & 0x40) == 0)
+        //    {
+        //        // Strobe reset, Printer Ack reset => byte is ready, print it
+        //        (*m_ParallelOutCallback)(m_PPIBwr);
+        //        // Set Printer Acknowledge
+        //        m_PPIBrd |= 0x40;
+        //        // Now the printer waits for Strobe
+        //    }
+        //}
     }
 
     return true;

@@ -149,6 +149,7 @@ public:  // System control
     bool        SystemFrame();  // Do one frame -- use for normal run
     void        UpdateKeyboardMatrix(const uint8_t matrix[8]);
     void        MouseMove(short dx, short dy, bool btnLeft, bool btnRight);
+    uint16_t    GetPrinterOutPort() const { return m_PPIBwr; }
 public:  // Floppy
     bool        AttachFloppyImage(int slot, LPCTSTR sFileName);
     void        DetachFloppyImage(int slot);
