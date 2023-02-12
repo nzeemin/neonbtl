@@ -40,6 +40,8 @@ bool m_okEmulatorCovox = false;
 bool m_okEmulatorSerial = false;
 FILE* m_fpEmulatorSerialOut = nullptr;
 
+uint8_t m_nPrinterOutLastByte = 0;
+
 long m_nFrameCount = 0;
 uint32_t m_dwTickCount = 0;
 uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
@@ -51,6 +53,7 @@ uint16_t g_wEmulatorCpuPC = 0;      // Current PC value
 uint16_t g_wEmulatorPrevCpuPC = 0;  // Previous PC value
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R);
+void CALLBACK Emulator_ParallelOut_Callback(BYTE byte);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -387,6 +390,8 @@ void Emulator_SetSound(bool soundOnOff)
 void Emulator_SetCovox(bool covoxOnOff)
 {
     m_okEmulatorCovox = covoxOnOff;
+
+    g_pBoard->SetParallelOutCallback(Emulator_ParallelOut_Callback);
 }
 
 void CALLBACK Emulator_SerialOut_Callback(uint8_t byte)
@@ -424,6 +429,12 @@ void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8])
 {
     g_pBoard->UpdateKeyboardMatrix(matrix);
 }
+
+void CALLBACK Emulator_ParallelOut_Callback(BYTE byte)
+{
+    m_nPrinterOutLastByte = byte;
+}
+
 
 bool Emulator_SystemFrame()
 {
@@ -480,6 +491,15 @@ bool Emulator_SystemFrame()
 
 void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)
 {
+    if (m_okEmulatorCovox)
+    {
+        // Get lower byte from printer port output register
+        unsigned short data = m_nPrinterOutLastByte;
+        // Merge with channel data
+        L |= (data << 7);
+        R |= (data << 7);
+    }
+
     SoundGen_FeedDAC(L, R);
 }
 

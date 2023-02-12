@@ -180,6 +180,7 @@ BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
         return FALSE;
 
     Emulator_SetSound(Settings_GetSound() != 0);
+    Emulator_SetCovox(Settings_GetSoundCovox() != 0);
 
     if (!CreateMainWindow())
         return FALSE;

@@ -115,6 +115,7 @@ BEGIN
         MENUITEM "Autostart",                   ID_EMULATOR_AUTOSTART
         MENUITEM SEPARATOR
         MENUITEM "Sound",                       ID_EMULATOR_SOUND
+        MENUITEM "Covox",                       ID_EMULATOR_COVOX
         MENUITEM SEPARATOR
         MENUITEM "RAM 512 KB",                  ID_CONF_RAM512
         MENUITEM "RAM 1024 KB",                 ID_CONF_RAM1024

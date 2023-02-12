@@ -215,7 +215,7 @@ private:  // Ports/devices: implementation
     uint8_t     m_PICRR;            // PIC interrupt request register
     uint8_t     m_PICMR;            // PIC mask register
     uint8_t     m_PPIAwr, m_PPIArd;
-    uint16_t    m_PPIB;             // 161032 Printer data - bits 0..7
+    uint8_t     m_PPIBwr, m_PPIBrd; // 161032 printer data (W) / flags (R)
     uint16_t    m_PPIC;             // 161034
     uint16_t    m_hdsdh;            // 161054 HD.SDH
     uint8_t     m_hdscnt;

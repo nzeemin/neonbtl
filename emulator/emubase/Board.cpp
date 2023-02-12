@@ -46,8 +46,8 @@ CMotherboard::CMotherboard()
     m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
     m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));
 
-    m_PPIAwr = m_PPIArd = 0;
-    m_PPIB = 11;  // IHLT EF1 EF0 - инверсные
+    m_PPIAwr = m_PPIArd = m_PPIBwr = 0;
+    m_PPIBrd = 11;  // IHLT EF1 EF0 - инверсные
     m_PPIC = 14;  // IHLT VIRQ - инверсные
     m_hdsdh = 0;
 
@@ -128,8 +128,8 @@ void CMotherboard::Reset()
     m_pCPU->SetDCLOPin(true);
     m_pCPU->SetACLOPin(true);
 
-    m_PPIAwr = m_PPIArd = 0;
-    m_PPIB = 11;  // IHLT EF1 EF0 - инверсные
+    m_PPIAwr = m_PPIArd = m_PPIBwr = 0;
+    m_PPIBrd = 11;  // IHLT EF1 EF0 - инверсные
     m_PPIC = 14;  // IHLT VIRQ - инверсные
     m_hdsdh = 0;
 
@@ -505,9 +505,22 @@ bool CMotherboard::SystemFrame()
             DoSound();
         }
 
-        if (m_ParallelOutCallback != nullptr && frameticks % 1000 == 0)
+        if (m_ParallelOutCallback != nullptr)
         {
-            //TODO
+            if ((m_PPIAwr & 2) != 0 && (m_PPIBrd & 0x40) != 0)
+            {
+                // Strobe set, Printer Ack set => reset Printer Ack
+                m_PPIBrd &= ~0x40;
+                // Now printer waits for a next byte
+            }
+            else if ((m_PPIAwr & 2) == 0 && (m_PPIBrd & 0x40) == 0)
+            {
+                // Strobe reset, Printer Ack reset => byte is ready, print it
+                (*m_ParallelOutCallback)(m_PPIBwr);
+                // Set Printer Acknowledge
+                m_PPIBrd |= 0x40;
+                // Now the printer waits for Strobe
+            }
         }
     }
 
@@ -580,11 +593,11 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
         //TODO: What to do if okExec == true ?
         return GetPortWord(address);
     case ADDRTYPE_EMUL:
-        if ((m_PPIB & 1) == 1)  // EF0 inactive?
+        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
             m_HR[0] = address;
         else
             m_HR[1] = address;
-        m_PPIB &= ~1;  // set EF0 active
+        m_PPIBrd &= ~1;  // set EF0 active
         m_pCPU->SetHALTPin(true);
         res = GetRAMWord(offset & 07776);
         DebugLogFormat(_T("%c%06ho\tGETWORD %06ho EMUL -> %06ho\n"), HU_INSTRUCTION_PC, address, res);
@@ -615,11 +628,11 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
         //TODO: What to do if okExec == true ?
         return GetPortByte(address);
     case ADDRTYPE_EMUL:
-        if ((m_PPIB & 1) == 1)  // EF0 inactive?
+        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
             m_HR[0] = address;
         else
             m_HR[1] = address;
-        m_PPIB &= ~1;  // set EF0 active
+        m_PPIBrd &= ~1;  // set EF0 active
         m_pCPU->SetHALTPin(true);
         resb = GetRAMByte(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETBYTE %06ho EMUL %03ho\n"), HU_INSTRUCTION_PC, address, resb);
@@ -656,11 +669,11 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETWORD %06ho -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, word, address);
         SetRAMWord(offset & 07777, word);
-        if ((m_PPIB & 1) == 1)  // EF0 inactive?
+        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
             m_HR[0] = address;
         else
             m_HR[1] = address;
-        m_PPIB &= ~3;  // set EF1,EF0 active
+        m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
         return;
     case ADDRTYPE_DENY:
@@ -692,11 +705,11 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETBYTE %03o -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, byte, address);
         SetRAMByte(offset & 07777, byte);
-        if ((m_PPIB & 1) == 1)  // EF0 inactive?
+        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
             m_HR[0] = address;
         else
             m_HR[1] = address;
-        m_PPIB &= ~3;  // set EF1,EF0 active
+        m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
         return;
     case ADDRTYPE_DENY:
@@ -789,11 +802,11 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
 
     case 0161010: case 0161012: case 0161014: case 0161016:
         resb = ProcessTimerRead(address);
-        DebugLogFormat(_T("%c%06ho\tGETPORT SND -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)resb);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho SND -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
     case 0161020: case 0161022: case 0161024: case 0161026:
         resb = ProcessTimerRead(address);
-        DebugLogFormat(_T("%c%06ho\tGETPORT SNL -> 0x%02hx\n"), HU_INSTRUCTION_PC, (uint16_t)resb);
+        DebugLogFormat(_T("%c%06ho\tGETPORT %06ho SNL -> 0x%02hx\n"), HU_INSTRUCTION_PC, address, (uint16_t)resb);
         return resb;
 
     case 0161030:  // PPIA
@@ -802,7 +815,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         return result;
 
     case 0161032:  // PPIB
-        result = m_PPIB;
+        result = m_PPIBrd;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho PPIB -> %06ho\n"), HU_INSTRUCTION_PC, address, result);
         return result;
 
@@ -897,7 +910,7 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
         chunk = (address >> 1) & 7;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HR%d -> %06ho\n"), HU_INSTRUCTION_PC, address, chunk, m_HR[chunk]);
         if (m_pCPU->IsHaltMode() && (chunk == 0 || chunk == 1))  // Чтение HR0 или HR1 в режиме HALT
-            m_PPIB |= 3;  // Снимаем EF0 и EF1
+            m_PPIBrd |= 3;  // Снимаем EF0 и EF1
         return m_HR[chunk];
 
     case 0161220:
@@ -946,7 +959,7 @@ uint16_t CMotherboard::GetPortView(uint16_t address) const
         return m_PICMR;
 
     case 0161032:  // PPIB
-        return m_PPIB;
+        return m_PPIBrd;
     case 0161034:  // PPIC
         return m_PPIC;
 
@@ -1071,6 +1084,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
     case 0161032:  // PPIB
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIB\n"), HU_INSTRUCTION_PC, word, address);
+        m_PPIBwr = word & 0xff;
         break;
     case 0161034:  // PPIC
         PrintBinaryValue(buffer, word);
@@ -1078,7 +1092,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
                 (word & 010) ? _T("") : _T(" VIRQ"),
                 (word & 4) ? _T("") : _T(" IHLT"));
         m_PPIC = word & 0xff;
-        m_PPIB = (m_PPIB & ~8) | ((m_PPIC & 4) == 0 ? 0 : 8);  // PC2(IHLT) -> PB3
+        m_PPIBrd = (m_PPIBrd & ~8) | ((m_PPIC & 4) == 0 ? 0 : 8);  // PC2(IHLT) -> PB3
         m_pCPU->SetVIRQ((m_PPIC & 010) == 0);
         break;
     case 0161036:  // PPIP -- Parallel port mode control
@@ -1176,7 +1190,7 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
             int chunk = (address >> 1) & 7;
             m_HR[chunk] = word;
             if (m_pCPU->IsHaltMode() && (chunk == 0 || chunk == 1))  // Запись HR0 или HR1 в режиме HALT
-                m_PPIB |= 3;  // Снимаем EF0 и EF1
+                m_PPIBrd |= 3;  // Снимаем EF0 и EF1
             break;
         }
 
@@ -1302,8 +1316,8 @@ void CMotherboard::UpdateInterrupts()
     SetPICInterrupt(1, m_pFloppyCtl->CheckInterrupt() || m_hdint);
     SetPICInterrupt(4, m_keyint);
     bool ioint = ((m_PICRR & ~m_PICMR) != 0);
-    m_PPIB = (m_PPIB & ~4) | (ioint ? 4 : 0);  // Update PB2(IOINT) signal
-    m_pCPU->SetHALTPin((m_PPIB & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
+    m_PPIBrd = (m_PPIBrd & ~4) | (ioint ? 4 : 0);  // Update PB2(IOINT) signal
+    m_pCPU->SetHALTPin((m_PPIBrd & 11) != 11 || ioint);  // EF0 EF1, IHLT or IOINT
 }
 
 // Get port value for Real Time Clock - ports 0161400..0161476 - КР512ВИ1 == MC146818
@@ -1455,18 +1469,18 @@ void CMotherboard::DoSound()
         return;
 
     uint16_t sound =
-        (m_snl.GetOutput(0) ? 1 : 0) +
-        (m_snl.GetOutput(1) ? 1 : 0) +
-        (m_snl.GetOutput(2) ? 1 : 0);
+        (m_snl.GetOutput(0) ? 0 : 1) +
+        (m_snl.GetOutput(1) ? 0 : 1) +
+        (m_snl.GetOutput(2) ? 0 : 1);
 
     switch (sound)
     {
     case 3:
-        sound = 0x1fff;  break;
+        sound = 0x7fff;  break;
     case 2:
-        sound = 0x1555;  break;
+        sound = 0x5555;  break;
     case 1:
-        sound = 0x0aaa;  break;
+        sound = 0x2AAA;  break;
     }
 
     (*m_SoundGenCallback)(sound, sound);
@@ -1493,12 +1507,12 @@ void CMotherboard::SetParallelOutCallback(PARALLELOUTCALLBACK outcallback)
 {
     if (outcallback == nullptr)  // Reset callback
     {
-        //m_Port177101 &= ~2;  // Reset OnLine flag
+        m_PPIArd &= ~0x10;  // Reset Printer flag
         m_ParallelOutCallback = nullptr;
     }
     else
     {
-        //m_Port177101 |= 2;  // Set OnLine flag
+        m_PPIArd |= 0x10;  // Set Printer flag
         m_ParallelOutCallback = outcallback;
     }
 }

@@ -84,6 +84,7 @@
 #define ID_EMULATOR_PARALLEL            32827
 #define ID_EMULATOR_NETWORK             32828
 #define ID_EMULATOR_SOUND               32831
+#define ID_EMULATOR_COVOX               32832
 #define ID_VIEW_SCREENMODE0             32847
 #define ID_VIEW_SCREENMODE1             32848
 #define ID_VIEW_SCREENMODE2             32849

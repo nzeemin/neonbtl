@@ -103,13 +103,13 @@ uint8_t PIT8253::Read(uint8_t address)
 
 void PIT8253::SetGate(uint8_t chan, bool gate)
 {
-    if (chan > 3) return;
+    if (chan >= 3) return;
     m_chan[chan].gate = gate;
 }
 
 bool PIT8253::GetOutput(uint8_t chan)
 {
-    if (chan > 3) return false;
+    if (chan >= 3) return false;
 
     return m_chan[chan].output;
 }
