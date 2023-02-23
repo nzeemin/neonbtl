@@ -98,6 +98,9 @@
 #define ID_DEBUG_STEPOVER               32884
 #define ID_VIEW_MEMORYMAP               32885
 #define ID_DEBUG_SPRITES                32886
+#define ID_DEBUG_MEMORY_CPU             32887
+#define ID_DEBUG_MEMORY_HALT            32888
+#define ID_DEBUG_MEMORY_USER            32889
 #define ID_DEBUG_MEMORY_WORDBYTE        32894
 #define ID_DEBUG_MEMORY_GOTO            32895
 #define ID_DEBUG_CLEARCONSOLE           32896

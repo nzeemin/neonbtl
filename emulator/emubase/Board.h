@@ -197,7 +197,6 @@ public:  // Memory
     uint16_t GetPortView(uint16_t address) const;
     // Read SEL register
     static uint16_t GetSelRegister() { return 0; }
-private:
     // Determine memory type for the given address - see ADDRTYPE_Xxx constants
     //   okHaltMode - processor mode (USER/HALT)
     //   okExec - true: read instruction for execution; false: read memory

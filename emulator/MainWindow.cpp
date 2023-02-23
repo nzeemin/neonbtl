@@ -233,10 +233,10 @@ BOOL MainWindow_InitStatusbar()
         return FALSE;
 
     int statusbarParts[4];
-    statusbarParts[0] = 300;
-    statusbarParts[1] = 370;
-    statusbarParts[2] = 440;
-    statusbarParts[3] = -1;
+    statusbarParts[0] = 410;
+    statusbarParts[1] = 480;  // FD Motor
+    statusbarParts[2] = 550;  // FPS
+    statusbarParts[3] = -1;   // Uptime
     SendMessage(m_hwndStatusbar, SB_SETPARTS, sizeof(statusbarParts) / sizeof(int), (LPARAM) statusbarParts);
 
     return TRUE;
@@ -777,6 +777,11 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_DEBUG_SUBTITLES:
         DisasmView_LoadUnloadSubtitles();
+        break;
+    case ID_DEBUG_MEMORY_CPU:
+    case ID_DEBUG_MEMORY_HALT:
+    case ID_DEBUG_MEMORY_USER:
+        MemoryView_SetViewMode((MemoryViewMode)(commandId - ID_DEBUG_MEMORY_CPU));
         break;
     case ID_DEBUG_MEMORY_WORDBYTE:
         MemoryView_SwitchWordByte();
