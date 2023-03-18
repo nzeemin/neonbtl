@@ -1,7 +1,10 @@
 # neonbtl
-**Neon Back to Life!** is emulator of **Sojuz-Neon PK 11/16**, soviet computer based on PDP-11 compatible processor.
+**Neon Back to Life!** is an emulator of Soviet computer **Sojuz-Neon PK 11/16**.
+This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (near Moscow), and a total of 200-1000 units were produced.
 
-Status: Work in progress.
+Soyuz-Neon is based on the N1806VM2 processor, so it is partially compatible with machines such as DVK, UKNC, NEMIGA, and in general inherits the instruction set and architecture from the DEC PDP-11 line of machines.
+
+Emulator status: Work in progress.
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
 [![Build status](https://ci.appveyor.com/api/projects/status/q0dmuth9x2sp3k1x?svg=true)](https://ci.appveyor.com/project/nzeemin/neonbtl)
@@ -12,12 +15,12 @@ Status: Work in progress.
 
 ### Neon Back to Life!
 
-Это проект эмуляции компьютера [Союз-Неон ПК-11/16](https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16).
+**Neon Back to Life!** — это эмулятор советского компьютера [Союз-Неон ПК-11/16](https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16).
+Этот компьютер выпускался в 1991-1992 годах на заводе "Квант" в г. Зеленограде, всего было выпущено 200-1000 экземпляров.
 
-Статус: Разработка эмулятора в процессе.
+Союз-Неон построен на процессоре Н1806ВМ2, поэтому он частично совместим с такими машинами как ДВК, УКНЦ, Немига, и в целом наследует систему команд и архитектуру от машин линейки DEC PDP-11.
 
-**Союз-Неон ПК 11/16** – советский 16-разрядный персональный компьютер на процессоре Н1806ВМ2.
-По системе команд совместим с Электроника-60, ДВК, т.е. повторяет систему команд DEC PDP-11.
+Состояние эмулятора: В процессе разработки.
 
 
 ### Маппинг клавиатуры
