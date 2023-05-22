@@ -52,6 +52,11 @@ enum NeonConfiguration
 #define TRACE_CPU      01000  // Trace CPU instructions
 #define TRACE_ALL    0177777  // Trace all
 
+// Emulator image constants
+#define NEONIMAGE_HEADER1 0x6E6F654E  // "Neon"
+#define NEONIMAGE_HEADER2 0x214C5442  // "BTL!"
+#define NEONIMAGE_VERSION 0x00010000  // 1.0
+
 // PIC 8259A flags
 #define PIC_MODE_ICW1      1  // Wait for ICW1 after RESET
 #define PIC_MODE_ICW2      2  // Wait for ICW2 after ICW1
@@ -141,6 +146,7 @@ public:  // Debug
     void        LoadRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
+    uint16_t    GetConfiguration() const { return m_Configuration; }
     void        LoadROM(const uint8_t* pBuffer);  // Load 16 KB ROM image from the buffer
     void        Reset();  // Reset computer
     void        Tick50();           // Tick 50 Hz

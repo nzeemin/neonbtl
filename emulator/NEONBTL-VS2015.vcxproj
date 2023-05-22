@@ -173,6 +173,7 @@
     </ClCompile>
     <ClCompile Include="ToolWindow.cpp" />
     <ClCompile Include="util\BitmapFile.cpp" />
+    <ClCompile Include="util\lz4.cpp" />
     <ClCompile Include="util\WavPcmFile.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -189,6 +190,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="ToolWindow.h" />
     <ClInclude Include="util\BitmapFile.h" />
+    <ClInclude Include="util\lz4.h" />
     <ClInclude Include="util\WavPcmFile.h" />
     <ClInclude Include="Views.h" />
   </ItemGroup>

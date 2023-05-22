@@ -17,8 +17,9 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "Emulator.h"
 
 #include "Views.h"
-#include "emubase\Emubase.h"
+#include "emubase/Emubase.h"
 #include "SoundGen.h"
+#include "util/lz4.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1163,26 +1164,53 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
         return false;
     }
 
-    //// Allocate memory
-    //BYTE* pImage = (BYTE*) ::malloc(NEON_IMAGE_SIZE);  memset(pImage, 0, NEON_IMAGE_SIZE);
-    //::memset(pImage, 0, NEON_IMAGE_SIZE);
-    //// Prepare header
-    //uint32_t* pHeader = (uint32_t*) pImage;
-    //*pHeader++ = BKIMAGE_HEADER1;
-    //*pHeader++ = BKIMAGE_HEADER2;
-    //*pHeader++ = BKIMAGE_VERSION;
-    //*pHeader++ = BKIMAGE_SIZE;
-    //// Store emulator state to the image
-    ////g_pBoard->SaveToImage(pImage);
-    //*(uint32_t*)(pImage + 16) = m_dwEmulatorUptime;
+    // Allocate memory: 24KB + RAM size
+    uint32_t stateSize = 24576 + (g_pBoard->GetConfiguration() & NEON_COPT_RAMSIZE_MASK) * 1024;
+    uint8_t* pImage = (uint8_t*) ::calloc(stateSize, 1);
+    // Prepare header
+    uint32_t* pHeader = (uint32_t*) pImage;
+    pHeader[0] = NEONIMAGE_HEADER1;
+    pHeader[1] = NEONIMAGE_HEADER2;
+    pHeader[2] = NEONIMAGE_VERSION;
+    pHeader[3] = stateSize;
+    pHeader[4] = m_dwEmulatorUptime;
+    // Store emulator state to the image
+    g_pBoard->SaveToImage(pImage);
 
-    //// Save image to the file
-    //uint32_t dwBytesWritten = 0;
-    //WriteFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesWritten, nullptr);
-    ////TODO: Check if dwBytesWritten != BKIMAGE_SIZE
+    // Compress the state body
+    int compressSize = (int)stateSize - 32;
+    int compressBufferSize = LZ4_COMPRESSBOUND(compressSize);
+    void* pCompressBuffer = ::calloc(compressBufferSize, 1);
+    int compressedSize = LZ4_compress_default(
+        (const char*)(pImage + 32), (char*)pCompressBuffer, compressSize, compressBufferSize);
+    if (compressedSize == 0)
+    {
+        AlertWarning(_T("Failed to compress the emulator state."));
+        return false;
+    }
 
-    //// Free memory, close file
-    //::free(pImage);
+    pHeader[5] = (uint32_t)compressedSize;
+
+    // Save header to the file
+    DWORD dwBytesWritten = 0;
+    WriteFile(hFile, pImage, 32, &dwBytesWritten, nullptr);
+    if (dwBytesWritten != 32)
+    {
+        AlertWarning(_T("Failed to write the emulator state."));
+        return false;
+    }
+
+    // Save compressed state body to the file
+    WriteFile(hFile, pCompressBuffer, compressedSize, &dwBytesWritten, nullptr);
+    if (dwBytesWritten != (DWORD)compressedSize)
+    {
+        AlertWarning(_T("Failed to write the emulator state."));
+        return false;
+    }
+
+    // Free memory, close file
+    ::free(pImage);
+    ::free(pCompressBuffer);
     CloseHandle(hFile);
 
     return true;
@@ -1200,31 +1228,51 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
         return false;
     }
 
-    //// Read header
-    //uint32_t bufHeader[BKIMAGE_HEADER_SIZE / sizeof(uint32_t)];
-    //uint32_t dwBytesRead = 0;
-    //ReadFile(hFile, bufHeader, BKIMAGE_HEADER_SIZE, &dwBytesRead, nullptr);
-    ////TODO: Check if dwBytesRead != BKIMAGE_HEADER_SIZE
+    // Read header
+    uint32_t bufHeader[32 / sizeof(uint32_t)];
+    DWORD dwBytesRead = 0;
+    ReadFile(hFile, bufHeader, 32, &dwBytesRead, nullptr);
+    if (dwBytesRead != 32)
+    {
+        AlertWarning(_T("Failed to load the emulator state."));
+        return false;
+    }
 
-    ////TODO: Check version and size
+    //TODO: Check version and size
 
-    //// Allocate memory
-    //BYTE* pImage = (BYTE*) ::malloc(BKIMAGE_SIZE);  ::memset(pImage, 0, BKIMAGE_SIZE);
+    int compressedSize = (int)bufHeader[5];
+    void* pCompressBuffer = ::calloc(compressedSize, 1);
 
-    //// Read image
-    //SetFilePointer(hFile, 0, nullptr, FILE_BEGIN);
-    //dwBytesRead = 0;
-    //ReadFile(hFile, pImage, BKIMAGE_SIZE, &dwBytesRead, nullptr);
-    ////TODO: Check if dwBytesRead != BKIMAGE_SIZE
-
-    //// Restore emulator state from the image
-    ////g_pBoard->LoadFromImage(pImage);
-
-    //m_dwEmulatorUptime = *(uint32_t*)(pImage + 16);
-
-    //// Free memory, close file
-    //::free(pImage);
+    // Read image
+    dwBytesRead = 0;
+    ReadFile(hFile, pCompressBuffer, compressedSize, &dwBytesRead, nullptr);
     CloseHandle(hFile);
+    if (dwBytesRead != (DWORD)compressedSize)
+    {
+        AlertWarning(_T("Failed to load the emulator state."));
+        return false;
+    }
+
+    // Decompress the state body
+    uint32_t stateSize = bufHeader[3];
+    BYTE* pImage = (BYTE*) ::calloc(stateSize, 1);
+    int decompressedSize = LZ4_decompress_safe(
+        (const char*)pCompressBuffer, (char*)(pImage + 32), compressedSize, (int)stateSize - 32);
+    if (decompressedSize <= 0)
+    {
+        AlertWarning(_T("Failed to decompress the emulator state."));
+        return false;
+    }
+    memcpy(pImage, bufHeader, 32);
+
+    // Restore emulator state from the image
+    g_pBoard->LoadFromImage(pImage);
+
+    m_dwEmulatorUptime = bufHeader[4];
+
+    // Free memory, close file
+    ::free(pCompressBuffer);
+    ::free(pImage);
 
     g_okEmulatorRunning = false;
 

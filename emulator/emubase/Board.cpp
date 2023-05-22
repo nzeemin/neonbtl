@@ -1077,8 +1077,10 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         break;
 
     case 0161030:  // PPIA
+#if !defined(PRODUCT)
         PrintBinaryValue(buffer, word);
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIA %s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12);
+#endif
         m_PPIAwr = word & 0xff;
         ProcessMouseWrite(word & 0x00f0);
         break;
@@ -1087,10 +1089,12 @@ void CMotherboard::SetPortWord(uint16_t address, uint16_t word)
         m_PPIBwr = word & 0xff;
         break;
     case 0161034:  // PPIC
+#if !defined(PRODUCT)
         PrintBinaryValue(buffer, word);
         DebugLogFormat(_T("%c%06ho\tSETPORT %06ho -> (%06ho) PPIC %s%s%s\n"), HU_INSTRUCTION_PC, word, address, buffer + 12,
                 (word & 010) ? _T("") : _T(" VIRQ"),
                 (word & 4) ? _T("") : _T(" IHLT"));
+#endif
         m_PPIC = word & 0xff;
         m_PPIBrd = (m_PPIBrd & ~8) | ((m_PPIC & 4) == 0 ? 0 : 8);  // PC2(IHLT) -> PB3
         m_pCPU->SetVIRQ((m_PPIC & 010) == 0);
@@ -1377,7 +1381,8 @@ void CMotherboard::ProcessRtcWrite(uint16_t address, uint8_t byte)
 //    1024   2048 bytes  - HD buffers 2K
 //    3072   1024 bytes  - RESERVED
 //    4096  16384 bytes  - ROM image 16K
-//   20480               - RAM image 512/1024/2048/4096 KB
+//   20480   4096 bytes  - RESERVED
+//   24576               - RAM image 512/1024/2048/4096 KB
 //
 //  Board status (448 bytes):
 //      32      4 bytes  - RAM size bytes
@@ -1430,7 +1435,7 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     uint8_t* pImageRom = pImage + 4096;
     memcpy(pImageRom, m_pROM, 16 * 1024);
     // RAM
-    uint8_t* pImageRam = pImage + 20480;
+    uint8_t* pImageRam = pImage + 24576;
     memcpy(pImageRam, m_pRAM, m_nRamSizeBytes);
 }
 void CMotherboard::LoadFromImage(const uint8_t* pImage)
@@ -1456,7 +1461,7 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     const uint8_t* pImageRom = pImage + 4096;
     memcpy(m_pROM, pImageRom, 16 * 1024);
     // RAM
-    const uint8_t* pImageRam = pImage + 20480;
+    const uint8_t* pImageRam = pImage + 24576;
     memcpy(m_pRAM, pImageRam, m_nRamSizeBytes);
 }
 

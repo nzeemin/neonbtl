@@ -49,6 +49,7 @@
     </ClCompile>
     <ClCompile Include="SoundGen.cpp" />
     <ClCompile Include="emubase\Hard.cpp" />
+    <ClCompile Include="util\lz4.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="emubase\Board.h">
@@ -80,6 +81,7 @@
       <Filter>res</Filter>
     </ClInclude>
     <ClInclude Include="SoundGen.h" />
+    <ClInclude Include="util\lz4.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\diskette.ico">
