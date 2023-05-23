@@ -2514,14 +2514,14 @@ void CProcessor::ExecuteMARK ()  // MARK
 
 //////////////////////////////////////////////////////////////////////
 //
-// CPU image format (64 bytes):
+// CPU image format (80 bytes):
 //   2   bytes      PSW
 //   2*8 bytes      Registers R0..R7
 //   2*2 bytes      Saved PC and PSW
 //   2   byte       Stopped flag: 1 - stopped, 0 - not stopped
 //   2   bytes      Internal tick count
 //   3   bytes      Flags
-//  35   bytes      Reserved
+//  51   bytes      Reserved
 
 void CProcessor::SaveToImage(uint8_t* pImage) const
 {

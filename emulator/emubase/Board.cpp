@@ -1375,22 +1375,33 @@ void CMotherboard::ProcessRtcWrite(uint16_t address, uint8_t byte)
 // Emulator image
 //  Offset Length
 //       0     32 bytes  - Header
-//      32    480 bytes  - Board status
-//     512     64 bytes  - CPU status
-//     576    448 bytes  - RESERVED
-//    1024   2048 bytes  - HD buffers 2K
-//    3072   1024 bytes  - RESERVED
-//    4096  16384 bytes  - ROM image 16K
-//   20480   4096 bytes  - RESERVED
-//   24576               - RAM image 512/1024/2048/4096 KB
+//      32    400 bytes  - Board status
+//     432     80 bytes  - CPU status
+//     512   2048 bytes  - HD buffers 2K
+//    2560    512 bytes  - RESERVED
+//    3072  16384 bytes  - ROM image 16K
+//   19456   1024 bytes  - RESERVED
+//   20480               - RAM image 512/1024/2048/4096 KB
 //
-//  Board status (448 bytes):
+//  Board status (400 bytes):
 //      32      4 bytes  - RAM size bytes
-//      36     28 bytes  - RESERVED
+//      36      6 bytes  - PIC
+//      42      4 bytes  - RESERVED
+//      46     10 bytes  - PPI
+//      56      8 bytes  - RESERVED
 //      64     32 bytes  - HR[8]
 //      96     32 bytes  - UR[8]
-//     128     64 bytes  - Timer
-//     192
+//     128      8 bytes  - RESERVED
+//     136      8 bytes  - HDD controller
+//     152      8 bytes  - RESERVED
+//     160     12 bytes  - Keyboard
+//     172      4 bytes  - RESERVED
+//     176      6 bytes  - Mouse
+//     182     10 bytes  - RESERVED
+//     192     60 bytes  - PIT8253 x 2
+//     256      4 bytes  - RESERVED
+//     256     64 bytes  - Timer
+//     320     80 bytes  - RESERVED
 //
 void CMotherboard::SaveToImage(uint8_t* pImage)
 {
@@ -1399,18 +1410,49 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     *pwImage++ = m_Configuration;
     memcpy(pwImage, &m_nRamSizeBytes, sizeof(m_nRamSizeBytes));  // 4 bytes
     pwImage += sizeof(m_nRamSizeBytes) / 2;
-    pwImage += 28 / 2;  // RESERVED
-    //TODO: PIC data
-    //TODO: PPIA, PPIB, PPIC data
+    *pwImage++ = m_PICflags;
+    *pwImage++ = m_PICRR;
+    *pwImage++ = m_PICMR;
+    pwImage += 4 / 2;  // RESERVED
+    *pwImage++ = m_PPIAwr;  *pwImage++ = m_PPIArd;
+    *pwImage++ = m_PPIBwr;  *pwImage++ = m_PPIBrd;
+    *pwImage++ = m_PPIC;
+    pwImage += 8 / 2;  // RESERVED
+    // HR / UR
     memcpy(pwImage, m_HR, sizeof(m_HR));  // 32 bytes
     pwImage += sizeof(m_HR) / 2;
     memcpy(pwImage, m_UR, sizeof(m_UR));  // 32 bytes
-    //pwImage += sizeof(m_UR) / 2;
-
+    pwImage += sizeof(m_UR) / 2;
+    pwImage += 8 / 2;  // RESERVED
+    // HDD controller
+    *pwImage++ = m_hdsdh;
+    *pwImage++ = m_hdscnt;
+    *pwImage++ = m_hdsnum;
+    *pwImage++ = m_hdcnum;
+    *pwImage++ = m_hdint;
+    *pwImage++ = m_nHDbuff;
+    *pwImage++ = m_nHDbuffpos;
+    *pwImage++ = m_HDbuffdir;
+    pwImage += 8 / 2;  // RESERVED
+    // Keyboard, mouse
+    pwImage = reinterpret_cast<uint16_t*>(pImage + 216);
+    memcpy(pwImage, m_keymatrix, sizeof(m_keymatrix));  // 8 bytes
+    pwImage += 8 / 2;
+    *pwImage++ = m_keypos;
+    *pwImage++ = m_keyint;
+    pwImage += 4 / 2;  // RESERVED
+    *pwImage++ = m_mousedx;
+    *pwImage++ = m_mousedy;
+    *pwImage++ = m_mousest;
+    pwImage += 10 / 2;  // RESERVED
+    // PIT8253 x 2
+    memcpy(pwImage, m_snd.m_chan, sizeof(m_snd.m_chan));  // 30 bytes
+    pwImage += 30 / 2;
+    memcpy(pwImage, m_snl.m_chan, sizeof(m_snl.m_chan));  // 30 bytes
     // Timer
     time_t tnow = time(0);
     struct tm* lnow = localtime(&tnow);
-    uint8_t* pImageTimer = pImage + 128;
+    uint8_t* pImageTimer = pImage + 256;
     *pImageTimer++ = (uint8_t)lnow->tm_sec;  // Seconds
     *pImageTimer++ = m_rtcalarmsec;
     *pImageTimer++ = (uint8_t)lnow->tm_min;  // Minutes
@@ -1428,40 +1470,91 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     memcpy(pImageTimer, m_rtcmemory, sizeof(m_rtcmemory));  // 50 bytes
 
     // CPU status
-    uint8_t* pImageCPU = pImage + 512;
+    uint8_t* pImageCPU = pImage + 432;
     m_pCPU->SaveToImage(pImageCPU);
-    //TODO: HD buffers 2K
+    // HD buffers 2K
+    uint8_t* pImageBuffer2K = pImage + 512;
+    memcpy(pImageBuffer2K, m_pHDbuff, 2048);
     // ROM
-    uint8_t* pImageRom = pImage + 4096;
+    uint8_t* pImageRom = pImage + 3072;
     memcpy(pImageRom, m_pROM, 16 * 1024);
     // RAM
-    uint8_t* pImageRam = pImage + 24576;
+    uint8_t* pImageRam = pImage + 20480;
     memcpy(pImageRam, m_pRAM, m_nRamSizeBytes);
 }
 void CMotherboard::LoadFromImage(const uint8_t* pImage)
 {
     // Board data
     const uint16_t* pwImage = reinterpret_cast<const uint16_t*>(pImage + 32);
+
+    //TODO: If the new configuration has different memory size, re-allocate the memory
     m_Configuration = *pwImage++;
     memcpy(&m_nRamSizeBytes, pwImage, sizeof(m_nRamSizeBytes));  // 4 bytes
     pwImage += sizeof(m_nRamSizeBytes) / 2;
-    pwImage += 28 / 2;  // RESERVED
+    m_PICflags = *pwImage++;
+    m_PICRR = (uint8_t) * pwImage++;
+    m_PICMR = (uint8_t) * pwImage++;
+    pwImage += 4 / 2;  // RESERVED
+    m_PPIAwr = (uint8_t) * pwImage++;  m_PPIArd = (uint8_t) * pwImage++;
+    m_PPIBwr = (uint8_t) * pwImage++;  m_PPIBrd = (uint8_t) * pwImage++;
+    m_PPIC = *pwImage++;
+    pwImage += 8 / 2;  // RESERVED
+    // HR / UR
     memcpy(m_HR, pwImage, sizeof(m_HR));  // 32 bytes
     pwImage += sizeof(m_HR) / 2;
     memcpy(m_UR, pwImage, sizeof(m_UR));  // 32 bytes
-    //pwImage += sizeof(m_UR) / 2;
-
-    //TODO: Timer
+    pwImage += 8 / 2;  // RESERVED
+    // HDD controller
+    m_hdsdh = *pwImage++;
+    m_hdscnt = (uint8_t) * pwImage++;
+    m_hdsnum = (uint8_t) * pwImage++;
+    m_hdcnum = *pwImage++;
+    m_hdint = *pwImage++ != 0;
+    m_nHDbuff = (uint8_t) * pwImage++;
+    m_nHDbuffpos = *pwImage++;
+    m_HDbuffdir = *pwImage++ != 0;
+    pwImage += 8 / 2;  // RESERVED
+    // Keyboard, mouse
+    pwImage = reinterpret_cast<const uint16_t*>(pImage + 216);
+    memcpy(m_keymatrix, pwImage, sizeof(m_keymatrix));  // 8 bytes
+    pwImage += 8 / 2;
+    m_keypos = *pwImage++;
+    m_keyint = *pwImage++ != 0;
+    pwImage += 4 / 2;  // RESERVED
+    m_mousedx = (uint8_t) * pwImage++;
+    m_mousedy = (uint8_t) * pwImage++;
+    m_mousest = (uint8_t) * pwImage++;
+    pwImage += 10 / 2;  // RESERVED
+    // PIT8253 x 2
+    memcpy(m_snd.m_chan, pwImage, sizeof(m_snd.m_chan));  // 30 bytes
+    pwImage += 30 / 2;
+    memcpy(m_snl.m_chan, pwImage, sizeof(m_snl.m_chan));  // 30 bytes
+    // Timer
+    const uint8_t* pImageTimer = pImage + 256;
+    pImageTimer++;  // Seconds
+    m_rtcalarmsec = *pImageTimer++;
+    pImageTimer++;  // Minutes
+    m_rtcalarmmin = *pImageTimer++;
+    pImageTimer++;  // Hours
+    m_rtcalarmhour = *pImageTimer++;
+    pImageTimer++;  // Day of week
+    pImageTimer++;  // Day of month
+    pImageTimer++;  // Month
+    pImageTimer++;  // Year
+    pImageTimer += 4;
+    memcpy(m_rtcmemory, pImageTimer, sizeof(m_rtcmemory));  // 50 bytes
 
     // CPU status
-    const uint8_t* pImageCPU = pImage + 512;
+    const uint8_t* pImageCPU = pImage + 432;
     m_pCPU->LoadFromImage(pImageCPU);
-    //TODO: HD buffers 2K
+    // HD buffers 2K
+    const uint8_t* pImageBuffer2K = pImage + 512;
+    memcpy(m_pHDbuff, pImageBuffer2K, 2048);
     // ROM
-    const uint8_t* pImageRom = pImage + 4096;
+    const uint8_t* pImageRom = pImage + 3072;
     memcpy(m_pROM, pImageRom, 16 * 1024);
     // RAM
-    const uint8_t* pImageRam = pImage + 24576;
+    const uint8_t* pImageRam = pImage + 20480;
     memcpy(m_pRAM, pImageRam, m_nRamSizeBytes);
 }
 

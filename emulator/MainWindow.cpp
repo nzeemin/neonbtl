@@ -41,8 +41,6 @@ RECT m_MainWindow_FullscreenOldRect;
 //////////////////////////////////////////////////////////////////////
 // Forward declarations
 
-BOOL MainWindow_InitToolbar();
-BOOL MainWindow_InitStatusbar();
 void MainWindow_RestorePositionAndShow();
 LRESULT CALLBACK MainWindow_WndProc(HWND, UINT, WPARAM, LPARAM);
 void MainWindow_AdjustWindowLayout();
@@ -882,14 +880,26 @@ void MainWindow_DoEmulatorMouse()
 
 void MainWindow_DoFileLoadState()
 {
+    if (g_okEmulatorRunning)
+    {
+        Emulator_Stop();
+        MainWindow_UpdateMenu();
+    }
+
     TCHAR bufFileName[MAX_PATH];
     BOOL okResult = ShowOpenDialog(g_hwnd,
             _T("Open state image to load"),
             _T("NEONBTL state images (*.neonst)\0*.neonst\0All Files (*.*)\0*.*\0\0"),
             bufFileName);
-    if (! okResult) return;
+    if (!okResult) return;
 
-    Emulator_LoadImage(bufFileName);
+    if (!Emulator_LoadImage(bufFileName))
+        return;
+
+    //TODO: Change settings if the board RAM size changed
+
+    MainWindow_UpdateAllViews();
+    MainWindow_UpdateMenu();
 }
 
 void MainWindow_DoFileSaveState()

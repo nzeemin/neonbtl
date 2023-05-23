@@ -1148,9 +1148,10 @@ void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pL
 //   4 bytes        NEON_IMAGE_HEADER1
 //   4 bytes        NEON_IMAGE_HEADER2
 //   4 bytes        NEON_IMAGE_VERSION
-//   4 bytes        NEON_IMAGE_SIZE = 20K + 512/1024/2048/4096 KB
+//   4 bytes        state size = 20K + 512/1024/2048/4096 KB
 //   4 bytes        NEON uptime
-//   12 bytes       Not used
+//   4 bytes        state body compressed size
+//   8 bytes        RESERVED
 
 bool Emulator_SaveImage(LPCTSTR sFilePath)
 {
@@ -1164,8 +1165,8 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
         return false;
     }
 
-    // Allocate memory: 24KB + RAM size
-    uint32_t stateSize = 24576 + (g_pBoard->GetConfiguration() & NEON_COPT_RAMSIZE_MASK) * 1024;
+    // Allocate memory: 20KB + RAM size
+    uint32_t stateSize = 20480 + (g_pBoard->GetConfiguration() & NEON_COPT_RAMSIZE_MASK) * 1024;
     uint8_t* pImage = (uint8_t*) ::calloc(stateSize, 1);
     // Prepare header
     uint32_t* pHeader = (uint32_t*) pImage;
@@ -1182,7 +1183,7 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
     int compressBufferSize = LZ4_COMPRESSBOUND(compressSize);
     void* pCompressBuffer = ::calloc(compressBufferSize, 1);
     int compressedSize = LZ4_compress_default(
-        (const char*)(pImage + 32), (char*)pCompressBuffer, compressSize, compressBufferSize);
+            (const char*)(pImage + 32), (char*)pCompressBuffer, compressSize, compressBufferSize);
     if (compressedSize == 0)
     {
         AlertWarning(_T("Failed to compress the emulator state."));
@@ -1250,17 +1251,20 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
     if (dwBytesRead != (DWORD)compressedSize)
     {
         AlertWarning(_T("Failed to load the emulator state."));
+        ::free(pCompressBuffer);
         return false;
     }
 
     // Decompress the state body
     uint32_t stateSize = bufHeader[3];
-    BYTE* pImage = (BYTE*) ::calloc(stateSize, 1);
+    uint8_t* pImage = (uint8_t*) ::calloc(stateSize, 1);
     int decompressedSize = LZ4_decompress_safe(
-        (const char*)pCompressBuffer, (char*)(pImage + 32), compressedSize, (int)stateSize - 32);
+            (const char*)pCompressBuffer, (char*)(pImage + 32), compressedSize, (int)stateSize - 32);
     if (decompressedSize <= 0)
     {
         AlertWarning(_T("Failed to decompress the emulator state."));
+        ::free(pCompressBuffer);
+        ::free(pImage);
         return false;
     }
     memcpy(pImage, bufHeader, 32);
@@ -1273,10 +1277,6 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
     // Free memory, close file
     ::free(pCompressBuffer);
     ::free(pImage);
-
-    g_okEmulatorRunning = false;
-
-    MainWindow_UpdateAllViews();
 
     return true;
 }
