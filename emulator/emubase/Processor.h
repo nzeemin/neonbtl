@@ -52,7 +52,7 @@ protected:  // Processor state
     bool        m_waitmode;         // WAIT
 
 protected:  // Current instruction processing
-    uint16_t    m_instruction;      // Curent instruction
+    uint16_t    m_instruction;      // Current instruction
     uint16_t    m_instructionpc;    // Address of the current instruction
     uint8_t     m_regsrc;           // Source register number
     uint8_t     m_methsrc;          // Source address mode
@@ -179,7 +179,6 @@ protected:  // Implementation - instruction execution
     void        ExecuteRESET ();
     void        ExecuteSTEP ();
     void        ExecuteRSEL ();
-    void        Execute000030 ();
     void        ExecuteFIS ();
     void        ExecuteRUN ();
     void        ExecuteRTT ();

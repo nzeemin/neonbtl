@@ -43,6 +43,8 @@ Emulator status: Work in progress.
 
 Спасибо Михаилу Гусеву за предоставленный экземпляр Союз-Неон!
 
+Спасибо Yann Collet и другим участникам проекта [lz4.org](http://www.lz4.org/) за LZ4!
+
 
 ### Ссылки
 

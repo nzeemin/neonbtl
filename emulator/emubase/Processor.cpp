@@ -161,7 +161,7 @@ void CProcessor::Init()
     RegisterMethodOpc( 0000021,          &CProcessor::ExecuteMFUS)
     RegisterMethodRef( 0000022, 0000023, &CProcessor::ExecuteRCPC)
     RegisterMethodRef( 0000024, 0000027, &CProcessor::ExecuteRCPS)
-    RegisterMethodOpc( 0000030,          &CProcessor::Execute000030)
+    RegisterMethodOpc( 0000030,          &CProcessor::ExecuteRSEL)
     RegisterMethodOpc( 0000031,          &CProcessor::ExecuteMTUS)
     RegisterMethodRef( 0000032, 0000033, &CProcessor::ExecuteWCPC)
     RegisterMethodRef( 0000034, 0000037, &CProcessor::ExecuteWCPS)
@@ -593,42 +593,6 @@ void CProcessor::ExecuteRSEL()  // RSEL / ЧПТ - Чтение безадрес
     {
         SetReg(0, m_pBoard->GetSelRegister());  // R0 <- (SEL)
     }
-}
-
-void CProcessor::Execute000030()  // Unknown command
-{
-    if ((m_psw & PSW_HALT) == 0)  // Эта команда выполняется только в режиме HALT
-    {
-        m_RSVDrq = true;
-        return;
-    }
-
-    // Описание: По этой команде сперва очищается регистр R0. Далее исполняется цикл, окончанием которого
-    //           является установка в разряде 07 R0 или R2 единицы. В цикле над регистрами проводятся
-    //           следующие действия: регистры с R1 по R3 сдвигаются влево, при этом в R1 в младший разряд
-    //           вдвигается ноль, а в R2 и R3 – содержимое разряда C, при этом старшая часть R2 расширяется
-    //           знаковым разрядом младшей части, R0 инкрементируется. Так как останов исполнения команды
-    //           производится при наличии единицы в разряде 7 в R0 или R2, то после исполнения команды R0
-    //           может принимать значения от 0 до 108 или 2008. Значение 2008 получается в том случае,
-    //           если до исполнения операции младшая часть R2 была равна нулю и был сброшен бит С.
-    // Признаки: N – очищается,
-    //           Z – устанавливается, если значение в R0 равно нулю, в противном случае очищается,
-    //           V – очищается,
-    //           C – очищается.
-
-    SetReg(0, 0);
-    while ((GetReg(0) & 0200) == 0 && (GetReg(2) & 0200) == 0)
-    {
-        SetReg(1, GetReg(1) << 1);
-        SetReg(2, (((uint16_t)GetLReg(2)) << 1) | (GetC() ? 1 : 0));
-        SetReg(2, ((GetReg(2) & 0200) ? 0xff00 : 0) | GetLReg(2));
-        SetReg(3, (GetReg(3) << 1) | (GetC() ? 1 : 0));
-        SetReg(0, GetReg(0) + 1);
-    }
-    SetN(0);
-    SetZ(GetReg(0) == 0);
-    SetV(0);
-    SetC(0);
 }
 
 void CProcessor::ExecuteFIS()  // Floating point instruction set: FADD, FSUB, FMUL, FDIV
