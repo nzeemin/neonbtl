@@ -790,6 +790,9 @@ bool MainWindow_DoCommand(int commandId)
     case IDM_ABOUT:
         ShowAboutBox();
         break;
+    case ID_HELP_COMMAND_LINE_HELP:
+        ShowCommandLineHelpBox();
+        break;
     default:
         return false;
     }

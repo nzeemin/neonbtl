@@ -14,8 +14,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include <commdlg.h>
 #include <crtdbg.h>
 #include <mmintrin.h>
-#include <vfw.h>
-#include <commctrl.h>
+#include <Vfw.h>
+#include <CommCtrl.h>
 #include <shellapi.h>
 
 #include "Main.h"
@@ -38,6 +38,19 @@ long m_nMainLastFrameTicks = 0;
 BOOL InitInstance(HINSTANCE, int);
 void DoneInstance();
 void ParseCommandLine();
+
+LPCTSTR g_CommandLineHelp =
+    _T("Usage: NEONBTL [options]\r\n\r\n")
+    _T("Command line options:\r\n\r\n")
+    _T("/h /help\r\n\tShow command line options (this box)\r\n")
+    _T("/autostart /autostarton\r\n\tStart emulation on window open\r\n")
+    _T("/noautostart /autostartoff\r\n\tDo not start emulation on window open\r\n")
+    _T("/debug /debugon /debugger\r\n\tSwitch to debug mode\r\n")
+    _T("/nodebug /debugoff\r\n\tSwitch off the debug mode\r\n")
+    _T("/sound /soundon\r\n\tTurn sound on\r\n")
+    _T("/nosound /soundoff\r\n\tTurn sound off\r\n")
+    _T("/diskN:filePath\r\n\tAttach disk image, N=0..1\r\n")
+    _T("/hard:filePath\r\n\tAttach hard disk image\r\n");
 
 
 //////////////////////////////////////////////////////////////////////
@@ -73,6 +86,9 @@ int APIENTRY _tWinMain(
         return FALSE;
 
     HACCEL hAccelTable = ::LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_APPLICATION));
+
+    if (Option_ShowHelp)
+        ::PostMessage(g_hwnd, WM_COMMAND, ID_HELP_COMMAND_LINE_HELP, NULL);
 
     LARGE_INTEGER nPerformanceFrequency;
     ::QueryPerformanceFrequency(&nPerformanceFrequency);
@@ -212,7 +228,49 @@ void ParseCommandLine()
     {
         LPTSTR arg = args[curargn];
 
-        //TODO
+        if (_tcscmp(arg, _T("/help")) == 0 || _tcscmp(arg, _T("/h")) == 0)
+        {
+            Option_ShowHelp = true;
+        }
+        else if (_tcscmp(arg, _T("/autostart")) == 0 || _tcscmp(arg, _T("/autostarton")) == 0)
+        {
+            Settings_SetAutostart(TRUE);
+        }
+        else if (_tcscmp(arg, _T("/autostartoff")) == 0 || _tcscmp(arg, _T("/noautostart")) == 0)
+        {
+            Settings_SetAutostart(FALSE);
+        }
+        else if (_tcscmp(arg, _T("/debug")) == 0 || _tcscmp(arg, _T("/debugon")) == 0 || _tcscmp(arg, _T("/debugger")) == 0)
+        {
+            Settings_SetDebug(TRUE);
+        }
+        else if (_tcscmp(arg, _T("/debugoff")) == 0 || _tcscmp(arg, _T("/nodebug")) == 0)
+        {
+            Settings_SetDebug(FALSE);
+        }
+        else if (_tcscmp(arg, _T("/sound")) == 0 || _tcscmp(arg, _T("/soundon")) == 0)
+        {
+            Settings_SetSound(TRUE);
+        }
+        else if (_tcscmp(arg, _T("/soundoff")) == 0 || _tcscmp(arg, _T("/nosound")) == 0)
+        {
+            Settings_SetSound(FALSE);
+        }
+        else if (_tcslen(arg) > 7 && _tcsncmp(arg, _T("/disk"), 5) == 0)  // "/diskN:filePath", N=0..1
+        {
+            if (arg[5] >= _T('0') && arg[5] <= _T('1') && arg[6] == ':')
+            {
+                int slot = arg[5] - _T('0');
+                LPCTSTR filePath = arg + 7;
+                Settings_SetFloppyFilePath(slot, filePath);
+            }
+        }
+        else if (_tcslen(arg) > 6 && _tcsncmp(arg, _T("/hard:"), 6) == 0)  // "/hard:filePath"
+        {
+            LPCTSTR filePath = arg + 6;
+            Settings_SetHardFilePath(filePath);
+        }
+        //TODO: "/state:filepath" or "filepath.neonst"
     }
 
     ::LocalFree(args);

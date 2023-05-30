@@ -10,7 +10,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 #pragma once
 
-#include "res\\resource.h"
+#include "res/resource.h"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -27,6 +27,8 @@ extern HINSTANCE g_hInst; // current instance
 // Main Window
 
 extern HWND g_hwnd;  // Main window handle
+
+extern LPCTSTR g_CommandLineHelp;
 
 void MainWindow_RegisterClass();
 BOOL CreateMainWindow();
@@ -168,6 +170,12 @@ LPCTSTR Settings_GetColorFriendlyName(ColorIndices colorIndex);
 COLORREF Settings_GetColor(ColorIndices colorIndex);
 COLORREF Settings_GetDefaultColor(ColorIndices colorIndex);
 void Settings_SetColor(ColorIndices colorIndex, COLORREF color);
+
+
+//////////////////////////////////////////////////////////////////////
+// Options
+
+extern bool Option_ShowHelp;
 
 
 //////////////////////////////////////////////////////////////////////
