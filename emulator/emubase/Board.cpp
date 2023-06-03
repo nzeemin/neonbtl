@@ -1487,9 +1487,18 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     // Board data
     const uint16_t* pwImage = reinterpret_cast<const uint16_t*>(pImage + 32);
 
-    //TODO: If the new configuration has different memory size, re-allocate the memory
+    // If the new configuration has different memory size, re-allocate the memory
     m_Configuration = *pwImage++;
-    memcpy(&m_nRamSizeBytes, pwImage, sizeof(m_nRamSizeBytes));  // 4 bytes
+    uint32_t nRamSizeKbytes = m_Configuration & NEON_COPT_RAMSIZE_MASK;
+    if (nRamSizeKbytes == 0)
+        nRamSizeKbytes = 512;
+    uint32_t newramsize = nRamSizeKbytes * 1024;
+    //memcpy(&newramsize, pwImage, sizeof(newramsize));  // 4 bytes
+    if (m_nRamSizeBytes != newramsize)
+    {
+        ::realloc(m_pRAM, newramsize);
+        m_nRamSizeBytes = newramsize;
+    }
     pwImage += sizeof(m_nRamSizeBytes) / 2;
     m_PICflags = *pwImage++;
     m_PICRR = (uint8_t) * pwImage++;

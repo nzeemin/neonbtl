@@ -1278,6 +1278,9 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
     ::free(pCompressBuffer);
     ::free(pImage);
 
+    // Board configuration is restored from the state image
+    Settings_SetConfiguration(g_pBoard->GetConfiguration());
+
     return true;
 }
 

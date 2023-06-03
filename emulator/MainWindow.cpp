@@ -899,8 +899,6 @@ void MainWindow_DoFileLoadState()
     if (!Emulator_LoadImage(bufFileName))
         return;
 
-    //TODO: Change settings if the board RAM size changed
-
     MainWindow_UpdateAllViews();
     MainWindow_UpdateMenu();
 }

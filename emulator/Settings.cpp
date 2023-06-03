@@ -36,7 +36,7 @@ void Settings_Init()
     TCHAR* pExt = m_Settings_IniPath + _tcslen(m_Settings_IniPath) - 3;
     *pExt++ = _T('i');
     *pExt++ = _T('n');
-    *pExt++ = _T('i');
+    *pExt   = _T('i');
 }
 void Settings_Done()
 {
@@ -196,7 +196,7 @@ BOOL Settings_LoadBinaryValue(LPCTSTR sName, void * pData, int size)
     } \
     OUTTYPE Settings_Get##PARAMNAME() { \
         if (!m_Settings_##PARAMNAME##_Valid) { \
-            DWORD dwValue = (DWORD) DEFVALUE; \
+            DWORD dwValue = (DWORD)(DEFVALUE); \
             Settings_LoadDwordValue(PARAMNAMESTR, &dwValue); \
             m_Settings_##PARAMNAME = (OUTTYPE) dwValue; \
             m_Settings_##PARAMNAME##_Valid = TRUE; \
