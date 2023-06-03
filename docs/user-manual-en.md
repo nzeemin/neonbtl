@@ -1,6 +1,6 @@
-# Руководство пользователя эмулятора NeonBTL
+# NeonBTL emulator User Manual
 
-## Введение
+## Intro
 
 **Neon Back to Life!** (**NeonBTL**) — is an emulator of the Soviet computer **Soyuz-Neon PK-11/16** (**Союз-Неон ПК-11/16** in Russian, hereinafter just **Soyuz-Neon**). This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (near Moscow), and a total of 200-1000 units were produced.
 
@@ -146,8 +146,15 @@ The following mapping of the Soyuz-Neon keyboard to the PC keyboard is used:
  - <kbd>АЛФ</kbd> = <kbd>RShift</kbd>, <kbd>ГРАФ</kbd> = <kbd>RCtrl</kbd>
 
 ### Command line
-
-```***TODO***```
+The emulator uses the following command-line options during startup:
+ * `/autostart` `/autostarton` — Turn on emulation auto-start
+ * `/noautostart` `/autostartoff` — Turn off the auto-start
+ * `/debug` `/debugon` `/debugger` — Turn on the debugger
+ * `/debugoff` `/nodebug` — Turn off the debugger
+ * `/sound` `/soundon` — Turn on the sound
+ * `/nosound` `/soundoff` — Turn off the sound
+ * `/diskN:filePath` — Attach the floppy disk image, N=0..1
+ * `/hard:filePath` — Attach the hard drive image
 
 ### Books
  * [Documentation for DEC RT-11 (PDF), in English](http://www.bitsavers.org/pdf/dec/pdp11/rt11/)

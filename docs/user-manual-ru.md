@@ -160,8 +160,15 @@ COPY *.* FD1:
  - <kbd>АЛФ</kbd> = <kbd>RShift</kbd>, <kbd>ГРАФ</kbd> = <kbd>RCtrl</kbd>
 
 ### Командная строка
-
-```***TODO***```
+При запуске эмулятора используются следующие ключи командной строки:
+ * `/autostart` `/autostarton` — Включение автозапуска эмуляции
+ * `/noautostart` `/autostartoff` — Выключение автозапуска эмуляции
+ * `/debug` `/debugon` `/debugger` — Включение отладчика
+ * `/debugoff` `/nodebug` — Выключение отладчика
+ * `/sound` `/soundon` — Включение звука
+ * `/nosound` `/soundoff` — Выключение звука
+ * `/diskN:filePath` — Подключение образа дискеты, N=0..1
+ * `/hard:filePath` — Подключение образа жёсткого диска
 
 ### Литература
  * Архангельский Андрей Германович. «RT-11, Step by Step». — Москва, 1989. — http://www.az-libr.ru/Persons/0GN/fe16506c/Books/000/Toc.shtml
