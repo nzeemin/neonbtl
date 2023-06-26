@@ -124,7 +124,7 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     SendMessage(m_hwndMemoryToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
     SendMessage(m_hwndMemoryToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
 
-    TBBUTTON buttons[7];
+    TBBUTTON buttons[8];
     ZeroMemory(buttons, sizeof(buttons));
     for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -144,6 +144,8 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     buttons[5].fsStyle = BTNS_SEP;
     buttons[6].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
     buttons[6].iBitmap = ToolbarImageWordByte;
+    buttons[7].idCommand = ID_DEBUG_MEMORY_HEXMODE;
+    buttons[7].iBitmap = ToolbarImageHexMode;
 
     SendMessage(m_hwndMemoryToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -325,10 +327,12 @@ void MemoryView_OnRButtonDown(int mousex, int mousey)
         TCHAR buffer[24];
         if (okValid)
         {
-            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Value: %06o"), value);
+            LPCTSTR vformat = (m_NumeralMode == MEMMODENUM_OCT) ? _T("Copy Value: %06o") : _T("Copy Value: %04x");
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, vformat, value);
             ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_VALUE, buffer);
         }
-        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Copy Address: %06o"), addr);
+        LPCTSTR aformat = (m_NumeralMode == MEMMODENUM_OCT) ? _T("Copy Address: %06o") : _T("Copy Address: %04x");
+        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, aformat, addr);
         ::AppendMenu(hMenu, 0, ID_DEBUG_COPY_ADDRESS, buffer);
         ::AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
     }
@@ -381,7 +385,8 @@ BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos)
 void MemoryView_UpdateWindowText()
 {
     TCHAR buffer[64];
-    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("Memory - %s - %06o"), MemoryView_GetMemoryModeName(), m_wCurrentAddress);
+    LPCTSTR format = (m_NumeralMode == MEMMODENUM_OCT) ? _T("Memory - %s - %06o") : _T("Memory - %s - %04x");
+    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, format, MemoryView_GetMemoryModeName(), m_wCurrentAddress);
     ::SetWindowText(g_hwndMemory, buffer);
 }
 
@@ -410,7 +415,10 @@ void MemoryView_CopyValueToClipboard(WPARAM command)
     }
 
     TCHAR buffer[7];
-    PrintOctalValue(buffer, value);
+    if (m_NumeralMode == MEMMODENUM_OCT)
+        PrintOctalValue(buffer, value);
+    else
+        PrintHexValue(buffer, value);
 
     // Prepare global memory object for the text
     HGLOBAL hglbCopy = ::GlobalAlloc(GMEM_MOVEABLE, sizeof(buffer));
@@ -435,6 +443,8 @@ void MemoryView_UpdateToolbar()
     case MEMMODE_USER:  command = ID_DEBUG_MEMORY_USER;  break;
     }
     SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, command, TRUE);
+
+    SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, ID_DEBUG_MEMORY_HEXMODE, (Settings_GetDebugMemoryNumeral() == MEMMODENUM_OCT ? 0 : 1));
 }
 
 void MemoryView_SetViewMode(MemoryViewMode mode)
@@ -518,6 +528,8 @@ void MemoryView_SwitchNumeralMode()
     m_NumeralMode = newMode;
     InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
     Settings_SetDebugMemoryNumeral((WORD)newMode);
+
+    MemoryView_UpdateWindowText();
     MemoryView_UpdateToolbar();
 }
 
@@ -639,7 +651,6 @@ void MemoryView_OnDraw(HDC hdc)
 
     m_nPageSize = rcClient.bottom / cyLine - 1;
 
-    bool okHalt = g_pBoard->GetCPU()->IsHaltMode();
     WORD address = m_wBaseAddress;
     int y = 1 * cyLine;
     for (;;)    // Draw lines
