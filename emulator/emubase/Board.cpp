@@ -247,6 +247,11 @@ bool CMotherboard::AttachHardImage(LPCTSTR sFileName)
     {
         m_pHardDrive->Reset();
     }
+    else
+    {
+        delete m_pHardDrive;
+        m_pHardDrive = nullptr;
+    }
 
     return success;
 }

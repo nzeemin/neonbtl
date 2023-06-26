@@ -34,9 +34,11 @@ int m_cyLineMemory = 0;  // Line height in pixels
 int m_nPageSize = 100;  // Page size in lines
 
 int     m_Mode = 0;  // See MemoryViewMode enum
+int     m_NumeralMode = MEMMODENUM_OCT;
 WORD    m_wBaseAddress = 0xFFFF;
 WORD    m_wCurrentAddress = 0xFFFF;
 BOOL    m_okMemoryByteMode = FALSE;
+int     m_PostionIncrement = 100;  // Increment by X to the next word
 
 void MemoryView_AdjustWindowLayout();
 BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM lParam);
@@ -86,6 +88,7 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     m_Mode = Settings_GetDebugMemoryMode();
     if (m_Mode > MEMMODE_LAST) m_Mode = MEMMODE_LAST;
     m_okMemoryByteMode = Settings_GetDebugMemoryByte();
+    m_NumeralMode = Settings_GetDebugMemoryNumeral();
 
     g_hwndMemory = CreateWindow(
             CLASSNAME_TOOLWINDOW, NULL,
@@ -109,7 +112,7 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
 
     m_hwndMemoryToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
             WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER | CCS_VERT,
-            4, 4, 32, 32 * 6, m_hwndMemoryViewer,
+            4, 4, 32, 32 * 8, m_hwndMemoryViewer,
             (HMENU) 102,
             g_hInst, NULL);
 
@@ -188,6 +191,8 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
             MemoryView_CopyValueToClipboard(wParam);
         else if (wParam == ID_DEBUG_GOTO_ADDRESS)  // "Go to Address" from context menu
             MemoryView_SelectAddress();
+        else if (wParam == ID_DEBUG_MEMORY_HEXMODE)
+            MemoryView_SwitchNumeralMode();
         else
             ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
@@ -227,11 +232,11 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
 int MemoryView_GetAddressByPoint(int mousex, int mousey)
 {
     int line = mousey / m_cyLineMemory - 1;
-    if (line < 0) return -1;
+    if (line < 0) line = 0;
     else if (line >= m_nPageSize) return -1;
-    int pos = (mousex - 12 * m_cxChar - m_cxChar / 2) / (m_cxChar * 7);
-    if (pos < 0) return -1;
-    else if (pos > 7) return -1;
+    int pos = (mousex - (32 + 4) - 9 * m_cxChar + m_cxChar / 2) / m_PostionIncrement;
+    if (pos < 0) pos = 0;
+    else if (pos > 7) pos = 7;
 
     return (WORD)(m_wBaseAddress + line * 16 + pos * 2);
 }
@@ -276,6 +281,10 @@ BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
     case 0x42:  // B - change byte/word mode
     case 0x57:  // W
         MemoryView_SwitchWordByte();
+        break;
+    case 0x48:  // H - Hex
+    case 0x4F:  // O - Octal
+        MemoryView_SwitchNumeralMode();
         break;
     default:
         return TRUE;
@@ -503,6 +512,15 @@ void MemoryView_ScrollTo(WORD wBaseAddress)
     MemoryView_UpdateScrollPos();
 }
 
+void MemoryView_SwitchNumeralMode()
+{
+    int newMode = m_NumeralMode ^ 1;
+    m_NumeralMode = newMode;
+    InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
+    Settings_SetDebugMemoryNumeral((WORD)newMode);
+    MemoryView_UpdateToolbar();
+}
+
 void MemoryView_UpdateScrollPos()
 {
     SCROLLINFO si;
@@ -524,8 +542,8 @@ void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine)
     int line = addroffset / 16;
     int pos = addroffset & 15;
 
-    pRect->left = 32 + 4 + cxChar * (9 + 7 * (pos / 2)) - cxChar / 2;
-    pRect->right = pRect->left + cxChar * 7;
+    pRect->left = 32 + 4 + cxChar * 9 + m_PostionIncrement * (pos / 2) - cxChar / 2;
+    pRect->right = pRect->left + m_PostionIncrement - 1;
     pRect->top = (line + 1) * cyLine - 1;
     pRect->bottom = pRect->top + cyLine + 1;
 }
@@ -586,7 +604,14 @@ void MemoryView_OnDraw(HDC hdc)
     RECT rcClient;
     GetClientRect(m_hwndMemoryViewer, &rcClient);
 
-    int xRight = 32 + 4 + cxChar * 82 + cxChar / 2;
+    if (m_NumeralMode == MEMMODENUM_OCT)
+        m_PostionIncrement = cxChar * 7;
+    else
+        m_PostionIncrement = cxChar * 5;
+    if (m_okMemoryByteMode)
+        m_PostionIncrement += cxChar;
+
+    int xRight = 32 + 4 + cxChar * 27 + m_PostionIncrement * 8 + cxChar / 2;
     HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
     ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
     ::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
@@ -599,8 +624,18 @@ void MemoryView_OnDraw(HDC hdc)
     m_cyLineMemory = cyLine;
 
     TCHAR buffer[7];
-    const TCHAR* ADDRESS_LINE = _T("  addr   0      2      4      6      10     12     14     16");
-    TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE, (int)_tcslen(ADDRESS_LINE));
+    const TCHAR* ADDRESS_LINE_OCT_WORDS = _T("  addr   0      2      4      6      10     12     14     16");
+    const TCHAR* ADDRESS_LINE_OCT_BYTES = _T("  addr   0   1   2   3   4   5   6   7   10  11  12  13  14  15  16  17");
+    const TCHAR* ADDRESS_LINE_HEX_WORDS = _T("  addr   0    2    4    6    8    a    c    e");
+    const TCHAR* ADDRESS_LINE_HEX_BYTES = _T("  addr   0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f");
+    if (m_NumeralMode == MEMMODENUM_OCT && !m_okMemoryByteMode)
+        TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE_OCT_WORDS, (int)_tcslen(ADDRESS_LINE_OCT_WORDS));
+    else if (m_NumeralMode == MEMMODENUM_OCT && m_okMemoryByteMode)
+        TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE_OCT_BYTES, (int)_tcslen(ADDRESS_LINE_OCT_BYTES));
+    else if (m_okMemoryByteMode)
+        TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE_HEX_BYTES, (int)_tcslen(ADDRESS_LINE_HEX_BYTES));
+    else
+        TextOut(hdc, cxChar * 5, 0, ADDRESS_LINE_HEX_WORDS, (int)_tcslen(ADDRESS_LINE_HEX_WORDS));
 
     m_nPageSize = rcClient.bottom / cyLine - 1;
 
@@ -611,7 +646,10 @@ void MemoryView_OnDraw(HDC hdc)
     {
         uint16_t lineAddress = address;
 
-        DrawOctalValue(hdc, 6 * cxChar, y, address);
+        if (m_NumeralMode == MEMMODENUM_OCT)
+            DrawOctalValue(hdc, 6 * cxChar, y, address);
+        else
+            DrawHexValue(hdc, 7 * cxChar, y, address);
 
         int x = 14 * cxChar;
         TCHAR wchars[16];
@@ -624,39 +662,44 @@ void MemoryView_OnDraw(HDC hdc)
             WORD word = MemoryView_GetWordFromMemory(address, okValid, addrtype, wChanged);
 
             if (address == m_wCurrentAddress)
-                ::PatBlt(hdc, x - cxChar / 2, y, cxChar * 7, cyLine, PATCOPY);
+                ::PatBlt(hdc, x - cxChar / 2, y, m_PostionIncrement, cyLine, PATCOPY);
 
             if (okValid)
             {
                 if (addrtype == ADDRTYPE_ROM)
                     ::SetTextColor(hdc, colorMemoryRom);
                 else
-                {
-                    uint32_t offset = g_pBoard->GetRAMFullAddress(address, okHalt);
-                    WORD wChanged = Emulator_GetChangeRamStatus(offset);
                     ::SetTextColor(hdc, (wChanged != 0) ? colorChanged : colorText);
-                }
-                if (m_okMemoryByteMode)
+
+                if (m_NumeralMode == MEMMODENUM_OCT && !m_okMemoryByteMode)
+                    DrawOctalValue(hdc, x, y, word);
+                else if (m_NumeralMode == MEMMODENUM_OCT && m_okMemoryByteMode)
                 {
                     PrintOctalValue(buffer, (word & 0xff));
                     TextOut(hdc, x, y, buffer + 3, 3);
                     PrintOctalValue(buffer, (word >> 8));
-                    TextOut(hdc, x + 3 * cxChar + 3, y, buffer + 3, 3);
+                    TextOut(hdc, x + 4 * cxChar, y, buffer + 3, 3);
                 }
-                else
-                    DrawOctalValue(hdc, x, y, word);
+                else if (m_NumeralMode == MEMMODENUM_HEX && !m_okMemoryByteMode)
+                    DrawHexValue(hdc, x, y, word);
+                else if (m_NumeralMode == MEMMODENUM_HEX && m_okMemoryByteMode)
+                {
+                    PrintHexValue(buffer, word);
+                    TextOut(hdc, x, y, buffer + 2, 2);
+                    TextOut(hdc, x + 3 * cxChar, y, buffer, 2);
+                }
             }
             else  // !okValid
             {
                 if (addrtype == ADDRTYPE_IO)
                 {
                     ::SetTextColor(hdc, colorMemoryIO);
-                    TextOut(hdc, x, y, _T("  IO  "), 6);
+                    TextOut(hdc, x, y, _T("  IO"), 4);
                 }
                 else
                 {
                     ::SetTextColor(hdc, colorMemoryNA);
-                    TextOut(hdc, x, y, _T("  NA  "), 6);
+                    TextOut(hdc, x, y, _T("  NA"), 4);
                 }
             }
 
@@ -671,7 +714,7 @@ void MemoryView_OnDraw(HDC hdc)
             wchars[j * 2 + 1] = wch2;
 
             address += 2;
-            x += 7 * cxChar;
+            x += m_PostionIncrement;
         }
 
         // Highlight characters at right
