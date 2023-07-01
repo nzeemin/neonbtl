@@ -87,6 +87,8 @@ void DrawOctalValue(HDC hdc, int x, int y, WORD value);
 void DrawHexValue(HDC hdc, int x, int y, WORD value);
 void DrawBinaryValue(HDC hdc, int x, int y, WORD value);
 
+void CopyTextToClipboard(LPCTSTR text);
+
 TCHAR TranslateDeviceCharToUnicode(BYTE ch);
 
 LPCTSTR GetFileNameFromFilePath(LPCTSTR lpfilepath);
