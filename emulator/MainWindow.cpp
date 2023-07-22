@@ -304,8 +304,9 @@ void MainWindow_RestorePositionAndShow()
 void MainWindow_UpdateWindowTitle()
 {
     LPCTSTR emustate = g_okEmulatorRunning ? _T("run") : _T("stop");
+    int memsize = g_pBoard->GetConfiguration() & NEON_COPT_RAMSIZE_MASK;
     TCHAR buffer[100];
-    wsprintf(buffer, _T("%s [%s]"), g_szTitle, emustate);
+    wsprintf(buffer, _T("%s - %d KB - [%s]"), g_szTitle, memsize, emustate);
     SetWindowText(g_hwnd, buffer);
 }
 

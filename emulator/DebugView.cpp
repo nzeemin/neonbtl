@@ -629,7 +629,6 @@ void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc)
         WORD addr = (WORD)(i * 020000);
         DrawOctalValue(hdc, x, yp - cyLine / 2, addr);
     }
-    ::SelectObject(hdc, hOldBrush);
     for (int i = 0; i < 7; i++)
     {
         int ytype = ybase - cyLine * i * 2 - cyLine;
@@ -649,6 +648,18 @@ void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc)
     }
 
     TextOut(hdc, xtype, ybase - cyLine * 15, _T("I/O"), 3);
+
+    uint16_t sp = pProc->GetSP();
+    int ysp = y2 - ((y2 - y1) * sp / 65536);
+    PatBlt(hdc, x2, ysp, cxChar, 1, PATCOPY);
+    TextOut(hdc, x2 + cxChar, ysp - cyLine / 2, _T("SP"), 2);
+
+    uint16_t pc = pProc->GetPC();
+    int ypc = y2 - ((y2 - y1) * pc / 65536);
+    PatBlt(hdc, x2, ypc, cxChar, 1, PATCOPY);
+    TextOut(hdc, x2 + cxChar, ypc - cyLine / 2, _T("PC"), 2);
+
+    ::SelectObject(hdc, hOldBrush);
 }
 
 
