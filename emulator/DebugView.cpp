@@ -308,6 +308,10 @@ void DebugView_DoDraw(HDC hdc)
     ::PatBlt(hdc, x, 0, 4, cyHeight, PATCOPY);
     x += 4;
     int xMemmap = x;
+    x += cxChar * 24;
+    ::PatBlt(hdc, x, 0, 4, cyHeight, PATCOPY);
+    x += 4;
+    int xHRandUR = x;
     ::SelectObject(hdc, hOldBrush);
 
     DebugView_DrawProcessor(hdc, pDebugPU, xProc + cxChar, cyLine / 2, arrR, arrRChanged, oldPsw);
@@ -316,12 +320,14 @@ void DebugView_DoDraw(HDC hdc)
     DebugView_DrawMemoryForRegister(hdc, 6, pDebugPU, xStack + cxChar / 2, cyLine / 2, oldSP);
 
     int nWatches = DebugView_DrawWatches(hdc, pDebugPU, xPorts + cxChar, cyLine / 2);
-    //DebugView_DrawHRandUR(hdc, xPorts + cxChar, cyLine / 2);
     DebugView_DrawPorts(hdc, xPorts + cxChar, cyLine / 2 + (nWatches > 0 ? 2 + nWatches : 0) * cyLine);
 
     DebugView_DrawBreakpoints(hdc, xBreaks + cxChar / 2, cyLine / 2);
 
     DebugView_DrawMemoryMap(hdc, xMemmap + cxChar / 2, 0, pDebugPU);
+
+    DebugView_DrawHRandUR(hdc, xHRandUR + cxChar, cyLine / 2);
+
     SetTextColor(hdc, colorOld);
     SetBkColor(hdc, colorBkOld);
     SelectObject(hdc, hOldFont);
@@ -431,7 +437,7 @@ void DebugView_DrawAddressAndValue(HDC hdc, const CProcessor* pProc, uint16_t ad
 
     int addrtype = ADDRTYPE_DENY;
     uint16_t value = g_pBoard->GetWordView(address, pProc->IsHaltMode(), FALSE, &addrtype);
-    if (addrtype == ADDRTYPE_RAM)
+    if (addrtype <= ADDRTYPE_RAM4)  // ADDRTYPE_RAM, ADDRTYPE_RAM2, ADDRTYPE_RAM4
     {
         DrawOctalValue(hdc, x, y, value);
     }

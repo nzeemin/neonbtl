@@ -20,4 +20,6 @@ printer.log
 *.lst
 *.txt
 *.neonst
+*.SAV
+*.log
 /x-*

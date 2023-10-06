@@ -289,13 +289,35 @@ uint8_t CMotherboard::GetRAMByte(uint32_t offset) const
 {
     return m_pRAM[offset];
 }
-void CMotherboard::SetRAMWord(uint32_t offset, uint16_t word)
+void CMotherboard::SetRAMWord2(uint32_t offset, uint16_t word)
 {
-    *((uint16_t*)(m_pRAM + offset)) = word;
+    uint16_t* p = (uint16_t*)(m_pRAM + offset);
+    uint16_t mask =
+        ((word & 0x0003) == 0 ? 0 : 0x0003) | ((word & 0x000C) == 0 ? 0 : 0x000C) |
+        ((word & 0x0030) == 0 ? 0 : 0x0030) | ((word & 0x00C0) == 0 ? 0 : 0x00C0) |
+        ((word & 0x0300) == 0 ? 0 : 0x0300) | ((word & 0x0C00) == 0 ? 0 : 0x0C00) |
+        ((word & 0x3000) == 0 ? 0 : 0x3000) | ((word & 0xC000) == 0 ? 0 : 0xC000);
+    *p = (word & mask) | (*p & ~mask);
 }
-void CMotherboard::SetRAMByte(uint32_t offset, uint8_t byte)
+void CMotherboard::SetRAMWord4(uint32_t offset, uint16_t word)
 {
-    m_pRAM[offset] = byte;
+    uint16_t* p = (uint16_t*)(m_pRAM + offset);
+    uint16_t mask =
+        ((word & 0x000F) == 0 ? 0 : 0x000F) | ((word & 0x00F0) == 0 ? 0 : 0x00F0) |
+        ((word & 0x0F00) == 0 ? 0 : 0x0F00) | ((word & 0xF000) == 0 ? 0 : 0xF000);
+    *p = (word & mask) | (*p & ~mask);
+}
+void CMotherboard::SetRAMByte2(uint32_t offset, uint8_t byte)
+{
+    uint8_t mask =
+        ((byte & 0x03) == 0 ? 0 : 0x03) | ((byte & 0x0C) == 0 ? 0 : 0x0C) |
+        ((byte & 0x30) == 0 ? 0 : 0x30) | ((byte & 0xC0) == 0 ? 0 : 0xC0);
+    m_pRAM[offset] = (byte & mask) | (m_pRAM[offset] & ~mask);
+}
+void CMotherboard::SetRAMByte4(uint32_t offset, uint8_t byte)
+{
+    uint8_t mask = ((byte & 0x0F) == 0 ? 0 : 0x0F) | ((byte & 0xF0) == 0 ? 0 : 0xF0);
+    m_pRAM[offset] = (byte & mask) | (m_pRAM[offset] & ~mask);
 }
 
 uint16_t CMotherboard::GetROMWord(uint16_t offset) const
@@ -559,6 +581,8 @@ uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExe
     switch (addrtype)
     {
     case ADDRTYPE_RAM:
+    case ADDRTYPE_RAM2:
+    case ADDRTYPE_RAM4:
         return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
         return GetROMWord(offset & 0xfffe);
@@ -591,6 +615,8 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
     switch (addrtype)
     {
     case ADDRTYPE_RAM:
+    case ADDRTYPE_RAM2:
+    case ADDRTYPE_RAM4:
         return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
         return GetROMWord(offset & 0xfffe);
@@ -626,6 +652,8 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
     switch (addrtype)
     {
     case ADDRTYPE_RAM:
+    case ADDRTYPE_RAM2:
+    case ADDRTYPE_RAM4:
         return GetRAMByte(offset);
     case ADDRTYPE_ROM:
         return GetROMByte(offset & 0xffff);
@@ -664,6 +692,12 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
     case ADDRTYPE_RAM:
         SetRAMWord(offset, word);
         return;
+    case ADDRTYPE_RAM2:
+        SetRAMWord2(offset, word);
+        return;
+    case ADDRTYPE_RAM4:
+        SetRAMWord4(offset, word);
+        return;
     case ADDRTYPE_ROM:  // Writing to ROM
         //DebugLogFormat(_T("%c%06ho\tSETWORD ROM (%06ho)\n"), HU_INSTRUCTION_PC, address);
         //m_pCPU->MemoryError();
@@ -699,6 +733,12 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
     {
     case ADDRTYPE_RAM:
         SetRAMByte(offset, byte);
+        return;
+    case ADDRTYPE_RAM2:
+        SetRAMByte2(offset, byte);
+        return;
+    case ADDRTYPE_RAM4:
+        SetRAMByte4(offset, byte);
         return;
     case ADDRTYPE_ROM:  // Writing to ROM
         //DebugLogFormat(_T("%c%06ho\tSETBYTE ROM (%06ho)\n"), HU_INSTRUCTION_PC, address);
@@ -775,8 +815,10 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
     }
 
     *pOffset = longaddr;
-    //ASSERT(longaddr < m_nRamSizeBytes);
-    return ADDRTYPE_RAM;
+    uint16_t maskmode = memreg & 3;
+    if (maskmode == 0)
+        return ADDRTYPE_RAM;
+    return (maskmode & 2) == 0 ? ADDRTYPE_RAM2 : ADDRTYPE_RAM4;
 }
 
 uint8_t CMotherboard::GetPortByte(uint16_t address)

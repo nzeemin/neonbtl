@@ -35,9 +35,11 @@ enum NeonConfiguration
 
 // TranslateAddress result code
 #define ADDRTYPE_RAM     0  // RAM
-#define ADDRTYPE_ROM     1  // ROM
-#define ADDRTYPE_IO      4  // I/O port
-#define ADDRTYPE_EMUL    8  // I/O port emulation, USER mode only
+#define ADDRTYPE_RAM2    1  // RAM with masking 2bit/pixel on write
+#define ADDRTYPE_RAM4    2  // RAM with masking 4bit/pixel on write
+#define ADDRTYPE_ROM     4  // ROM 
+#define ADDRTYPE_IO     16  // I/O port
+#define ADDRTYPE_EMUL   32  // I/O port emulation, USER mode only
 #define ADDRTYPE_DENY  128  // Access denied
 
 //floppy debug
@@ -110,7 +112,7 @@ private:
 
 //////////////////////////////////////////////////////////////////////
 
-// Souz-Neon computer
+// Soyuz-Neon computer
 class CMotherboard
 {
 public:  // Construct / destruct
@@ -133,8 +135,12 @@ private:  // Memory
 public:  // Memory access
     uint16_t    GetRAMWord(uint32_t offset) const;
     uint8_t     GetRAMByte(uint32_t offset) const;
-    void        SetRAMWord(uint32_t offset, uint16_t word);
-    void        SetRAMByte(uint32_t offset, uint8_t byte);
+    void        SetRAMWord(uint32_t offset, uint16_t word) { *((uint16_t*)(m_pRAM + offset)) = word; }
+    void        SetRAMWord2(uint32_t offset, uint16_t word);
+    void        SetRAMWord4(uint32_t offset, uint16_t word);
+    void        SetRAMByte(uint32_t offset, uint8_t byte) { m_pRAM[offset] = byte; }
+    void        SetRAMByte2(uint32_t offset, uint8_t byte);
+    void        SetRAMByte4(uint32_t offset, uint8_t byte);
     uint16_t    GetROMWord(uint16_t offset) const;
     uint8_t     GetROMByte(uint16_t offset) const;
     uint32_t    GetRamSizeBytes() const { return m_nRamSizeBytes; }
