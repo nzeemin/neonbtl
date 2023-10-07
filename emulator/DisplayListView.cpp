@@ -54,7 +54,7 @@ void DisplayListView_RegisterClass()
 
 void DisplayListView_Create(int x, int y)
 {
-    int width = 800;
+    int width = 480;
     int height = 600;
 
     g_hwndDisplayList = CreateWindowEx(
@@ -75,6 +75,9 @@ void DisplayListView_Create(int x, int y)
             WS_VISIBLE | WS_CHILD | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
             0, 0, rcClient.right, rcClient.bottom,
             g_hwndDisplayList, NULL, g_hInst, NULL);
+
+    HFONT hFont = CreateMonospacedFont();
+    ::SendMessage(m_hwndDisplayListTreeView, WM_SETFONT, (WPARAM)hFont, NULL);
 
     DiaplayList_FillTreeView();
     ::SetFocus(m_hwndDisplayListViewer);
@@ -122,22 +125,24 @@ void DiaplayList_FillTreeView()
     const CMotherboard* pBoard = g_pBoard;
     uint16_t vdptaslo = pBoard->GetRAMWordView(0000010);  // VDPTAS
     uint16_t vdptashi = pBoard->GetRAMWordView(0000012);  // VDPTAS
+    uint16_t vdptaplo = pBoard->GetRAMWordView(0000004);  // VDPTAP
+    uint16_t vdptaphi = pBoard->GetRAMWordView(0000006);  // VDPTAP
     uint32_t tasaddr = (((uint32_t)vdptaslo) << 2) | (((uint32_t)(vdptashi & 0x000f)) << 18);
 
     const size_t buffersize = 256 - 1;
     TCHAR buffer[buffersize + 1];
-    _sntprintf(buffer, buffersize, _T("VDPTAS=%06o:%06o"), vdptashi, vdptaslo);
+    _sntprintf(buffer, buffersize, _T("VDPTAS=%06o:%06o VDPTAP=%06o:%06o"), vdptashi, vdptaslo, vdptaphi, vdptaplo);
 
-    TVITEM item;
+    TVITEM item = {};
     item.mask = TVIF_TEXT;
     item.cchTextMax = buffersize;
     item.pszText = buffer;
 
-    TVINSERTSTRUCT tvins;
+    TVINSERTSTRUCT tvins = {};
     tvins.hParent = TVI_ROOT;
     tvins.hInsertAfter = NULL;
     tvins.item = item;
-    HTREEITEM hRoot = (HTREEITEM)SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
+    HTREEITEM hRoot = (HTREEITEM)::SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
     for (int line = -2; line < 300; line++)  // ÷икл по строкам -2..299, первые две строки не видны
     {
@@ -160,23 +165,44 @@ void DiaplayList_FillTreeView()
             // ѕолучаем параметры отрезка
             int otrcount = 32 - (otrhi >> 10) & 037;  // ƒлина отрезка в 32-разр€дных словах
             if (otrcount == 0) otrcount = 32;
-            uint16_t otrvn = (otrhi >> 6) & 3;  // VN1 VN0 - бит/точку
-            bool otrpb = (otrhi & 0x8000) != 0;
-            uint16_t vmode = (otrhi >> 6) & 0x0f;  // биты VD1 VD0 VN1 VN0
             // ќпредел€ем, сколько 16-пиксельных полосок нужно заполнить
             int barcount = otrcount * 2;
             if (!firstOtr) barcount--;
             if (barcount > bar) barcount = bar;
             bar -= barcount;
 
-            _sntprintf(buffer, buffersize, _T("%d: %06o:%06o"), otrno, otrhi, otrlo);
+            uint16_t vd = (otrhi >> 8) & 3;  // биты VD1 VD0
+            LPCTSTR vdstr;
+            switch (vd)
+            {
+            case 0: vdstr = _T("vd208"); break;
+            case 1: vdstr = _T("vd104"); break;
+            case 2: vdstr = _T("vd52 "); break;
+            default: vdstr = _T("vd52s"); break;
+            }
+            uint16_t vm = (otrhi & 0x8000) >> 13 | (otrhi >> 6) & 3;  // биты PB VN1 VN0
+            LPCTSTR vmstr;
+            switch (vm)
+            {
+            case 0: case 4: vmstr = _T("VM1 "); break;
+            case 1: case 5: vmstr = _T("VM2 "); break;
+            case 2: vmstr = _T("VM40"); break;
+            case 3: vmstr = _T("VM41"); break;
+            case 6: vmstr = _T("VM4 "); break;
+            default: vmstr = _T("VM8 "); break;
+            }
+            uint16_t palno = (otrhi >> 4) & 3;  // PN1 PN0 - номер палитры
+
+            _sntprintf(buffer, buffersize, _T("%d: %06o:%06o dwlen:%d %s %s pal:%d"), otrno, otrhi, otrlo, otrcount, vdstr, vmstr, palno);
             tvins.hParent = hLine;
-            (HTREEITEM)SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
+            ::SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
             if (bar <= 0) break;
             firstOtr = false;
         }
     }
+
+    ::SendMessage(m_hwndDisplayListTreeView, TVM_EXPAND, TVE_EXPAND, (LPARAM)hRoot);
 }
 
 //////////////////////////////////////////////////////////////////////
