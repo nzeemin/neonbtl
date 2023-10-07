@@ -142,8 +142,10 @@ protected:  // Implementation - memory access
     // Read word from the bus
     uint16_t    GetWord(uint16_t address) { return m_pBoard->GetWord(address, IsHaltMode()); }
     void        SetWord(uint16_t address, uint16_t word) { m_pBoard->SetWord(address, IsHaltMode(), word); }
+    void        SetWordRMW(uint16_t address, uint16_t word) { m_pBoard->SetWord(address, IsHaltMode(), word, true); }
     uint8_t     GetByte(uint16_t address) { return m_pBoard->GetByte(address, IsHaltMode()); }
     void        SetByte(uint16_t address, uint8_t byte) { m_pBoard->SetByte(address, IsHaltMode(), byte); }
+    void        SetByteRMW(uint16_t address, uint8_t byte) { m_pBoard->SetByte(address, IsHaltMode(), byte, true); }
 
 protected:  // PSW bits calculations
     bool static CheckForNegative(uint8_t byte) { return (byte & 0200) != 0; }

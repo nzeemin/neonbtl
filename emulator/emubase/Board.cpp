@@ -691,7 +691,7 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
     return 0;
 }
 
-void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
+void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word, bool isRMW)
 {
     address &= ~1;
 
@@ -719,10 +719,13 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETWORD %06ho -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, word, address);
         SetRAMWord(offset & 07777, word);
-        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
-            m_HR[0] = address;
-        else
-            m_HR[1] = address;
+        if (!isRMW)
+        {
+            if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
+                m_HR[0] = address;
+            else
+                m_HR[1] = address;
+        }
         m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
         return;
@@ -735,7 +738,7 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word)
     ASSERT(false);  // If we are here - then addrtype has invalid value
 }
 
-void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
+void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte, bool isRMW)
 {
     uint32_t offset;
     int addrtype = TranslateAddress(address, okHaltMode, false, &offset);
@@ -761,10 +764,13 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte)
     case ADDRTYPE_EMUL:
         DebugLogFormat(_T("%c%06ho\tSETBYTE %03o -> (%06ho) EMUL\n"), HU_INSTRUCTION_PC, byte, address);
         SetRAMByte(offset & 07777, byte);
-        if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
-            m_HR[0] = address;
-        else
-            m_HR[1] = address;
+        if (!isRMW)
+        {
+            if ((m_PPIBrd & 1) == 1)  // EF0 inactive?
+                m_HR[0] = address;
+            else
+                m_HR[1] = address;
+        }
         m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
         return;

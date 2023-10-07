@@ -195,11 +195,11 @@ public:  // Memory
     // Read word
     uint16_t GetWord(uint16_t address, bool okHaltMode, bool okExec);
     // Write word
-    void SetWord(uint16_t address, bool okHaltMode, uint16_t word);
+    void SetWord(uint16_t address, bool okHaltMode, uint16_t word, bool isRMW = false);
     // Read byte
     uint8_t GetByte(uint16_t address, bool okHaltMode);
     // Write byte
-    void SetByte(uint16_t address, bool okHaltMode, uint8_t byte);
+    void SetByte(uint16_t address, bool okHaltMode, uint8_t byte, bool isRMW = false);
     // Read word from memory for video renderer and debugger
     uint8_t GetRAMByteView(uint32_t offset) const;
     uint16_t GetRAMWordView(uint32_t offset) const;
