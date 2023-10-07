@@ -50,6 +50,7 @@
     <ClCompile Include="SoundGen.cpp" />
     <ClCompile Include="emubase\Hard.cpp" />
     <ClCompile Include="util\lz4.cpp" />
+    <ClCompile Include="DisplayListView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="emubase\Board.h">

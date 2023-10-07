@@ -609,11 +609,13 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
     uint16_t pal0 = GETPALETTEHILO(tapaddr);
     uint32_t colorBorder = Color16Convert(pal0);  // Глобальный цвет бордюра
 
-    for (int line = 0; line < NEON_SCREEN_HEIGHT; line++)  // Цикл по строкам 0..299
+    for (int line = -2; line < 300; line++)  // Цикл по строкам -2..299, первые две строки не видны
     {
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
         tasaddr += 4;
+        if (line < 0)
+            continue;
 
         uint32_t* plinebits = linebits;
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);

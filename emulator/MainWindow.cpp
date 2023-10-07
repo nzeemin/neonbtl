@@ -47,6 +47,7 @@ void MainWindow_AdjustWindowLayout();
 bool MainWindow_DoCommand(int commandId);
 void MainWindow_DoViewDebug();
 //void MainWindow_DoDebugMemoryMap();
+void MainWindow_DoDebugDisplayList();
 void MainWindow_DoViewToolbar();
 void MainWindow_DoViewKeyboard();
 void MainWindow_DoViewScreenMode(int newMode);
@@ -602,6 +603,21 @@ void MainWindow_ShowHideKeyboard()
     MainWindow_UpdateMenu();
 }
 
+void MainWindow_ShowHideDisplayListViewer()
+{
+    if (g_hwndDisplayList == INVALID_HANDLE_VALUE)
+    {
+        RECT rcScreen;  ::GetWindowRect(g_hwndScreen, &rcScreen);
+        int x = 600;
+        int y = rcScreen.top - 4 - ::GetSystemMetrics(SM_CYSMCAPTION);
+        DisplayListView_Create(x, y);
+    }
+    else
+    {
+        ::SetFocus(g_hwndDisplayList);
+    }
+}
+
 void MainWindow_UpdateMenu()
 {
     // Get main menu
@@ -758,6 +774,9 @@ bool MainWindow_DoCommand(int commandId)
     case ID_VIEW_DEBUG:
         MainWindow_DoViewDebug();
         break;
+    case ID_VIEW_DISPLAY_LIST:
+        MainWindow_DoDebugDisplayList();
+        break;
     case ID_DEBUG_STEPINTO:
         if (!g_okEmulatorRunning && Settings_GetDebug())
             ConsoleView_StepInto();
@@ -816,6 +835,10 @@ void MainWindow_DoViewKeyboard()
 {
     Settings_SetKeyboard(!Settings_GetKeyboard());
     MainWindow_ShowHideKeyboard();
+}
+void MainWindow_DoDebugDisplayList()
+{
+    MainWindow_ShowHideDisplayListViewer();
 }
 
 void MainWindow_DoViewScreenMode(int newMode)

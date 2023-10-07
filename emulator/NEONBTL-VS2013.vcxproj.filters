@@ -48,6 +48,9 @@
       <Filter>emubase</Filter>
     </ClCompile>
     <ClCompile Include="SoundGen.cpp" />
+    <ClCompile Include="emubase\Hard.cpp" />
+    <ClCompile Include="util\lz4.cpp" />
+    <ClCompile Include="DisplayListView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="emubase\Board.h">
@@ -75,7 +78,11 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="ToolWindow.h" />
     <ClInclude Include="Views.h" />
-    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="res\resource.h">
+      <Filter>res</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundGen.h" />
+    <ClInclude Include="util\lz4.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\diskette.ico" />
