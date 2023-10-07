@@ -871,7 +871,7 @@ void CProcessor::ExecuteCOM()  // COM
     {
         ea = GetWordAddr(m_methdest, m_regdest);
         if (m_RPLYrq) return;
-        dst = GetWord(ea);
+        dst = GetWord(ea);  // RMW read
         if (m_RPLYrq) return;
     }
     else
@@ -880,7 +880,7 @@ void CProcessor::ExecuteCOM()  // COM
     dst = ~dst;
 
     if (m_methdest)
-        SetWord(ea, dst);
+        SetWordRMW(ea, dst);  // RMW write
     else
         SetReg(m_regdest, dst);
     if (m_RPLYrq) return;
@@ -901,7 +901,7 @@ void CProcessor::ExecuteCOMB()  // COM
     {
         ea = GetByteAddr(m_methdest, m_regdest);
         if (m_RPLYrq) return;
-        dst = GetByte(ea);
+        dst = GetByte(ea);  // RMW read
         if (m_RPLYrq) return;
     }
     else
@@ -910,7 +910,7 @@ void CProcessor::ExecuteCOMB()  // COM
     dst = ~dst;
 
     if (m_methdest)
-        SetByte(ea, dst);
+        SetByteRMW(ea, dst);  // RMW write
     else
         SetLReg(m_regdest, dst);
     if (m_RPLYrq) return;
@@ -1764,7 +1764,7 @@ void CProcessor::ExecuteXOR ()  // XOR
     {
         ea = GetWordAddr(m_methdest, m_regdest);
         if (m_RPLYrq) return;
-        dst = GetWord(ea);
+        dst = GetWord(ea);  // RMW read
         if (m_RPLYrq) return;
     }
     else
@@ -1773,7 +1773,7 @@ void CProcessor::ExecuteXOR ()  // XOR
     dst = dst ^ GetReg(m_regsrc);
 
     if (m_methdest)
-        SetWord(ea, dst);
+        SetWordRMW(ea, dst);  // RMW write
     else
         SetReg(m_regdest, dst);
     if (m_RPLYrq) return;
