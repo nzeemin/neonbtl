@@ -973,8 +973,6 @@ uint16_t CMotherboard::GetPortWord(uint16_t address)
     case 0161216:
         chunk = (address >> 1) & 7;
         DebugLogFormat(_T("%c%06ho\tGETPORT %06ho HR%d -> %06ho\n"), HU_INSTRUCTION_PC, address, chunk, m_HR[chunk]);
-        if (m_pCPU->IsHaltMode() && (chunk == 0 || chunk == 1))  // Чтение HR0 или HR1 в режиме HALT
-            m_PPIBrd |= 3;  // Снимаем EF0 и EF1
         return m_HR[chunk];
 
     case 0161220:
