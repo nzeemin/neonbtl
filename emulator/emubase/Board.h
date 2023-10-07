@@ -105,7 +105,7 @@ public:
     uint8_t     Read(uint8_t address);
     void        SetGate(uint8_t chan, bool gate);
     void        Tick();
-    bool        GetOutput(uint8_t chan);
+    bool        GetOutput(uint8_t chan) const;
 private:
     void        Tick(uint8_t channel);
 };
@@ -255,7 +255,7 @@ private:
     uint8_t     ProcessTimerRead(uint16_t address);
     void        ProcessKeyboardWrite(uint8_t byte);
     void        ProcessMouseWrite(uint8_t byte);
-    void        DoSound();
+    void        DoSound(uint16_t s0, uint16_t s1, uint16_t s2);
 private:
     const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
     uint32_t    m_dwTrace;  // Trace flags

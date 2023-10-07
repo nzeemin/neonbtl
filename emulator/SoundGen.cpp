@@ -143,6 +143,7 @@ void CALLBACK SoundGen_FeedDAC(unsigned short L, unsigned short R)
     if (!m_SoundGenInitialized)
         return;
 
+    //DebugLogFormat(_T("FeedDAC %04X\r\n"), L);
     unsigned int word = ((unsigned int)R << 16) + L;
     memcpy(&buffer[bufcurpos], &word, 4);
     bufcurpos += 4;

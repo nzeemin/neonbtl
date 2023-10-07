@@ -59,10 +59,6 @@ CMotherboard::CMotherboard()
     m_PICRR = m_PICMR = 0;
     m_PICflags = PIC_MODE_ICW1;
 
-    m_snd.SetGate(0, true);
-    m_snd.SetGate(1, true);
-    m_snd.SetGate(2, true);
-
     ::memset(m_keymatrix, 0, sizeof(m_keymatrix));
     m_keyint = false;
     m_keypos = 0;
@@ -363,22 +359,22 @@ void CMotherboard::Tick50()  // 50 Hz timer
 
 void CMotherboard::TimerTick() // Timer Tick - 2 MHz
 {
+    m_snd.SetGate(0, true);
+    m_snd.SetGate(1, true);
+    m_snd.SetGate(2, true);
     m_snd.Tick();
 
     m_snl.SetGate(0, m_snd.GetOutput(0));
     m_snl.SetGate(1, m_snd.GetOutput(1));
     m_snl.SetGate(2, m_snd.GetOutput(2));
-
     m_snl.Tick();
 }
-
 // address = 0161010..0161026
 void CMotherboard::ProcessTimerWrite(uint16_t address, uint8_t byte)
 {
     PIT8253& pit = (address & 020) ? m_snl : m_snd;
     pit.Write((address >> 1) & 3, byte);
 }
-
 // address = 0161010..0161026
 uint8_t CMotherboard::ProcessTimerRead(uint16_t address)
 {
@@ -492,6 +488,7 @@ bool CMotherboard::SystemFrame()
 {
     const int soundSamplesPerFrame = SOUNDSAMPLERATE / 25;
     int soundBrasErr = 0;
+    int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;//DEBUG
 
     for (int frameticks = 0; frameticks < 20000; frameticks++)
     {
@@ -513,7 +510,16 @@ bool CMotherboard::SystemFrame()
             }
 
             if ((procticks & 3) == 3)  // Every 4th tick
+            {
                 TimerTick();
+                //snd0 += m_snd.GetOutput(0) ? 1 : 0;
+                //snd1 += m_snd.GetOutput(1) ? 1 : 0;
+                //snd2 += m_snd.GetOutput(2) ? 1 : 0;
+                snl0 += m_snl.GetOutput(0) ? 1 : 0;
+                snl1 += m_snl.GetOutput(1) ? 1 : 0;
+                snl2 += m_snl.GetOutput(2) ? 1 : 0;
+                soundTicks++;
+            }
         }
 
         if (frameticks % 10000 == 5000)
@@ -529,7 +535,12 @@ bool CMotherboard::SystemFrame()
         if (2 * soundBrasErr >= 20000)
         {
             soundBrasErr -= 20000;
-            DoSound();
+            //DebugLogFormat(_T("SoundSNL %02d  %2d %2d %2d  %2d %2d %2d\r\n"), soundTicks, snd0, snd1, snd2, snl0, snl1, snl2);
+            uint16_t s0 = (uint16_t)((soundTicks - snl0) * 512 / soundTicks);
+            uint16_t s1 = (uint16_t)((soundTicks - snl1) * 512 / soundTicks);
+            uint16_t s2 = (uint16_t)((soundTicks - snl2) * 512 / soundTicks);
+            DoSound(s0, s1, s2);
+            soundTicks = 0; snl0 = snl1 = snl2 = 0; snd0 = snd1 = snd2 = 0;
         }
 
         //if (m_ParallelOutCallback != nullptr)
@@ -1431,22 +1442,23 @@ void CMotherboard::ProcessRtcWrite(uint16_t address, uint8_t byte)
 //   20480               - RAM image 512/1024/2048/4096 KB
 //
 //  Board status (400 bytes):
-//      32      4 bytes  - RAM size bytes
-//      36      6 bytes  - PIC
-//      42      4 bytes  - RESERVED
-//      46     10 bytes  - PPI
-//      56      8 bytes  - RESERVED
-//      64     32 bytes  - HR[8]
-//      96     32 bytes  - UR[8]
-//     128      8 bytes  - RESERVED
-//     136      8 bytes  - HDD controller
-//     152      8 bytes  - RESERVED
+//      32      2 bytes  - configuration
+//      34      4 bytes  - RAM size bytes
+//      38      6 bytes  - PIC
+//      44      4 bytes  - RESERVED
+//      48     10 bytes  - PPI
+//      58      8 bytes  - RESERVED
+//      66     32 bytes  - HR[8]
+//      98     32 bytes  - UR[8]
+//     130      8 bytes  - RESERVED
+//     138     16 bytes  - HDD controller
+//     154      6 bytes  - RESERVED
 //     160     12 bytes  - Keyboard
 //     172      4 bytes  - RESERVED
 //     176      6 bytes  - Mouse
 //     182     10 bytes  - RESERVED
 //     192     60 bytes  - PIT8253 x 2
-//     256      4 bytes  - RESERVED
+//     252      4 bytes  - RESERVED
 //     256     64 bytes  - Timer
 //     320     80 bytes  - RESERVED
 //
@@ -1479,10 +1491,9 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     *pwImage++ = m_hdint;
     *pwImage++ = m_nHDbuff;
     *pwImage++ = m_nHDbuffpos;
-    *pwImage++ = m_HDbuffdir;
-    pwImage += 8 / 2;  // RESERVED
+    *pwImage   = m_HDbuffdir;
     // Keyboard, mouse
-    pwImage = reinterpret_cast<uint16_t*>(pImage + 216);
+    pwImage = reinterpret_cast<uint16_t*>(pImage + 160);
     memcpy(pwImage, m_keymatrix, sizeof(m_keymatrix));  // 8 bytes
     pwImage += 8 / 2;
     *pwImage++ = m_keypos;
@@ -1493,9 +1504,9 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     *pwImage++ = m_mousest;
     pwImage += 10 / 2;  // RESERVED
     // PIT8253 x 2
-    memcpy(pwImage, m_snd.m_chan, sizeof(m_snd.m_chan));  // 30 bytes
-    pwImage += 30 / 2;
     memcpy(pwImage, m_snl.m_chan, sizeof(m_snl.m_chan));  // 30 bytes
+    pwImage += 30 / 2;
+    memcpy(pwImage, m_snd.m_chan, sizeof(m_snd.m_chan));  // 30 bytes
     // Timer
     time_t tnow = time(0);
     struct tm* lnow = localtime(&tnow);
@@ -1568,10 +1579,9 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     m_hdint = *pwImage++ != 0;
     m_nHDbuff = (uint8_t) * pwImage++;
     m_nHDbuffpos = *pwImage++;
-    m_HDbuffdir = *pwImage++ != 0;
-    pwImage += 8 / 2;  // RESERVED
+    m_HDbuffdir = *pwImage != 0;
     // Keyboard, mouse
-    pwImage = reinterpret_cast<const uint16_t*>(pImage + 216);
+    pwImage = reinterpret_cast<const uint16_t*>(pImage + 160);
     memcpy(m_keymatrix, pwImage, sizeof(m_keymatrix));  // 8 bytes
     pwImage += 8 / 2;
     m_keypos = *pwImage++;
@@ -1582,9 +1592,9 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     m_mousest = (uint8_t) * pwImage++;
     pwImage += 10 / 2;  // RESERVED
     // PIT8253 x 2
-    memcpy(m_snd.m_chan, pwImage, sizeof(m_snd.m_chan));  // 30 bytes
-    pwImage += 30 / 2;
     memcpy(m_snl.m_chan, pwImage, sizeof(m_snl.m_chan));  // 30 bytes
+    pwImage += 30 / 2;
+    memcpy(m_snd.m_chan, pwImage, sizeof(m_snd.m_chan));  // 30 bytes
     // Timer
     const uint8_t* pImageTimer = pImage + 256;
     pImageTimer++;  // Seconds
@@ -1617,25 +1627,12 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
 
 //////////////////////////////////////////////////////////////////////
 
-void CMotherboard::DoSound()
+void CMotherboard::DoSound(uint16_t s0, uint16_t s1, uint16_t s2)
 {
     if (m_SoundGenCallback == nullptr)
         return;
 
-    uint16_t sound =
-        (m_snl.GetOutput(0) ? 0 : 1) +
-        (m_snl.GetOutput(1) ? 0 : 1) +
-        (m_snl.GetOutput(2) ? 0 : 1);
-
-    switch (sound)
-    {
-    case 3:
-        sound = 0x7fff;  break;
-    case 2:
-        sound = 0x5555;  break;
-    case 1:
-        sound = 0x2AAA;  break;
-    }
+    uint16_t sound = (s0 + s1 + s2) * 21;
 
     (*m_SoundGenCallback)(sound, sound);
 }

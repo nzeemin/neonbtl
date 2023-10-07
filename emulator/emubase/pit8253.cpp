@@ -23,9 +23,10 @@ PIT8253_chan::PIT8253_chan()
     value = count = 0;
     gate = true;
     writehi = readhi = false;
+    output = false;
 }
 
-PIT8253::PIT8253()
+PIT8253::PIT8253() : m_chan()
 {
 }
 
@@ -107,7 +108,7 @@ void PIT8253::SetGate(uint8_t chan, bool gate)
     m_chan[chan].gate = gate;
 }
 
-bool PIT8253::GetOutput(uint8_t chan)
+bool PIT8253::GetOutput(uint8_t chan) const
 {
     if (chan >= 3) return false;
 
@@ -116,12 +117,10 @@ bool PIT8253::GetOutput(uint8_t chan)
 
 void PIT8253::Tick()
 {
-    for (uint8_t channel = 0; channel < 3; channel++)
-    {
-        Tick(channel);
-    }
+    Tick(0);
+    Tick(1);
+    Tick(2);
 }
-
 void PIT8253::Tick(uint8_t channel)
 {
     PIT8253_chan& chan = m_chan[channel];
