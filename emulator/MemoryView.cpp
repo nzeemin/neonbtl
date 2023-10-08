@@ -56,6 +56,8 @@ void MemoryView_UpdateToolbar();
 void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine);
 WORD MemoryView_GetWordFromMemory(WORD address, BOOL& okValid, int& addrtype, WORD& wChanged);
 void MemoryView_OnDraw(HDC hdc);
+void MemoryView_DrawMemory(HDC hdc);
+void MemoryView_DrawProcessList(HDC hdc);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -587,12 +589,31 @@ WORD MemoryView_GetWordFromMemory(WORD address, BOOL& okValid, int& addrtype, WO
     return word;
 }
 
+uint16_t MemoryView_GetWordFromHalt(WORD address)
+{
+    uint32_t offset;
+    int addrtype = g_pBoard->TranslateAddress(address, true, FALSE, &offset);
+    if (addrtype < ADDRTYPE_RAM4)
+        return g_pBoard->GetRAMWordView(offset);
+    return 0;
+}
+
 void MemoryView_OnDraw(HDC hdc)
 {
     ASSERT(g_pBoard != NULL);
 
     HFONT hFont = CreateMonospacedFont();
     HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+
+    MemoryView_DrawMemory(hdc);
+    //MemoryView_DrawProcessList(hdc);
+
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
+}
+
+void MemoryView_DrawMemory(HDC hdc)
+{
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
     COLORREF colorText = Settings_GetColor(ColorDebugText);
     COLORREF colorChanged = Settings_GetColor(ColorDebugValueChanged);
@@ -737,8 +758,6 @@ void MemoryView_OnDraw(HDC hdc)
 
     ::SelectObject(hdc, hOldBrush);
     VERIFY(::DeleteObject(hbrHighlight));
-    SelectObject(hdc, hOldFont);
-    VERIFY(::DeleteObject(hFont));
 
     if (::GetFocus() == m_hwndMemoryViewer)
     {
@@ -748,5 +767,89 @@ void MemoryView_OnDraw(HDC hdc)
     }
 }
 
+void MemoryView_DrawProcessList(HDC hdc)
+{
+    const size_t PROLENW = 35;  // process descriptor size, words
+    LPCTSTR PROCESS_LIST_HEADER  = _T("#   Name            Descript Priority State  Mem   Low   High");
+    LPCTSTR PROCESS_LIST_DIVIDER = _T("--- ----------------  ------  ------  -----  ----  ----  ----");
+    const CMotherboard* pBoard = g_pBoard;
+    uint16_t pdptr = pBoard->GetRAMWordView(020572); // pointer to first process-descriptor
+    uint16_t freepr = pBoard->GetRAMWordView(020006); // pointer to first free process-descriptor
+    uint16_t running = pBoard->GetRAMWordView(020016); // pointer to current process
+    uint16_t maplen = pBoard->GetRAMWordView(020002); // length of ram-bit-map in bytes
+
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+
+    TextOut(hdc, 32 + 4 + cxChar * 1, cyLine * 0, PROCESS_LIST_HEADER, (int)_tcslen(PROCESS_LIST_HEADER));
+    TextOut(hdc, 32 + 4 + cxChar * 1, cyLine * 1, PROCESS_LIST_DIVIDER, (int)_tcslen(PROCESS_LIST_DIVIDER));
+
+    uint16_t procno = 1;
+    int y = cyLine * 2;
+    while (pdptr != 0 && pdptr != freepr)
+    {
+        uint16_t procinfo[PROLENW];
+        for (int i = 0; i < PROLENW; i++)
+            procinfo[i] = MemoryView_GetWordFromHalt((uint16_t)(pdptr + i * 2));
+
+        TCHAR bufname[17];
+        for (int i = 0; i < 16; i++)
+            bufname[i] = TranslateDeviceCharToUnicode(((const uint8_t*)(procinfo + 24))[i]);
+        bufname[16] = 0;
+
+        uint16_t priority = procinfo[22];
+        TCHAR bufprio[7];
+        if ((priority & 0100000) == 0)
+            PrintOctalValue(bufprio, priority);
+        else
+        {
+            PrintOctalValue(bufprio, (uint16_t)(0200000 - priority));
+            bufprio[0] = _T('-');
+        }
+
+        LPCTSTR statestr;
+        if (pdptr == running)
+            statestr = _T("Run ");
+        else if ((procinfo[19] & 0040000) != 0)
+            statestr = _T("Wait");
+        else if ((procinfo[19] & 0000400) != 0)
+            statestr = _T("Tim ");
+        else if ((procinfo[19] & 0000377) != 0)
+            statestr = _T("Int ");
+        else
+            statestr = _T("I/O ");
+
+        LPCTSTR memstr = _T("No memory map  ");
+        //TCHAR bufmem[18];
+        uint16_t pmem = procinfo[23];
+        if (pmem != 0)
+        {
+            //int memsum = 0, addrlo = maplen * 8, addrhi = 0;
+            //for (int i = 0; i < (maplen + 1) / 2; i++)
+            //{
+            //    uint16_t membits = MemoryView_GetWordFromHalt((uint16_t)(pmem + i * 2));
+            //    for (int b = 0; b < 16; b++)
+            //    {
+            //        if (membits & 1)
+            //        {
+            //            memsum += 1;
+            //        }
+            //        membits = membits >> 1;
+            //    }
+            //}
+
+            //_sntprintf(bufmem, 17, _T("%3dk  %3dk  %3dk"), memsum, 0, 0);
+            //memstr = bufmem;
+            memstr = _T("");
+        }
+
+        TCHAR buffer[256];
+        _sntprintf(buffer, 255, _T("%2d  %16s  %06o  %s  %4s   %s"), procno, bufname, pdptr, bufprio, statestr, memstr);
+        TextOut(hdc, 32 + 4 + cxChar * 1, y, buffer, (int)_tcslen(buffer));
+
+        pdptr = procinfo[34];  // p.dsucc
+        procno++;
+        y += cyLine;
+    }
+}
 
 //////////////////////////////////////////////////////////////////////
