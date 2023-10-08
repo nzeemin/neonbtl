@@ -81,6 +81,7 @@ enum ToolbarButtonImages
     ToolbarImageMemoryHalt = 20,
     ToolbarImageMemoryUser = 21,
     ToolbarImageHexMode = 22,
+    ToolbarImageProcessList = 23,
 };
 
 enum StatusbarParts

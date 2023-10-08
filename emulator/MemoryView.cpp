@@ -29,6 +29,8 @@ WNDPROC m_wndprocMemoryToolWindow = NULL;  // Old window proc address of the Too
 HWND m_hwndMemoryViewer = (HWND)INVALID_HANDLE_VALUE;
 HWND m_hwndMemoryToolbar = (HWND)INVALID_HANDLE_VALUE;
 
+HWND m_hwndProcessListViewer = (HWND)INVALID_HANDLE_VALUE;
+
 int m_cxChar = 0;
 int m_cyLineMemory = 0;  // Line height in pixels
 int m_nPageSize = 100;  // Page size in lines
@@ -47,6 +49,7 @@ void MemoryView_OnRButtonDown(int mousex, int mousey);
 BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM lParam);
 BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos);
 void MemoryView_CopyValueToClipboard(WPARAM command);
+void MemoryView_ShowHideProcessList();
 void MemoryView_GotoAddress(WORD wAddress);
 void MemoryView_ScrollTo(WORD wBaseAddress);
 void MemoryView_UpdateWindowText();
@@ -56,8 +59,8 @@ void MemoryView_UpdateToolbar();
 void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine);
 WORD MemoryView_GetWordFromMemory(WORD address, BOOL& okValid, int& addrtype, WORD& wChanged);
 void MemoryView_OnDraw(HDC hdc);
-void MemoryView_DrawMemory(HDC hdc);
-void MemoryView_DrawProcessList(HDC hdc);
+
+void ProcessListView_OnDraw(HDC hdc);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -79,7 +82,10 @@ void MemoryView_RegisterClass()
     wcex.lpszMenuName   = NULL;
     wcex.lpszClassName  = CLASSNAME_MEMORYVIEW;
     wcex.hIconSm        = NULL;
+    RegisterClassEx(&wcex);
 
+    wcex.lpfnWndProc = ProcessListViewViewerWndProc;
+    wcex.lpszClassName = CLASSNAME_PROCESSLISTVIEW;
     RegisterClassEx(&wcex);
 }
 
@@ -126,7 +132,7 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     SendMessage(m_hwndMemoryToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
     SendMessage(m_hwndMemoryToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
 
-    TBBUTTON buttons[8];
+    TBBUTTON buttons[10];
     ZeroMemory(buttons, sizeof(buttons));
     for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -144,10 +150,13 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     buttons[4].idCommand = ID_DEBUG_MEMORY_USER;
     buttons[4].iBitmap = ToolbarImageMemoryUser;
     buttons[5].fsStyle = BTNS_SEP;
-    buttons[6].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
-    buttons[6].iBitmap = ToolbarImageWordByte;
-    buttons[7].idCommand = ID_DEBUG_MEMORY_HEXMODE;
-    buttons[7].iBitmap = ToolbarImageHexMode;
+    buttons[6].idCommand = ID_VIEW_PROCESS_LIST;
+    buttons[6].iBitmap = ToolbarImageProcessList;
+    buttons[7].fsStyle = BTNS_SEP;
+    buttons[8].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
+    buttons[8].iBitmap = ToolbarImageWordByte;
+    buttons[9].idCommand = ID_DEBUG_MEMORY_HEXMODE;
+    buttons[9].iBitmap = ToolbarImageHexMode;
 
     SendMessage(m_hwndMemoryToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
@@ -197,6 +206,8 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
             MemoryView_SelectAddress();
         else if (wParam == ID_DEBUG_MEMORY_HEXMODE)
             MemoryView_SwitchNumeralMode();
+        else if (wParam == ID_VIEW_PROCESS_LIST)
+            MemoryView_ShowHideProcessList();
         else
             ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
@@ -436,7 +447,32 @@ void MemoryView_UpdateToolbar()
     }
     SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, command, TRUE);
 
+    BOOL okProcessListShown = m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE;
+    SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, ID_VIEW_PROCESS_LIST, okProcessListShown);
+
     SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, ID_DEBUG_MEMORY_HEXMODE, (Settings_GetDebugMemoryNumeral() == MEMMODENUM_OCT ? 0 : 1));
+}
+
+void MemoryView_ShowHideProcessList()
+{
+    if (m_hwndProcessListViewer == (HWND)INVALID_HANDLE_VALUE)  // Create Process List controls
+    {
+        RECT rcClient;  GetClientRect(g_hwndMemory, &rcClient);
+
+        m_hwndProcessListViewer = CreateWindowEx(
+                WS_EX_STATICEDGE,
+                CLASSNAME_PROCESSLISTVIEW, NULL,
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,
+                32 + 4, 0, rcClient.right, rcClient.bottom,
+                g_hwndMemory, NULL, g_hInst, NULL);
+    }
+    else  // Destroy Process List controls
+    {
+        ::DestroyWindow(m_hwndProcessListViewer);
+        m_hwndProcessListViewer = (HWND)INVALID_HANDLE_VALUE;
+    }
+
+    MemoryView_UpdateToolbar();
 }
 
 void MemoryView_SetViewMode(MemoryViewMode mode)
@@ -605,15 +641,6 @@ void MemoryView_OnDraw(HDC hdc)
     HFONT hFont = CreateMonospacedFont();
     HGDIOBJ hOldFont = SelectObject(hdc, hFont);
 
-    MemoryView_DrawMemory(hdc);
-    //MemoryView_DrawProcessList(hdc);
-
-    SelectObject(hdc, hOldFont);
-    VERIFY(::DeleteObject(hFont));
-}
-
-void MemoryView_DrawMemory(HDC hdc)
-{
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
     COLORREF colorText = Settings_GetColor(ColorDebugText);
     COLORREF colorChanged = Settings_GetColor(ColorDebugValueChanged);
@@ -765,18 +792,49 @@ void MemoryView_DrawMemory(HDC hdc)
         MemoryView_GetCurrentValueRect(&rcFocus, cxChar, cyLine);
         DrawFocusRect(hdc, &rcFocus);
     }
+
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
 }
 
-void MemoryView_DrawProcessList(HDC hdc)
+//////////////////////////////////////////////////////////////////////
+
+LRESULT CALLBACK ProcessListViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    UNREFERENCED_PARAMETER(lParam);
+    switch (message)
+    {
+    case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+
+            ProcessListView_OnDraw(hdc);
+
+            EndPaint(hWnd, &ps);
+        }
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return (LRESULT)FALSE;
+}
+
+void ProcessListView_OnDraw(HDC hdc)
+{
+    ASSERT(g_pBoard != NULL);
+
+    HFONT hFont = CreateMonospacedFont();
+    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+
     const size_t PROLENW = 35;  // process descriptor size, words
-    LPCTSTR PROCESS_LIST_HEADER  = _T("#   Name            Descript Priority State  Mem   Low   High");
+    LPCTSTR PROCESS_LIST_HEADER = _T("#   Name            Descript Priority State  Mem   Low   High");
     LPCTSTR PROCESS_LIST_DIVIDER = _T("--- ----------------  ------  ------  -----  ----  ----  ----");
     const CMotherboard* pBoard = g_pBoard;
     uint16_t pdptr = pBoard->GetRAMWordView(020572); // pointer to first process-descriptor
     uint16_t freepr = pBoard->GetRAMWordView(020006); // pointer to first free process-descriptor
     uint16_t running = pBoard->GetRAMWordView(020016); // pointer to current process
-    uint16_t maplen = pBoard->GetRAMWordView(020002); // length of ram-bit-map in bytes
+    //uint16_t maplen = pBoard->GetRAMWordView(020002); // length of ram-bit-map in bytes
 
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
 
@@ -850,6 +908,10 @@ void MemoryView_DrawProcessList(HDC hdc)
         procno++;
         y += cyLine;
     }
+
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
 }
+
 
 //////////////////////////////////////////////////////////////////////

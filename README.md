@@ -4,6 +4,8 @@ This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (
 
 Soyuz-Neon is based on the N1806VM2 processor, so it is partially compatible with machines such as DVK, UKNC, NEMIGA, and in general inherits the instruction set and architecture from the DEC PDP-11 line of machines.
 
+[User Manual](docs/user-manual-en.md)
+
 Emulator status: Work in progress.
 
 [![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
@@ -19,6 +21,8 @@ Emulator status: Work in progress.
 Этот компьютер выпускался в 1991-1992 годах на заводе "Квант" в г. Зеленограде, всего было выпущено 200-1000 экземпляров.
 
 Союз-Неон построен на процессоре Н1806ВМ2, поэтому он частично совместим с такими машинами как ДВК, УКНЦ, Немига, и в целом наследует систему команд и архитектуру от машин линейки DEC PDP-11.
+
+[Руководство пользователя эмулятора](docs/user-manual-ru.md)
 
 Состояние эмулятора: В процессе разработки.
 
@@ -48,6 +52,7 @@ Emulator status: Work in progress.
 
 ### Ссылки
 
+* [Союз-Неон ПК 11/16](https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16) в Википедии
 * [Техническое описание](http://www.emuverse.ru/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16_%D0%A2%D0%9E) в Emuverse
 * [Документация на персональную ЭВМ ПК-11/16](https://github.com/troosh/pk11-16/tree/master/)
 * Архив файлов по Союз-Неон: http://mirrors.pdp-11.ru/_pk11-16/
