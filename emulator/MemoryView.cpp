@@ -191,10 +191,13 @@ void MemoryView_AdjustWindowLayout()
     if (m_hwndMemoryTab != (HWND)INVALID_HANDLE_VALUE)
         SetWindowPos(m_hwndMemoryTab, NULL, 0, 0, rc.right, rc.bottom, SWP_NOZORDER);
 
+    TabCtrl_AdjustRect(m_hwndMemoryTab, FALSE, &rc);
+    ::InflateRect(&rc, -4, -4);
+
     if (m_hwndMemoryViewer != (HWND) INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndMemoryViewer, NULL, 4, 28, rc.right, rc.bottom - 28, SWP_NOZORDER);
+        SetWindowPos(m_hwndMemoryViewer, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_NOZORDER);
     if (m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndProcessListViewer, NULL, 4, 28, rc.right, rc.bottom - 28, SWP_NOZORDER);
+        SetWindowPos(m_hwndProcessListViewer, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_NOZORDER);
 }
 
 LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
