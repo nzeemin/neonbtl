@@ -175,7 +175,7 @@ endprog:
 BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
 {
     INITCOMMONCONTROLSEX ics;  ics.dwSize = sizeof(ics);
-    ics.dwICC = ICC_WIN95_CLASSES;
+    ics.dwICC = ICC_WIN95_CLASSES | ICC_TAB_CLASSES;
     InitCommonControlsEx(&ics);
 
     BitmapFile_Init();

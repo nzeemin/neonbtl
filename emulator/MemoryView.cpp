@@ -26,6 +26,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 HWND g_hwndMemory = (HWND)INVALID_HANDLE_VALUE;  // Memory view window handler
 WNDPROC m_wndprocMemoryToolWindow = NULL;  // Old window proc address of the ToolWindow
 
+HWND m_hwndMemoryTab = (HWND)INVALID_HANDLE_VALUE;
 HWND m_hwndMemoryViewer = (HWND)INVALID_HANDLE_VALUE;
 HWND m_hwndMemoryToolbar = (HWND)INVALID_HANDLE_VALUE;
 
@@ -43,13 +44,13 @@ BOOL    m_okMemoryByteMode = FALSE;
 int     m_PostionIncrement = 100;  // Increment by X to the next word
 
 void MemoryView_AdjustWindowLayout();
+void MemoryView_OnTabChange();
 BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM lParam);
 void MemoryView_OnLButtonDown(int mousex, int mousey);
 void MemoryView_OnRButtonDown(int mousex, int mousey);
 BOOL MemoryView_OnMouseWheel(WPARAM wParam, LPARAM lParam);
 BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos);
 void MemoryView_CopyValueToClipboard(WPARAM command);
-void MemoryView_ShowHideProcessList();
 void MemoryView_GotoAddress(WORD wAddress);
 void MemoryView_ScrollTo(WORD wBaseAddress);
 void MemoryView_UpdateWindowText();
@@ -93,11 +94,6 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
 {
     ASSERT(hwndParent != NULL);
 
-    m_Mode = Settings_GetDebugMemoryMode();
-    if (m_Mode > MEMMODE_LAST) m_Mode = MEMMODE_LAST;
-    m_okMemoryByteMode = Settings_GetDebugMemoryByte();
-    m_NumeralMode = Settings_GetDebugMemoryNumeral();
-
     g_hwndMemory = CreateWindow(
             CLASSNAME_TOOLWINDOW, NULL,
             WS_CHILD | WS_VISIBLE,
@@ -111,18 +107,44 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
 
     RECT rcClient;  GetClientRect(g_hwndMemory, &rcClient);
 
-    m_hwndMemoryViewer = CreateWindowEx(
-            WS_EX_STATICEDGE,
-            CLASSNAME_MEMORYVIEW, NULL,
-            WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,
+    m_hwndMemoryTab = CreateWindowEx(
+            0,
+            WC_TABCONTROL, NULL,
+            WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
             0, 0, rcClient.right, rcClient.bottom,
             g_hwndMemory, NULL, g_hInst, NULL);
+    TCITEM tie;
+    tie.mask = TCIF_TEXT;
+    tie.pszText = _T(" CPU ");
+    TabCtrl_InsertItem(m_hwndMemoryTab, 0, &tie);
+    tie.pszText = _T(" HALT ");
+    TabCtrl_InsertItem(m_hwndMemoryTab, 1, &tie);
+    tie.pszText = _T(" USER ");
+    TabCtrl_InsertItem(m_hwndMemoryTab, 2, &tie);
+    tie.pszText = _T(" Process List ");
+    TabCtrl_InsertItem(m_hwndMemoryTab, 3, &tie);
 
+    HFONT hFont = CreateDialogFont();
+    ::SendMessage(m_hwndMemoryTab, WM_SETFONT, (WPARAM)hFont, NULL);
+
+    m_hwndMemoryViewer = CreateWindowEx(
+            0,
+            CLASSNAME_MEMORYVIEW, NULL,
+            WS_CHILD | WS_VSCROLL | WS_TABSTOP,
+            4, 28, rcClient.right, rcClient.bottom,
+            g_hwndMemory, NULL, g_hInst, NULL);
     m_hwndMemoryToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
             WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER | CCS_VERT,
             4, 4, 32, 32 * 8, m_hwndMemoryViewer,
             (HMENU) 102,
             g_hInst, NULL);
+
+    m_hwndProcessListViewer = CreateWindowEx(
+            0,
+            CLASSNAME_PROCESSLISTVIEW, NULL,
+            WS_CHILD | WS_VSCROLL | WS_TABSTOP,
+            32 + 4, 0, rcClient.right, rcClient.bottom,
+            g_hwndMemory, NULL, g_hInst, NULL);
 
     TBADDBITMAP addbitmap;
     addbitmap.hInst = g_hInst;
@@ -130,9 +152,9 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     SendMessage(m_hwndMemoryToolbar, TB_ADDBITMAP, 2, (LPARAM) &addbitmap);
 
     SendMessage(m_hwndMemoryToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM) sizeof(TBBUTTON), 0);
-    SendMessage(m_hwndMemoryToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG (26, 26));
+    SendMessage(m_hwndMemoryToolbar, TB_SETBUTTONSIZE, 0, (LPARAM) MAKELONG(26, 26));
 
-    TBBUTTON buttons[10];
+    TBBUTTON buttons[4];
     ZeroMemory(buttons, sizeof(buttons));
     for (int i = 0; i < sizeof(buttons) / sizeof(TBBUTTON); i++)
     {
@@ -143,27 +165,22 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     buttons[0].idCommand = ID_DEBUG_MEMORY_GOTO;
     buttons[0].iBitmap = ToolbarImageGotoAddress;
     buttons[1].fsStyle = BTNS_SEP;
-    buttons[2].idCommand = ID_DEBUG_MEMORY_CPU;
-    buttons[2].iBitmap = ToolbarImageMemoryCpu;
-    buttons[3].idCommand = ID_DEBUG_MEMORY_HALT;
-    buttons[3].iBitmap = ToolbarImageMemoryHalt;
-    buttons[4].idCommand = ID_DEBUG_MEMORY_USER;
-    buttons[4].iBitmap = ToolbarImageMemoryUser;
-    buttons[5].fsStyle = BTNS_SEP;
-    buttons[6].idCommand = ID_VIEW_PROCESS_LIST;
-    buttons[6].iBitmap = ToolbarImageProcessList;
-    buttons[7].fsStyle = BTNS_SEP;
-    buttons[8].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
-    buttons[8].iBitmap = ToolbarImageWordByte;
-    buttons[9].idCommand = ID_DEBUG_MEMORY_HEXMODE;
-    buttons[9].iBitmap = ToolbarImageHexMode;
+    buttons[2].idCommand = ID_DEBUG_MEMORY_WORDBYTE;
+    buttons[2].iBitmap = ToolbarImageWordByte;
+    buttons[3].idCommand = ID_DEBUG_MEMORY_HEXMODE;
+    buttons[3].iBitmap = ToolbarImageHexMode;
 
     SendMessage(m_hwndMemoryToolbar, TB_ADDBUTTONS, (WPARAM) sizeof(buttons) / sizeof(TBBUTTON), (LPARAM) &buttons);
 
     MemoryView_ScrollTo(Settings_GetDebugMemoryBase());
     MemoryView_GotoAddress(Settings_GetDebugMemoryAddress());
 
-    MemoryView_UpdateToolbar();
+    m_okMemoryByteMode = Settings_GetDebugMemoryByte();
+    m_NumeralMode = Settings_GetDebugMemoryNumeral();
+
+    int mode = Settings_GetDebugMemoryMode();
+    if (mode > MEMMODE_LAST) mode = MEMMODE_LAST;
+    MemoryView_SetViewMode((MemoryViewMode)mode);
 }
 
 // Adjust position of client windows
@@ -171,8 +188,13 @@ void MemoryView_AdjustWindowLayout()
 {
     RECT rc;  GetClientRect(g_hwndMemory, &rc);
 
+    if (m_hwndMemoryTab != (HWND)INVALID_HANDLE_VALUE)
+        SetWindowPos(m_hwndMemoryTab, NULL, 0, 0, rc.right, rc.bottom, SWP_NOZORDER);
+
     if (m_hwndMemoryViewer != (HWND) INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndMemoryViewer, NULL, 0, 0, rc.right, rc.bottom, SWP_NOZORDER);
+        SetWindowPos(m_hwndMemoryViewer, NULL, 4, 28, rc.right, rc.bottom - 28, SWP_NOZORDER);
+    if (m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE)
+        SetWindowPos(m_hwndProcessListViewer, NULL, 4, 28, rc.right, rc.bottom - 28, SWP_NOZORDER);
 }
 
 LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -188,10 +210,16 @@ LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
         lResult = CallWindowProc(m_wndprocMemoryToolWindow, hWnd, message, wParam, lParam);
         MemoryView_AdjustWindowLayout();
         return lResult;
+    case WM_NOTIFY:
+        if (((LPNMHDR)lParam)->code == TCN_SELCHANGE)
+            MemoryView_OnTabChange();
+        else
+            return DefWindowProc(hWnd, message, wParam, lParam);
+        break;
     default:
         return CallWindowProc(m_wndprocMemoryToolWindow, hWnd, message, wParam, lParam);
     }
-    //return (LRESULT)FALSE;
+    return (LRESULT)FALSE;
 }
 
 LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -206,8 +234,6 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
             MemoryView_SelectAddress();
         else if (wParam == ID_DEBUG_MEMORY_HEXMODE)
             MemoryView_SwitchNumeralMode();
-        else if (wParam == ID_VIEW_PROCESS_LIST)
-            MemoryView_ShowHideProcessList();
         else
             ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
@@ -241,6 +267,13 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return (LRESULT)FALSE;
+}
+
+void MemoryView_OnTabChange()
+{
+    int tab = TabCtrl_GetCurSel(m_hwndMemoryTab);
+
+    MemoryView_SetViewMode((MemoryViewMode)tab);
 }
 
 // Returns even address 0-65534, or -1 if out of area
@@ -280,9 +313,6 @@ BOOL MemoryView_OnKeyDown(WPARAM vkey, LPARAM /*lParam*/)
         break;
     case VK_DOWN:
         MemoryView_GotoAddress((WORD)(m_wCurrentAddress + 16));
-        break;
-    case VK_SPACE:
-        MemoryView_SetViewMode((MemoryViewMode)((m_Mode == MEMMODE_LAST) ? 0 : m_Mode + 1));
         break;
     case VK_PRIOR:
         MemoryView_GotoAddress((WORD)(m_wCurrentAddress - m_nPageSize * 16));
@@ -397,10 +427,17 @@ BOOL MemoryView_OnVScroll(WORD scrollcmd, WORD scrollpos)
 
 void MemoryView_UpdateWindowText()
 {
-    TCHAR buffer[64];
-    LPCTSTR format = (m_NumeralMode == MEMMODENUM_OCT) ? _T("Memory - %s - %06o") : _T("Memory - %s - %04x");
-    _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, format, MemoryView_GetMemoryModeName(), m_wCurrentAddress);
-    ::SetWindowText(g_hwndMemory, buffer);
+    if (m_Mode <= MEMMODE_USER)
+    {
+        TCHAR buffer[64];
+        LPCTSTR format = (m_NumeralMode == MEMMODENUM_OCT) ? _T("Memory - %s - %06o") : _T("Memory - %s - %04x");
+        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, format, MemoryView_GetMemoryModeName(), m_wCurrentAddress);
+        ::SetWindowText(g_hwndMemory, buffer);
+    }
+    else
+    {
+        ::SetWindowText(g_hwndMemory, _T("Memory - Process List"));
+    }
 }
 
 void MemoryView_CopyValueToClipboard(WPARAM command)
@@ -438,41 +475,7 @@ void MemoryView_CopyValueToClipboard(WPARAM command)
 
 void MemoryView_UpdateToolbar()
 {
-    int command = ID_DEBUG_MEMORY_CPU;
-    switch (m_Mode)
-    {
-    case MEMMODE_CPU:   command = ID_DEBUG_MEMORY_CPU;   break;
-    case MEMMODE_HALT:  command = ID_DEBUG_MEMORY_HALT;  break;
-    case MEMMODE_USER:  command = ID_DEBUG_MEMORY_USER;  break;
-    }
-    SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, command, TRUE);
-
-    BOOL okProcessListShown = m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE;
-    SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, ID_VIEW_PROCESS_LIST, okProcessListShown);
-
     SendMessage(m_hwndMemoryToolbar, TB_CHECKBUTTON, ID_DEBUG_MEMORY_HEXMODE, (Settings_GetDebugMemoryNumeral() == MEMMODENUM_OCT ? 0 : 1));
-}
-
-void MemoryView_ShowHideProcessList()
-{
-    if (m_hwndProcessListViewer == (HWND)INVALID_HANDLE_VALUE)  // Create Process List controls
-    {
-        RECT rcClient;  GetClientRect(g_hwndMemory, &rcClient);
-
-        m_hwndProcessListViewer = CreateWindowEx(
-                WS_EX_STATICEDGE,
-                CLASSNAME_PROCESSLISTVIEW, NULL,
-                WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP,
-                32 + 4, 0, rcClient.right, rcClient.bottom,
-                g_hwndMemory, NULL, g_hInst, NULL);
-    }
-    else  // Destroy Process List controls
-    {
-        ::DestroyWindow(m_hwndProcessListViewer);
-        m_hwndProcessListViewer = (HWND)INVALID_HANDLE_VALUE;
-    }
-
-    MemoryView_UpdateToolbar();
 }
 
 void MemoryView_SetViewMode(MemoryViewMode mode)
@@ -482,9 +485,23 @@ void MemoryView_SetViewMode(MemoryViewMode mode)
     m_Mode = mode;
     Settings_SetDebugMemoryMode((WORD)m_Mode);
 
-    InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
-    MemoryView_UpdateWindowText();
+    bool okShowMemory = m_Mode <= MEMMODE_USER;
+    ::ShowWindow(m_hwndMemoryViewer, okShowMemory ? SW_NORMAL : SW_HIDE);
+    ::ShowWindow(m_hwndProcessListViewer, m_Mode == MEMMODE_PS ? SW_NORMAL : SW_HIDE);
 
+    if (okShowMemory)
+    {
+        ::InvalidateRect(m_hwndMemoryViewer, NULL, TRUE);
+        ::SetFocus(m_hwndMemoryViewer);
+    }
+    if (m_Mode == MEMMODE_PS)
+    {
+        ::InvalidateRect(m_hwndProcessListViewer, NULL, TRUE);
+        ::SetFocus(m_hwndProcessListViewer);
+    }
+
+    TabCtrl_SetCurSel(m_hwndMemoryTab, m_Mode);
+    MemoryView_UpdateWindowText();
     MemoryView_UpdateToolbar();
 }
 
