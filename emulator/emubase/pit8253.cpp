@@ -20,7 +20,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 PIT8253_chan::PIT8253_chan()
 {
     control = phase = 0;
-    value = count = 0;
+    value = count = latchvalue = 0;
     gate = true;
     writehi = readhi = false;
     output = false;
@@ -32,7 +32,7 @@ PIT8253::PIT8253() : m_chan()
 
 void PIT8253::Write(uint8_t address, uint8_t byte)
 {
-    int channel = (address & 3);
+    int channel = address & 3;
     if (channel == 3)
     {
         channel = byte >> 6;
@@ -41,9 +41,16 @@ void PIT8253::Write(uint8_t address, uint8_t byte)
         PIT8253_chan& chan = m_chan[channel];
         chan.control = byte & 0x3f;
         chan.writehi = chan.readhi = false;
-        chan.phase = 0;
-        uint8_t mode = (chan.control >> 1) & 7;
-        chan.output = (mode != 0);
+        if ((chan.control & 0x30) == 0)  // latch mode
+        {
+            chan.latchvalue = chan.value;
+        }
+        else
+        {
+            chan.phase = 0;
+            uint8_t mode = (chan.control >> 1) & 7;
+            chan.output = (mode != 0);
+        }
     }
     else
     {
@@ -80,7 +87,7 @@ void PIT8253::Write(uint8_t address, uint8_t byte)
 
 uint8_t PIT8253::Read(uint8_t address)
 {
-    int channel = (address & 3);
+    int channel = address & 3;
     if (channel == 3)
         return 0;
     PIT8253_chan& chan = m_chan[channel];
@@ -90,15 +97,13 @@ uint8_t PIT8253::Read(uint8_t address)
     case 1:
         return chan.value & 0xff;
     case 2:
-        return (chan.value >> 8);
+        return chan.value >> 8;
     case 3:
         chan.readhi = !chan.readhi;
-        if (chan.readhi)
-            return chan.value & 0xff;
-        else
-            return (chan.value >> 8);
-    default:
-        return 0;
+        return chan.readhi ? chan.value & 0xff : chan.value >> 8;
+    default:  // latch mode
+        chan.readhi = !chan.readhi;
+        return chan.readhi ? chan.latchvalue & 0xff : chan.latchvalue >> 8;
     }
 }
 
@@ -127,8 +132,38 @@ void PIT8253::Tick(uint8_t channel)
     uint8_t mode = (chan.control >> 1) & 7;
     switch (mode)
     {
-    case 0:
-        //TODO
+    case 0:  // Interrupt on Terminal Count
+        /*
+        phase|output  |length  |value|next|comment
+        -----+--------+--------+-----+----+----------------------------------
+            0|low     |infinity|     |1   |waiting for count
+            1|low     |1       |     |2   |internal delay when counter loaded
+            2|low     |n       |n..1 |3   |counting down
+            3|high    |infinity|0..1 |3   |counting down
+         */
+        if (chan.phase != 0)
+        {
+            if (chan.phase == 1)
+            {
+                chan.value = chan.count;
+                chan.phase = 2;
+                return;
+            }
+            if (chan.gate != 0)
+            {
+                if (chan.phase == 2)
+                {
+                    if (chan.value <= 1)
+                    {
+                        chan.phase = 3;
+                        chan.value = 0;
+                        chan.output = true;
+                    }
+                }
+
+                chan.value--;
+            }
+        }
         break;
     case 1:
         //TODO

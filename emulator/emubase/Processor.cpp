@@ -19,14 +19,14 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 uint16_t MOV_TIMING[8][8] =
 {
     // RN     (RN)    (RN)+  @(RN)+  -(RN)   @-(RN)  X(RN)   @X(RN)
-    {0x0007, 0x0016, 0x0017, 0x001F, 0x0017, 0x001F, 0x001E, 0x002E},   // RN
-    {0x000F, 0x0020, 0x0020, 0x002E, 0x0026, 0x002F, 0x0028, 0x0037},   // (RN)
-    {0x000F, 0x0020, 0x0021, 0x002E, 0x0026, 0x002F, 0x0028, 0x0037},   // (RN)+
-    {0x0018, 0x0028, 0x0028, 0x0035, 0x002F, 0x0036, 0x0038, 0x003E},   // @(RN)+
-    {0x0010, 0x0024, 0x0024, 0x0034, 0x0026, 0x002F, 0x002A, 0x0036},   // -(RN)
-    {0x0017, 0x002C, 0x002E, 0x0040, 0x002F, 0x0037, 0x0034, 0x003E},   // @-(RN)
-    {0x001E, 0x002E, 0x0030, 0x0038, 0x002F, 0x0038, 0x0037, 0x0045},   // X(RN)
-    {0x0027, 0x0037, 0x0035, 0x0040, 0x0036, 0x0040, 0x003E, 0x004D}    // @X(RN)
+    {0x0007, 0x000F, 0x000F, 0x0017, 0x000F, 0x0017, 0x0017, 0x001F},   // RN
+    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027},   // (RN)
+    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027},   // (RN)+
+    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F},   // @(RN)+
+    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027},   // -(RN)
+    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F},   // @-(RN)
+    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F},   // X(RN)
+    {0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x002F, 0x0037}    // @X(RN)
 };
 
 uint16_t MOVB_TIMING[8][8] =
@@ -430,7 +430,7 @@ bool CProcessor::InterruptProcessing()
             uint16_t new_psw = GetWord(intrVector + 2);
             if (m_RPLYrq) return true;
 
-            DebugLogFormat(_T("%06ho\tCPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            //DebugLogFormat(_T("%c%06ho\tCPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), currMode ? _T('H') : _T('U'), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetPSW(new_psw);
             SetPC(new_pc);
         }
@@ -451,7 +451,7 @@ bool CProcessor::InterruptProcessing()
             uint16_t new_psw = GetWord(intrVector + 2);
             if (m_RPLYrq) return true;
 
-            DebugLogFormat(_T("%06ho\tCPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), GetInstructionPC(), intrVector, new_pc, new_psw);
+            //DebugLogFormat(_T("%c%06ho\tCPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), currMode ? _T('H') : _T('U'), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetLPSW((uint8_t)(new_psw & 0xff));
             SetPC(new_pc);
         }
@@ -1989,6 +1989,7 @@ void CProcessor::ExecuteMOV()  // MOV - move
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
     m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
+    if ((m_instruction & 000077) == 000027) m_internalTick += 8;
 }
 
 void CProcessor::ExecuteMOVB()  // MOVB - move byte

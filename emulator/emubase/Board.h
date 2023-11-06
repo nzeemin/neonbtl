@@ -87,6 +87,7 @@ struct PIT8253_chan
     uint8_t     phase;
     uint16_t    value;      // Current counter value
     uint16_t    count;      // Counter reload value
+    uint16_t    latchvalue; // Latched counter value
     bool        gate;       // Gate input line
     bool        writehi;
     bool        readhi;

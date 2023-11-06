@@ -372,13 +372,13 @@ void CMotherboard::TimerTick() // Timer Tick - 2 MHz
 // address = 0161010..0161026
 void CMotherboard::ProcessTimerWrite(uint16_t address, uint8_t byte)
 {
-    PIT8253& pit = (address & 020) ? m_snl : m_snd;
+    PIT8253& pit = (address & 020) != 0 ? m_snl : m_snd;
     pit.Write((address >> 1) & 3, byte);
 }
 // address = 0161010..0161026
 uint8_t CMotherboard::ProcessTimerRead(uint16_t address)
 {
-    PIT8253& pit = (address & 020) ? m_snl : m_snd;
+    PIT8253& pit = (address & 020) != 0 ? m_snl : m_snd;
     return pit.Read((address >> 1) & 3);
 }
 

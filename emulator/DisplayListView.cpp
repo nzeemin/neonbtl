@@ -175,9 +175,9 @@ void DiaplayList_FillTreeView()
             LPCTSTR vdstr;
             switch (vd)
             {
-            case 0: vdstr = _T("vd208"); break;
-            case 1: vdstr = _T("vd104"); break;
-            case 2: vdstr = _T("vd52 "); break;
+            case 3:  vdstr = _T("vd208"); break;
+            case 2:  vdstr = _T("vd104"); break;
+            case 1:  vdstr = _T("vd52 "); break;
             default: vdstr = _T("vd52s"); break;
             }
             uint16_t vm = (otrhi & 0x8000) >> 13 | (otrhi >> 6) & 3;  // биты PB VN1 VN0
@@ -186,9 +186,9 @@ void DiaplayList_FillTreeView()
             {
             case 0: case 4: vmstr = _T("VM1 "); break;
             case 1: case 5: vmstr = _T("VM2 "); break;
-            case 2: vmstr = _T("VM40"); break;
-            case 3: vmstr = _T("VM41"); break;
-            case 6: vmstr = _T("VM4 "); break;
+            case 2:  vmstr = _T("VM40"); break;
+            case 3:  vmstr = _T("VM41"); break;
+            case 6:  vmstr = _T("VM4 "); break;
             default: vmstr = _T("VM8 "); break;
             }
             uint16_t palno = (otrhi >> 4) & 3;  // PN1 PN0 - номер палитры
