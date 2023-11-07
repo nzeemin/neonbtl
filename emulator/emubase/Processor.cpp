@@ -18,62 +18,87 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 uint16_t MOV_TIMING[12][12] =
 {
-    // RN     (RN)    (RN)+  @(RN)+  -(RN)   @-(RN)  X(RN)   @X(RN)    #X     @#X      X       @X
-    {0x0007, 0x000F, 0x000F, 0x0017, 0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x0017, 0x0017, 0x001F},   // RN
-    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x001F, 0x001F, 0x0027},   // @RN
-    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x001F, 0x001F, 0x0027},   // (RN)+
-    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // @(RN)+
-    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x001F, 0x001F, 0x0027},   // -(RN)
-    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // @-(RN)
-    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // X(RN)
-    {0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x002F, 0x0037, 0x002F, 0x002F, 0x002F, 0x0037},   // @X(RN)
-    {0x000F, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x001F, 0x001F, 0x0027},   // #X
-    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // @#X
-    {0x0017, 0x001F, 0x001F, 0x0027, 0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // X
-    {0x001F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x0027, 0x0037, 0x002F, 0x002F, 0x002F, 0x0037},   // @X
+    // R1   @R1  (R1)+ @(R1)+ -(R1) @-(R1) X(R1) @X(R1)  #X    @#X    X    @X
+    {   8,   24,   24,   32,   24,   32,   32,   48,     32,   32,   32,   48 },  // R0
+    {  16,   32,   32,   48,   40,   48,   40,   56,     40,   40,   40,   56 },  // @R0
+    {  16,   32,   32,   48,   40,   48,   40,   56,     40,   40,   40,   56 },  // (R0)+
+    {  24,   40,   40,   56,   48,   56,   48,   64,     48,   48,   48,   64 },  // @(R0)+
+    {  16,   32,   32,   48,   40,   48,   40,   56,     40,   40,   40,   56 },  // -(R0)
+    {  24,   40,   40,   56,   48,   56,   48,   64,     48,   48,   48,   64 },  // @-(R0)
+    {  32,   48,   48,   56,   48,   56,   56,   72,     56,   56,   56,   72 },  // X(R0)
+    {  40,   56,   56,   64,   56,   64,   64,   80,     64,   64,   64,   80 },  // @X(R0)
+    {  16,   32,   32,   40,   32,   40,   40,   56,     40,   40,   40,   56 },  // #X
+    {  32,   48,   48,   56,   48,   56,   56,   72,     56,   56,   56,   72 },  // @#X
+    {  32,   48,   48,   56,   48,   56,   56,   72,     56,   56,   56,   72 },  // X
+    {  40,   56,   56,   64,   56,   64,   64,   80,     64,   64,   64,   80 },  // @X
 };
 
 uint16_t MOVB_TIMING[12][12] =  // MOVB, BICB, BISB
 {
-    // RN     (RN)    (RN)+  @(RN)+  -(RN)   @-(RN)  X(RN)   @X(RN)    #X     @#X      X       @X
-    {0x0007, 0x0017, 0x0017, 0x001F, 0x0017, 0x001F, 0x0027, 0x002F, 0x0027, 0x0027, 0x0027, 0x002F},   // RN
-    {0x000F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x002F, 0x0037, 0x002F, 0x002F, 0x002F, 0x0037},   // @RN
-    {0x000F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x002F, 0x0037, 0x002F, 0x002F, 0x002F, 0x0037},   // (RN)+
-    {0x0017, 0x002F, 0x002F, 0x0037, 0x002F, 0x0037, 0x0037, 0x003F, 0x0037, 0x0037, 0x0037, 0x003F},   // @(RN)+
-    {0x000F, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x002F, 0x0037, 0x002F, 0x002F, 0x002F, 0x0037},   // -(RN)
-    {0x0017, 0x002F, 0x002F, 0x0037, 0x002F, 0x0037, 0x0037, 0x003F, 0x0037, 0x0037, 0x0037, 0x003F},   // @-(RN)
-    {0x001F, 0x002F, 0x002F, 0x0037, 0x002F, 0x0037, 0x003F, 0x0047, 0x0037, 0x003F, 0x003F, 0x0047},   // X(RN)
-    {0x0027, 0x0037, 0x0037, 0x003F, 0x0037, 0x003F, 0x0047, 0x004F, 0x003F, 0x0047, 0x0047, 0x004F},   // @X(RN)
-    {0x0017, 0x0027, 0x0027, 0x002F, 0x0027, 0x002F, 0x0037, 0x003F, 0x002F, 0x0037, 0x0037, 0x003F},   // #X
-    {0x001F, 0x002F, 0x002F, 0x0037, 0x002F, 0x0037, 0x003F, 0x0047, 0x0037, 0x003F, 0x003F, 0x0047},   // @#X
-    {0x001F, 0x002F, 0x002F, 0x0037, 0x002F, 0x0037, 0x003F, 0x0047, 0x0037, 0x003F, 0x003F, 0x0047},   // X
-    {0x0027, 0x0037, 0x0037, 0x003F, 0x0037, 0x003F, 0x0047, 0x004F, 0x003F, 0x0047, 0x0047, 0x004F},   // @X
+    // R1   @R1  (R1)+ @(R1)+ -(R1) @-(R1) X(R1) @X(R1)  #X    @#X    X    @X
+    {   8,   24,   24,   32,   24,   32,   40,   48,     40,   40,   40,   48 },  // R0
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // @R0
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // (R0)+
+    {  24,   48,   48,   56,   48,   56,   56,   64,     56,   56,   56,   64 },  // @(R0)+
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // -(R0)
+    {  24,   48,   48,   56,   48,   56,   56,   64,     56,   56,   56,   64 },  // @-(R0)
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // X(R0)
+    {  40,   56,   56,   64,   56,   64,   72,   80,     64,   72,   72,   80 },  // @X(R0)
+    {  24,   40,   40,   48,   40,   48,   56,   64,     48,   56,   56,   64 },  // #X
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // @#X
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // X
+    {  40,   56,   56,   64,   56,   64,   72,   80,     64,   72,   72,   80 },  // @X
 };
 
-uint16_t BIT_TIMING[8][8] =  // BIT, CMP
+uint16_t ADD_TIMING[12][12] =  // ADD, BIC, BIS, SUB
 {
-    // RN     (RN)    (RN)+  @(RN)+  -(RN)   @-(RN)  X(RN)   @X(RN)
-    {0x0007, 0x0010, 0x0010, 0x0018, 0x0018, 0x0020, 0x0026, 0x0030},   // RN
-    {0x000F, 0x0020, 0x0020, 0x0029, 0x0026, 0x0028, 0x0030, 0x0037},   // (RN)
-    {0x000F, 0x0020, 0x0020, 0x0029, 0x002E, 0x0028, 0x0030, 0x0037},   // (RN)+
-    {0x0017, 0x0029, 0x0029, 0x002D, 0x002C, 0x0030, 0x0034, 0x003E},   // @(RN)+
-    {0x000F, 0x0022, 0x0020, 0x0028, 0x002E, 0x002A, 0x002F, 0x0037},   // -(RN)
-    {0x0017, 0x0028, 0x002E, 0x002F, 0x002B, 0x0030, 0x003A, 0x003F},   // @-(RN)
-    {0x001E, 0x002A, 0x002A, 0x002F, 0x0029, 0x0030, 0x003F, 0x0045},   // X(RN)
-    {0x0027, 0x002E, 0x002E, 0x0037, 0x002F, 0x0037, 0x0046, 0x004E}    // @X(RN)
+    // R1   @R1  (R1)+ @(R1)+ -(R1) @-(R1) X(R1) @X(R1)  #X    @#X    X    @X
+    {   8,   24,   24,   32,   24,   32,   40,   48,     40,   40,   40,   48 },  // R0
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // @R0
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // (R0)+
+    {  24,   48,   48,   56,   48,   56,   56,   64,     56,   56,   56,   64 },  // @(R0)+
+    {  16,   40,   40,   48,   40,   48,   48,   56,     48,   48,   48,   56 },  // -(R0)
+    {  24,   48,   48,   56,   48,   56,   56,   64,     56,   56,   56,   64 },  // @-(R0)
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // X(R0)
+    {  40,   56,   56,   64,   56,   64,   72,   80,     64,   72,   72,   80 },  // @X(R0)
+    {  16,   32,   32,   40,   32,   40,   48,   56,     40,   48,   48,   56 },  // #X
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // @#X
+    {  32,   48,   48,   56,   48,   56,   64,   72,     56,   64,   64,   72 },  // X
+    {  40,   56,   56,   64,   56,   64,   72,   80,     64,   72,   72,   80 },  // @X
 };
 
-uint16_t BITB_TIMING[8][8] =
+uint16_t BIT_TIMING[12][12] =  // BIT, CMP
 {
-    // RN     (RN)    (RN)+  @(RN)+  -(RN)   @-(RN)  X(RN)   @X(RN)
-    {0x0007, 0x0010, 0x0010, 0x0018, 0x0018, 0x0020, 0x0026, 0x0030},   // RN
-    {0x000F, 0x0020, 0x0020, 0x0029, 0x0026, 0x0028, 0x0030, 0x0037},   // (RN)
-    {0x000F, 0x0020, 0x0020, 0x0029, 0x002E, 0x0028, 0x0030, 0x0037},   // (RN)+
-    {0x0017, 0x0029, 0x0029, 0x002D, 0x002C, 0x0030, 0x0034, 0x003E},   // @(RN)+
-    {0x000F, 0x0022, 0x0020, 0x0028, 0x002E, 0x002A, 0x002F, 0x0037},   // -(RN)
-    {0x0017, 0x0028, 0x002E, 0x002F, 0x002B, 0x0030, 0x003A, 0x003F},   // @-(RN)
-    {0x001E, 0x002A, 0x002A, 0x002F, 0x0029, 0x0030, 0x003F, 0x0045},   // X(RN)
-    {0x0027, 0x002E, 0x002E, 0x0037, 0x002F, 0x0037, 0x0046, 0x004E}    // @X(RN)
+    // R1   @R1  (R1)+ @(R1)+ -(R1) @-(R1) X(R1) @X(R1)  #X    @#X    X    @X
+    {   8,   16,   16,   24,   24,   32,   40,   48,     24,   40,   40,   48 },  // R0
+    {  16,   32,   32,   40,   32,   40,   48,   56,     40,   48,   48,   56 },  // @R0
+    {  16,   32,   32,   40,   32,   40,   48,   56,     40,   48,   48,   56 },  // (R0)+
+    {  24,   40,   40,   48,   40,   48,   56,   64,     48,   56,   56,   64 },  // @(R0)+
+    {  16,   32,   32,   40,   32,   40,   48,   56,     40,   48,   48,   56 },  // -(R0)
+    {  24,   40,   40,   48,   40,   48,   56,   64,     48,   56,   56,   64 },  // @-(R0)
+    {  32,   40,   40,   48,   40,   48,   64,   72,     48,   64,   64,   72 },  // X(R0)
+    {  40,   48,   48,   56,   48,   56,   72,   80,     56,   72,   72,   80 },  // @X(R0)
+    {  16,   24,   24,   32,   24,   32,   48,   56,     32,   48,   48,   56 },  // #X
+    {  32,   40,   40,   48,   40,   48,   64,   72,     48,   64,   64,   72 },  // @#X
+    {  32,   40,   40,   48,   40,   48,   64,   72,     48,   64,   64,   72 },  // X
+    {  40,   48,   48,   56,   48,   56,   72,   80,     56,   72,   72,   80 },  // @X
+};
+
+uint16_t BITB_TIMING[12][12] =  // BITB, CMPB
+{
+    // R1   @R1  (R1)+ @(R1)+ -(R1) @-(R1) X(R1) @X(R1)  #X    @#X    X    @X
+    {   8,   16,   16,   24,   24,   32,   40,   48,     40,   40,   40,   48 },  // R0
+    {  16,   32,   32,   40,   32,   40,   48,   56,     48,   48,   48,   56 },  // @R0
+    {  16,   32,   32,   40,   32,   40,   48,   56,     48,   48,   48,   56 },  // (R0)+
+    {  24,   40,   40,   48,   40,   48,   56,   64,     56,   56,   56,   64 },  // @(R0)+
+    {  16,   32,   32,   40,   32,   40,   48,   56,     48,   48,   48,   56 },  // -(R0)
+    {  24,   40,   40,   48,   40,   48,   56,   64,     56,   56,   56,   64 },  // @-(R0)
+    {  32,   40,   40,   48,   40,   48,   64,   72,     56,   64,   64,   72 },  // X(R0)
+    {  40,   48,   48,   56,   48,   56,   72,   80,     64,   72,   72,   80 },  // @X(R0)
+    {  24,   32,   32,   40,   32,   40,   56,   64,     48,   56,   56,   64 },  // #X
+    {  32,   40,   40,   48,   40,   48,   64,   72,     56,   64,   64,   72 },  // @#X
+    {  32,   40,   40,   48,   40,   48,   64,   72,     56,   64,   64,   72 },  // X
+    {  40,   48,   48,   56,   48,   56,   72,   80,     64,   72,   72,   80 },  // @X
 };
 
 uint16_t CLR_TIMING[8] =
@@ -719,7 +744,7 @@ void CProcessor::ExecuteMFUS ()  // ЧЧП, move from user space - Чтение 
     SetReg(5, addr + 2);
     if (!m_RPLYrq) SetReg(0, word);
 
-    m_internalTick = MOV_TIMING[0][2];
+    m_internalTick = MOV_TIMING[0][2] - 1;
 }
 
 void CProcessor::ExecuteMTUS()  // ЗЧП, move to user space - Запись в память адресного пространства USER
@@ -736,7 +761,7 @@ void CProcessor::ExecuteMTUS()  // ЗЧП, move to user space - Запись в 
     SetWord(GetReg(5), GetReg(0));  // Write in USER mode
     SetHALT(true);
 
-    m_internalTick = MOV_TIMING[0][2];
+    m_internalTick = MOV_TIMING[0][2] - 1;
 }
 
 void CProcessor::ExecuteRTI()  // RTI - Return from Interrupt - Возврат из прерывания
@@ -863,7 +888,7 @@ void CProcessor::ExecuteSWAB ()
     if ((dst & 0200) != 0) new_psw |= PSW_N;
     if ((uint8_t)(dst & 0xff) == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
-    m_internalTick = MOV_TIMING[m_methdest][m_methdest];
+    m_internalTick = MOV_TIMING[m_methdest][m_methdest] - 1;
 }
 
 void CProcessor::ExecuteCLR ()  // CLR
@@ -2032,7 +2057,7 @@ void CProcessor::ExecuteMOV()  // MOV - move
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 
-    m_internalTick = GetInstructionTiming12x12(MOV_TIMING, m_instruction);
+    m_internalTick = GetInstructionTiming12x12(MOV_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteMOVB()  // MOVB - move byte
@@ -2067,7 +2092,7 @@ void CProcessor::ExecuteMOVB()  // MOVB - move byte
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 
-    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction);
+    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteCMP()  // CMP - compare
@@ -2106,7 +2131,8 @@ void CProcessor::ExecuteCMP()  // CMP - compare
     if (((src ^ src2) & ~(dst ^ src2)) & 0100000) new_psw |= PSW_V;
     if (((~src & src2) | (~(src ^ src2) & dst)) & 0100000) new_psw |= PSW_C;
     SetLPSW(new_psw);
-    m_internalTick = BIT_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(BIT_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteCMPB()  // CMPB - compare byte
@@ -2145,7 +2171,8 @@ void CProcessor::ExecuteCMPB()  // CMPB - compare byte
     if (((src ^ src2) & ~(dst ^ src2)) & 0200) new_psw |= PSW_V;
     if (((~src & src2) | (~(src ^ src2) & dst)) & 0200) new_psw |= PSW_C;
     SetLPSW(new_psw);
-    m_internalTick = BITB_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(BITB_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBIT()  // BIT - bit test
@@ -2181,7 +2208,8 @@ void CProcessor::ExecuteBIT()  // BIT - bit test
     if (dst & 0100000) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
-    m_internalTick = BIT_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(BIT_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBITB()  // BITB - bit test on byte
@@ -2217,7 +2245,8 @@ void CProcessor::ExecuteBITB()  // BITB - bit test on byte
     if (dst & 0200) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
-    m_internalTick = BITB_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(BITB_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBIC()  // BIC - bit clear
@@ -2259,7 +2288,8 @@ void CProcessor::ExecuteBIC()  // BIC - bit clear
     if (dst & 0100000) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
-    m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(ADD_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBICB()  // BICB - bit clear
@@ -2302,7 +2332,7 @@ void CProcessor::ExecuteBICB()  // BICB - bit clear
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 
-    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction);
+    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBIS()  // BIS - bit set
@@ -2344,7 +2374,8 @@ void CProcessor::ExecuteBIS()  // BIS - bit set
     if (dst & 0100000) new_psw |= PSW_N;
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
-    m_internalTick = MOV_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(ADD_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteBISB()  // BISB - bit set on byte
@@ -2387,7 +2418,7 @@ void CProcessor::ExecuteBISB()  // BISB - bit set on byte
     if (dst == 0) new_psw |= PSW_Z;
     SetLPSW(new_psw);
 
-    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction);
+    m_internalTick = GetInstructionTiming12x12(MOVB_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteADD ()  // ADD
@@ -2429,7 +2460,8 @@ void CProcessor::ExecuteADD ()  // ADD
     if ((~(src ^ src2) & (dst ^ src2)) & 0100000) new_psw |= PSW_V;
     if (((src & src2) | ((src ^ src2) & ~dst)) & 0100000) new_psw |= PSW_C;
     SetLPSW(new_psw);
-    m_internalTick = MOVB_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(ADD_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteSUB()  // SUB
@@ -2471,7 +2503,8 @@ void CProcessor::ExecuteSUB()  // SUB
     if (((src ^ src2) & ~(dst ^ src)) & 0100000) new_psw |= PSW_V;
     if (((src & ~src2) | (~(src ^ src2) & dst)) & 0100000) new_psw |= PSW_C;
     SetLPSW(new_psw);
-    m_internalTick = MOVB_TIMING[m_methsrc][m_methdest];
+
+    m_internalTick = GetInstructionTiming12x12(ADD_TIMING, m_instruction) - 1;
 }
 
 void CProcessor::ExecuteEMT()  // EMT - emulator trap
