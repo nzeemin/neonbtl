@@ -1023,6 +1023,14 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                         FILL1PIXEL(color)
                         bits = bits >> 2;
                     }
+                    bits = pBoard->GetRAMWordView(otraddr);
+                    otraddr += 2;
+                    for (uint16_t k = 0; k < 8; k++)
+                    {
+                        uint32_t color = (bits & 2) ? color1 : color0;
+                        FILL1PIXEL(color)
+                        bits = bits >> 2;
+                    }
                     barcount--;
                 }
             }
