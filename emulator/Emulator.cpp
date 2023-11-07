@@ -979,27 +979,27 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     FILL2PIXELS(color3)
                 }
             }
-            else if (vmode == 15 && otrpb)
+            else if (vmode == 15 && otrpb)  // VM8, плотность видео-строки 208 байт
             {
                 while (barcount > 0)
                 {
                     uint16_t bits0 = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
                     otraddr += 2;
-                    uint32_t palc0 = (paladdr + (bits0 & 15));
+                    uint32_t palc0 = (paladdr + (bits0 & 0xff));
                     uint16_t c0 = GETPALETTEHILO(palc0);
                     uint32_t color0 = Color16Convert(c0);
                     FILL4PIXELS(color0)
-                    uint32_t palc1 = (paladdr + ((bits0 >> 4) & 15));
+                    uint32_t palc1 = (paladdr + (bits0 >> 8));
                     uint16_t c1 = GETPALETTEHILO(palc1);
                     uint32_t color1 = Color16Convert(c1);
                     FILL4PIXELS(color1)
                     uint16_t bits1 = pBoard->GetRAMWordView(otraddr);  // читаем слово - выводим 8 пикселей
                     otraddr += 2;
-                    uint32_t palc2 = (paladdr + (bits1 & 15));
+                    uint32_t palc2 = (paladdr + (bits1 & 0xff));
                     uint16_t c2 = GETPALETTEHILO(palc2);
                     uint32_t color2 = Color16Convert(c2);
                     FILL4PIXELS(color2)
-                    uint32_t palc3 = (paladdr + ((bits1 >> 4) & 15));
+                    uint32_t palc3 = (paladdr + (bits1 >> 8));
                     uint16_t c3 = GETPALETTEHILO(palc3);
                     uint32_t color3 = Color16Convert(c3);
                     FILL4PIXELS(color3)
