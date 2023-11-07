@@ -1008,10 +1008,21 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
             }
             else //if (vmode == 12)  // VM1, плотность видео-строки 208 байт - запрещенный режим
             {
+                //NOTE: Как выяснилось, берутся только чётные биты из строки в 208 байт
+                uint16_t pal14hi = pBoard->GetRAMWordView(paladdr + 14);
+                uint16_t pal14lo = pBoard->GetRAMWordView(paladdr + 14 + 256);
+                uint32_t color0 = Color16Convert((uint16_t)((pal14hi & 0xff) << 8 | (pal14lo & 0xff)));
+                uint32_t color1 = Color16Convert((uint16_t)((pal14hi & 0xff00) | (pal14lo & 0xff00) >> 8));
                 while (barcount > 0)
                 {
-                    FILL8PIXELS(colorBorder)
-                    FILL8PIXELS(colorBorder)
+                    uint16_t bits = pBoard->GetRAMWordView(otraddr);
+                    otraddr += 2;
+                    for (uint16_t k = 0; k < 8; k++)
+                    {
+                        uint32_t color = (bits & 2) ? color1 : color0;
+                        FILL1PIXEL(color)
+                        bits = bits >> 2;
+                    }
                     barcount--;
                 }
             }
