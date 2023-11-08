@@ -674,12 +674,22 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 {
                     uint16_t bits = pBoard->GetRAMByteView(otraddr);
                     otraddr++;
-                    for (uint16_t k = 0; k < 8; k++)
-                    {
-                        uint32_t color = (bits & 1) ? color1 : color0;
-                        FILL2PIXELS(color)
-                        bits = bits >> 1;
-                    }
+                    uint32_t color = (bits & 1) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 2) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 4) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 8) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 16) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 32) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 64) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 128) ? color1 : color0;
+                    FILL2PIXELS(color)
                     barcount--;
                 }
             }
@@ -709,8 +719,8 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 }
             }
             else if (vmode == 2 || vmode == 6 ||
-                    vmode == 3 && !otrpb ||
-                    vmode == 7 && !otrpb)  // VM4, плотность видео-строки 52 байта
+                    (vmode == 3 && !otrpb) ||
+                    (vmode == 7 && !otrpb))  // VM4, плотность видео-строки 52 байта
             {
                 while (barcount > 0)
                 {
@@ -727,8 +737,8 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     barcount--;
                 }
             }
-            else if (vmode == 3 && otrpb ||
-                    vmode == 7 && otrpb)  // VM8, плотность видео-строки 52 байта
+            else if ((vmode == 3 && otrpb) ||
+                    (vmode == 7 && otrpb))  // VM8, плотность видео-строки 52 байта
             {
                 while (barcount > 0)
                 {
@@ -753,12 +763,22 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                     uint16_t bits = pBoard->GetRAMWordView(otraddr & ~1);
                     if (otraddr & 1) bits = bits >> 8;
                     otraddr++;
-                    for (uint16_t k = 0; k < 8; k++)
-                    {
-                        uint32_t color = (bits & 1) ? color1 : color0;
-                        FILL2PIXELS(color)
-                        bits = bits >> 1;
-                    }
+                    uint32_t color = (bits & 1) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 2) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 4) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 8) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 16) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 32) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 64) ? color1 : color0;
+                    FILL2PIXELS(color)
+                    color = (bits & 128) ? color1 : color0;
+                    FILL2PIXELS(color)
                     barcount--;
                 }
             }
@@ -797,12 +817,38 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 {
                     uint16_t bits = pBoard->GetRAMWordView(otraddr);
                     otraddr += 2;
-                    for (uint16_t k = 0; k < 16; k++)
-                    {
-                        uint32_t color = (bits & 1) ? color1 : color0;
-                        FILL1PIXEL(color)
-                        bits = bits >> 1;
-                    }
+                    uint32_t color = (bits & 1) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 2) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 4) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 8) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 16) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 32) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 64) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 128) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x0100) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x0200) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x0400) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x0800) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x1000) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x2000) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x4000) ? color1 : color0;
+                    FILL1PIXEL(color)
+                    color = (bits & 0x8000) ? color1 : color0;
+                    FILL1PIXEL(color)
                     barcount--;
                 }
             }
@@ -955,7 +1001,7 @@ void Emulator_PrepareScreenLines(void* pImageBits, SCREEN_LINE_CALLBACK lineCall
                 }
             }
             else if ((vmode == 14) ||  // VM4, плотность видео-строки 208 байт
-                    vmode == 15 && !otrpb)  // VM41, плотность видео-строки 208 байт
+                    (vmode == 15 && !otrpb))  // VM41, плотность видео-строки 208 байт
             {
                 for (int j = 0; j < barcount * 2; j++)
                 {
