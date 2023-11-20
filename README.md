@@ -1,4 +1,7 @@
 # neonbtl
+
+[![CodeFactor](https://www.codefactor.io/repository/github/nzeemin/neonbtl/badge)](https://www.codefactor.io/repository/github/nzeemin/neonbtl)
+
 **Neon Back to Life!** is an emulator of Soviet computer **Sojuz-Neon PK 11/16**.
 This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (near Moscow), and a total of 200-1000 units were produced.
 
