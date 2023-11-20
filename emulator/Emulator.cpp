@@ -535,6 +535,7 @@ void CALLBACK PrepareScreenLine624x450(uint32_t* pImageBits, const uint32_t* pLi
 void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1040x750(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine1664x1200(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 struct ScreenModeStruct
 {
@@ -545,11 +546,12 @@ struct ScreenModeStruct
 static ScreenModeReference[] =
 {
     // wid  hei  callback                           size      scaleX scaleY   notes
-    {  416, 300, PrepareScreenLine416x300  },  //  416 x 300   0.5     1      Debug mode
-    {  624, 450, PrepareScreenLine624x450  },  //  624 x 450   0.75    1.5
-    {  832, 600, PrepareScreenLine832x600  },  //  832 x 600   1       2
-    { 1040, 750, PrepareScreenLine1040x750 },  // 1040 x 750   1.25    2.5
-    { 1248, 900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
+    {  416,  300, PrepareScreenLine416x300  },  //  416 x 300   0.5     1      Debug mode
+    {  624,  450, PrepareScreenLine624x450  },  //  624 x 450   0.75    1.5
+    {  832,  600, PrepareScreenLine832x600  },  //  832 x 600   1       2
+    { 1040,  750, PrepareScreenLine1040x750 },  // 1040 x 750   1.25    2.5
+    { 1248,  900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
+    { 1664, 1200, PrepareScreenLine1664x1200 }, // 1664 x 1200  2       4
 };
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei)
@@ -1205,6 +1207,23 @@ void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pL
     memcpy(pBits2, pBits, sizeof(uint32_t) * 1248);
     uint32_t* pBits3 = pBits2 + 1248;
     memcpy(pBits3, pBits, sizeof(uint32_t) * 1248);
+}
+
+void CALLBACK PrepareScreenLine1664x1200(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    uint32_t* pBits = pImageBits + (300 - 1 - line) * 1664 * 4;
+    uint32_t* p0 = pBits;
+    uint32_t* p1 = p0 + 1664;
+    uint32_t* p2 = p1 + 1664;
+    uint32_t* p3 = p2 + 1664;
+    for (int x = 0; x < 832; x++)
+    {
+        uint32_t color1 = *pLineBits++;
+        *p0++ = color1;  *p0++ = color1;
+        *p1++ = color1;  *p1++ = color1;
+        *p2++ = color1;  *p2++ = color1;
+        *p3++ = color1;  *p3++ = color1;
+    }
 }
 
 

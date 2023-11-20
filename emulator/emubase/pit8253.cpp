@@ -17,13 +17,9 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
-PIT8253_chan::PIT8253_chan()
+PIT8253_chan::PIT8253_chan() :
+    control(0), phase(0), value(0), count(0), latchvalue(0), gate(true), writehi(false), readhi(false), output(false)
 {
-    control = phase = 0;
-    value = count = latchvalue = 0;
-    gate = true;
-    writehi = readhi = false;
-    output = false;
 }
 
 PIT8253::PIT8253() : m_chan()
@@ -107,25 +103,6 @@ uint8_t PIT8253::Read(uint8_t address)
     }
 }
 
-void PIT8253::SetGate(uint8_t chan, bool gate)
-{
-    if (chan >= 3) return;
-    m_chan[chan].gate = gate;
-}
-
-bool PIT8253::GetOutput(uint8_t chan) const
-{
-    if (chan >= 3) return false;
-
-    return m_chan[chan].output;
-}
-
-void PIT8253::Tick()
-{
-    Tick(0);
-    Tick(1);
-    Tick(2);
-}
 void PIT8253::Tick(uint8_t channel)
 {
     PIT8253_chan& chan = m_chan[channel];

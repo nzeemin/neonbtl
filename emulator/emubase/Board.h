@@ -111,6 +111,24 @@ private:
     void        Tick(uint8_t channel);
 };
 
+inline void PIT8253::SetGate(uint8_t chan, bool gate)
+{
+    if (chan >= 3) return;
+    m_chan[chan].gate = gate;
+}
+inline bool PIT8253::GetOutput(uint8_t chan) const
+{
+    if (chan >= 3) return false;
+    return m_chan[chan].output;
+}
+inline void PIT8253::Tick()
+{
+    Tick(0);
+    Tick(1);
+    Tick(2);
+}
+
+
 //////////////////////////////////////////////////////////////////////
 
 // Soyuz-Neon computer
