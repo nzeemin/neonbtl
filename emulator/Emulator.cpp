@@ -117,6 +117,10 @@ bool Emulator_Init()
         m_EmulatorWatches[i] = 0177777;
     }
 
+    // Allocate memory for old RAM values
+    g_pEmulatorRam = static_cast<uint8_t*>(::calloc(4096 * 1024, 1));
+    g_pEmulatorChangedRam = static_cast<uint8_t*>(::calloc(4096 * 1024, 1));
+
     g_pBoard = new CMotherboard();
 
     g_pBoard->Reset();
@@ -165,12 +169,6 @@ bool Emulator_InitConfiguration(NeonConfiguration configuration)
 
     m_nUptimeFrameCount = 0;
     m_dwEmulatorUptime = 0;
-
-    // Allocate memory for old RAM values
-    ::free(g_pEmulatorRam);
-    g_pEmulatorRam = static_cast<uint8_t*>(::calloc(g_pBoard->GetRamSizeBytes(), 1));
-    ::free(g_pEmulatorChangedRam);
-    g_pEmulatorChangedRam = static_cast<uint8_t*>(::calloc(g_pBoard->GetRamSizeBytes(), 1));
 
     return true;
 }
@@ -1234,7 +1232,7 @@ void CALLBACK PrepareScreenLine1664x1200(uint32_t* pImageBits, const uint32_t* p
 //   4 bytes        NEON_IMAGE_HEADER1
 //   4 bytes        NEON_IMAGE_HEADER2
 //   4 bytes        NEON_IMAGE_VERSION
-//   4 bytes        state size = 20K + 512/1024/2048/4096 KB
+//   4 bytes        state size = 20K + 4096 KB
 //   4 bytes        NEON uptime
 //   4 bytes        state body compressed size
 //   8 bytes        RESERVED
@@ -1251,8 +1249,8 @@ bool Emulator_SaveImage(LPCTSTR sFilePath)
         return false;
     }
 
-    // Allocate memory: 20KB + RAM size
-    uint32_t stateSize = 20480 + (g_pBoard->GetConfiguration() & NEON_COPT_RAMSIZE_MASK) * 1024;
+    // Allocate memory: 20KB + virtual RAM size
+    const uint32_t stateSize = 20480 + 4096 * 1024;
     uint8_t* pImage = (uint8_t*) ::calloc(stateSize, 1);
     // Prepare header
     uint32_t* pHeader = (uint32_t*) pImage;
@@ -1341,8 +1339,15 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
         return false;
     }
 
-    // Decompress the state body
     uint32_t stateSize = bufHeader[3];
+    if (stateSize != 20480 + 4096 * 1024)
+    {
+        AlertWarning(_T("Failed to load the emulator state: invalid state size."));
+        ::free(pCompressBuffer);
+        return false;
+    }
+
+    // Decompress the state body
     uint8_t* pImage = (uint8_t*) ::calloc(stateSize, 1);
     int decompressedSize = LZ4_decompress_safe(
             (const char*)pCompressBuffer, (char*)(pImage + 32), compressedSize, (int)stateSize - 32);
@@ -1368,29 +1373,6 @@ bool Emulator_LoadImage(LPCTSTR sFilePath)
     Settings_SetConfiguration(g_pBoard->GetConfiguration());
 
     return true;
-}
-
-void Emulator_LoadMemory()
-{
-    HANDLE hFile = CreateFile(_T("PK11Memory.bin"),
-            GENERIC_READ, FILE_SHARE_READ, nullptr,
-            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (hFile == INVALID_HANDLE_VALUE)
-    {
-        AlertWarning(_T("Failed to load memory file."));
-        return;
-    }
-
-    uint8_t buffer[8192];
-
-    for (int bank = 0; bank < 512; bank++)
-    {
-        DWORD dwBytesRead = 0;
-        ReadFile(hFile, buffer, 8192, &dwBytesRead, nullptr);
-        g_pBoard->LoadRAMBank(bank, buffer);
-    }
-
-    CloseHandle(hFile);
 }
 
 

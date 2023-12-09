@@ -60,7 +60,6 @@ void MainWindow_DoEmulatorCovox();
 void MainWindow_DoEmulatorMouse();
 void MainWindow_DoFileSaveState();
 void MainWindow_DoFileLoadState();
-void MainWindow_DoFileLoadMemory();
 void MainWindow_DoEmulatorFloppy(int slot);
 void MainWindow_DoEmulatorHardDrive();
 void MainWindow_DoEmulatorConf(NeonConfiguration configuration);
@@ -659,6 +658,9 @@ void MainWindow_UpdateMenu()
     case 1024: ramcmd = ID_CONF_RAM1024; break;
     case 2048: ramcmd = ID_CONF_RAM2048; break;
     case 4096: ramcmd = ID_CONF_RAM4096; break;
+    case 2560:
+        ramcmd = ((Settings_GetConfiguration() >> 4) & 3) == 2 ? ID_CONF_RAM2048N512 : ID_CONF_RAM512N2048;
+        break;
     }
     CheckMenuRadioItem(hMenu, ID_CONF_RAM512, ID_CONF_RAM4096, ramcmd, MF_BYCOMMAND);
 
@@ -693,9 +695,6 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_FILE_SAVESTATE:
         MainWindow_DoFileSaveState();
-        break;
-    case ID_FILE_LOADMEMORY:
-        MainWindow_DoFileLoadMemory();
         break;
     case ID_FILE_SCREENSHOT:
         MainWindow_DoFileScreenshot();
@@ -760,6 +759,8 @@ bool MainWindow_DoCommand(int commandId)
     case ID_CONF_RAM512:
     case ID_CONF_RAM1024:
     case ID_CONF_RAM2048:
+    case ID_CONF_RAM512N2048:
+    case ID_CONF_RAM2048N512:
     case ID_CONF_RAM4096:
         MainWindow_DoEmulatorConfRam(commandId);
         break;
@@ -944,13 +945,6 @@ void MainWindow_DoFileSaveState()
     Emulator_SaveImage(bufFileName);
 }
 
-void MainWindow_DoFileLoadMemory()
-{
-    Emulator_LoadMemory();
-
-    MainWindow_UpdateAllViews();
-}
-
 void MainWindow_DoFileScreenshot()
 {
     TCHAR bufFileName[MAX_PATH];
@@ -1015,20 +1009,26 @@ void MainWindow_DoEmulatorConf(NeonConfiguration configuration)
     Settings_SetConfiguration(configuration);
 
     MainWindow_UpdateMenu();
+    MainWindow_UpdateWindowTitle();
     MainWindow_UpdateAllViews();
 }
 void MainWindow_DoEmulatorConfRam(int command)
 {
-    int memsize = 512;
+    uint32_t memsize = 512;
+    uint32_t bankbits = 1 << 4;
     switch (command)
     {
-    case ID_CONF_RAM512:  memsize = 512; break;
-    case ID_CONF_RAM1024: memsize = 1024; break;
-    case ID_CONF_RAM2048: memsize = 2048; break;
-    case ID_CONF_RAM4096: memsize = 4096; break;
+    default:
+    case ID_CONF_RAM512:  memsize = 512; bankbits = 1 << 4; break;
+    case ID_CONF_RAM1024: memsize = 1024; bankbits = (1 << 4) | (1 << 6); break;
+    case ID_CONF_RAM2048: memsize = 2048; bankbits = 2 << 4; break;
+    case ID_CONF_RAM512N2048: memsize = 512 + 2048; bankbits = (1 << 4) | (2 << 6); break;
+    case ID_CONF_RAM2048N512: memsize = 2048 + 512; bankbits = (2 << 4) | (1 << 6); break;
+    case ID_CONF_RAM4096: memsize = 4096; bankbits = (2 << 4) | (2 << 6); break;
     }
-    NeonConfiguration conf = (NeonConfiguration)((Settings_GetConfiguration() & ~NEON_COPT_RAMSIZE_MASK) | memsize);
-
+    NeonConfiguration conf = (NeonConfiguration)(
+            (Settings_GetConfiguration() & ~(NEON_COPT_RAMSIZE_MASK | NEON_COPT_RAMBANK0_MASK | NEON_COPT_RAMBANK1_MASK))
+            | memsize | bankbits);
     MainWindow_DoEmulatorConf(conf);
 }
 

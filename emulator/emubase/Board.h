@@ -23,10 +23,21 @@ class CHardDrive;
 
 //////////////////////////////////////////////////////////////////////
 
+// Valid RAM slot combinations:
+//  BANK 0      BANK 1
+// 2 х 256K              = 0.5M
+// 2 х 256K  + 2 х 256K  = 1M
+// 2 х 256K  + 2 х 1M    = 2.5M
+// 2 х 1M                = 2M
+// 2 х 1M    + 2 х 256K  = 2.5M
+// 2 х 1M    + 2 х 1M    = 4M
+
 // Machine configurations
 enum NeonConfiguration
 {
-    NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,
+    NEON_COPT_RAMBANK0_MASK = 3 << 4,  // bits 4-5
+    NEON_COPT_RAMBANK1_MASK = 3 << 6,  // bits 6-7
+    NEON_COPT_RAMSIZE_MASK = 4096 | 2048 | 1024 | 512,  // bits 9-12
 };
 
 
@@ -40,6 +51,7 @@ enum NeonConfiguration
 #define ADDRTYPE_ROM     4  // ROM 
 #define ADDRTYPE_IO     16  // I/O port
 #define ADDRTYPE_EMUL   32  // I/O port emulation, USER mode only
+#define ADDRTYPE_NULL   64  // RAM but no physical RAM here
 #define ADDRTYPE_DENY  128  // Access denied
 
 //floppy debug
@@ -57,7 +69,7 @@ enum NeonConfiguration
 // Emulator image constants
 #define NEONIMAGE_HEADER1 0x6E6F654E  // "Neon"
 #define NEONIMAGE_HEADER2 0x214C5442  // "BTL!"
-#define NEONIMAGE_VERSION 0x00010000  // 1.0
+#define NEONIMAGE_VERSION 0x00010001  // 1.1
 
 // PIC 8259A flags
 #define PIC_MODE_ICW1      1  // Wait for ICW1 after RESET
@@ -146,7 +158,7 @@ public:  // Getting devices
     CProcessor* GetCPU() { return m_pCPU; }
 private:  // Memory
     uint8_t*    m_pROM;  // ROM, 16 KB
-    uint8_t*    m_pRAM;  // RAM, 512..4096 KB
+    uint8_t*    m_pRAM;  // RAM, 4096 KB
     uint16_t    m_HR[8];
     uint16_t    m_UR[8];
     uint32_t    m_nRamSizeBytes;  // Actual RAM size
@@ -168,7 +180,6 @@ public:  // Debug
     void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
     void        SetTrace(uint32_t dwTrace);
-    void        LoadRAMBank(int bank, const void* buffer);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     uint16_t    GetConfiguration() const { return m_Configuration; }

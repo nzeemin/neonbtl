@@ -42,9 +42,9 @@ CMotherboard::CMotherboard()
 
     // Allocate memory
     m_nRamSizeBytes = 0;
-    m_pRAM = nullptr;  // RAM allocation in SetConfiguration() method
-    m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));
-    m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));
+    m_pRAM = static_cast<uint8_t*>(::calloc(4096 * 1024, 1));  // 4MB
+    m_pROM = static_cast<uint8_t*>(::calloc(16 * 1024, 1));  // 16K
+    m_pHDbuff = static_cast<uint8_t*>(::calloc(4 * 512, 1));  // 2K
 
     m_PPIAwr = m_PPIArd = m_PPIBwr = 0;
     m_PPIBrd = 11;  // IHLT EF1 EF0 - инверсные
@@ -88,15 +88,35 @@ CMotherboard::~CMotherboard()
 
 void CMotherboard::SetConfiguration(uint16_t conf)
 {
-    m_Configuration = conf;
-
-    // Allocate RAM; clean RAM/ROM
-    ::free(m_pRAM);
+    // Check RAM bits and set them properly, if not
     uint32_t nRamSizeKbytes = conf & NEON_COPT_RAMSIZE_MASK;
     if (nRamSizeKbytes == 0)
         nRamSizeKbytes = 512;
+    if ((conf & NEON_COPT_RAMBANK0_MASK) == 0)
+    {
+        conf &= ~(NEON_COPT_RAMBANK0_MASK | NEON_COPT_RAMBANK1_MASK);
+        switch (nRamSizeKbytes)
+        {
+        default:
+        case 512:
+            conf |= 1 << 4;  // 2 x 256K = 512K
+            break;
+        case 1024:
+            conf |= (1 << 4) | (1 << 6);  // 2 x 256K + 2 x 256K = 1024K
+            break;
+        case 2048:
+            conf |= 2 << 4;  // 2 x 1024K = 2048K
+            break;
+        case 4096:
+            conf |= (2 << 4) | (2 << 6);  // 2 x 1024K + 2 x 1024K = 4096K
+            break;
+        }
+    }
+
+    m_Configuration = conf;
     m_nRamSizeBytes = nRamSizeKbytes * 1024;
-    m_pRAM = static_cast<uint8_t*>(::calloc(m_nRamSizeBytes, 1));
+
+    // Allocate RAM; clean RAM/ROM
     ::memset(m_pROM, 0, 16 * 1024);
 
     //// Pre-fill RAM with "uninitialized" values
@@ -149,13 +169,6 @@ void CMotherboard::Reset()
 void CMotherboard::LoadROM(const uint8_t* pBuffer)
 {
     ::memcpy(m_pROM, pBuffer, 16384);
-}
-
-void CMotherboard::LoadRAMBank(int bank, const void* buffer)
-{
-    if (bank < 0 || bank > (int)(m_nRamSizeBytes / 8192))
-        return;
-    memcpy(m_pRAM + bank * 8192, buffer, 8192);
 }
 
 
@@ -278,7 +291,7 @@ void CMotherboard::SetHardPortWord(uint16_t port, uint16_t data)
 
 uint16_t CMotherboard::GetRAMWord(uint32_t offset) const
 {
-    ASSERT(offset < m_nRamSizeBytes);
+    ASSERT(offset < 4096 * 1024);
     return *((uint16_t*)(m_pRAM + offset));
 }
 uint8_t CMotherboard::GetRAMByte(uint32_t offset) const
@@ -572,13 +585,25 @@ bool CMotherboard::SystemFrame()
 // Read word from memory for debugger
 uint8_t CMotherboard::GetRAMByteView(uint32_t offset) const
 {
-    if (offset >= m_nRamSizeBytes)
+    bool okBank = offset >= 2048 * 1024;  // false for BANK 0, true for BANK 1
+    uint16_t bankbits = (okBank ? m_Configuration >> 6 : m_Configuration >> 4) & 3;  // 00 ничего, 01 256K планки, 10 1024К планки
+    if (bankbits == 0)
+        return 0;  // No RAM in this bank
+    if (bankbits == 1)  // 2 x 256K
+        offset &= ~0x180000;  // limit to 512K
+    if (offset >= 4096 * 1024)
         return 0;
     return m_pRAM[offset];
 }
 uint16_t CMotherboard::GetRAMWordView(uint32_t offset) const
 {
-    if (offset >= m_nRamSizeBytes - 1)
+    bool okBank = offset >= 2048 * 1024;  // false for BANK 0, true for BANK 1
+    uint16_t bankbits = (okBank ? m_Configuration >> 6 : m_Configuration >> 4) & 3;  // 00 ничего, 01 256K планки, 10 1024К планки
+    if (bankbits == 0)
+        return 0;  // No RAM in this bank
+    if (bankbits == 1)  // 2 x 256K
+        offset &= ~0x180000;  // limit to 512K
+    if (offset >= 4096 * 1024)
         return 0;
     return *(uint16_t*)(m_pRAM + offset);
 }
@@ -597,12 +622,12 @@ uint16_t CMotherboard::GetWordView(uint16_t address, bool okHaltMode, bool okExe
         return GetRAMWord(offset & ~1);
     case ADDRTYPE_ROM:
         return GetROMWord(offset & 0xfffe);
-    case ADDRTYPE_IO:
-        return 0;  // I/O port, not memory
     case ADDRTYPE_EMUL:
         return GetRAMWord(offset & 07776);  // I/O port emulation
-    case ADDRTYPE_DENY:
-        return 0;  // This memory is inaccessible for reading
+    case ADDRTYPE_IO:    // I/O port, not memory
+    case ADDRTYPE_DENY:  // No RAM here
+    case ADDRTYPE_NULL:  // This memory is inaccessible for reading
+        return 0;
     }
 
     ASSERT(false);  // If we are here - then addrtype has invalid value
@@ -644,6 +669,8 @@ uint16_t CMotherboard::GetWord(uint16_t address, bool okHaltMode, bool okExec)
         res = GetRAMWord(offset & 07776);
         DebugLogFormat(_T("%c%06ho\tGETWORD %06ho EMUL -> %06ho\n"), HU_INSTRUCTION_PC, address, res);
         return res;
+    case ADDRTYPE_NULL:
+        return 0;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tGETWORD DENY %06ho\n"), HU_INSTRUCTION_PC, address);
         m_pCPU->MemoryError();
@@ -681,6 +708,8 @@ uint8_t CMotherboard::GetByte(uint16_t address, bool okHaltMode)
         resb = GetRAMByte(offset & 07777);
         DebugLogFormat(_T("%c%06ho\tGETBYTE %06ho EMUL %03ho\n"), HU_INSTRUCTION_PC, address, resb);
         return resb;
+    case ADDRTYPE_NULL:
+        return 0;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tGETBYTE DENY (%06ho)\n"), HU_INSTRUCTION_PC, address);
         m_pCPU->MemoryError();
@@ -729,6 +758,8 @@ void CMotherboard::SetWord(uint16_t address, bool okHaltMode, uint16_t word, boo
         m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
         return;
+    case ADDRTYPE_NULL:
+        return;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tSETWORD DENY (%06ho)\n"), HU_INSTRUCTION_PC, address);
         m_pCPU->MemoryError();
@@ -773,6 +804,8 @@ void CMotherboard::SetByte(uint16_t address, bool okHaltMode, uint8_t byte, bool
         }
         m_PPIBrd &= ~3;  // set EF1,EF0 active
         m_pCPU->SetHALTPin(true);
+        return;
+    case ADDRTYPE_NULL:
         return;
     case ADDRTYPE_DENY:
         DebugLogFormat(_T("%c%06ho\tSETBYTE DENY (%06ho)\n"), HU_INSTRUCTION_PC, address);
@@ -825,11 +858,17 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
         return ADDRTYPE_DENY;
     }
     uint32_t longaddr = ((uint32_t)(address & 017777)) + (((uint32_t)(memreg & 037760)) << 8);
-    if (longaddr >= m_nRamSizeBytes)
+
+    // RAM banks logic
+    bool okBank = longaddr >= 2048 * 1024;  // false for BANK 0, true for BANK 1
+    uint16_t bankbits = (okBank ? m_Configuration >> 6 : m_Configuration >> 4) & 3;  // 00 ничего, 01 256K планки, 10 1024К планки
+    if (bankbits == 0)  // no RAM in this bank
     {
         *pOffset = 0;
-        return ADDRTYPE_DENY;
+        return ADDRTYPE_NULL;
     }
+    if (bankbits == 1)
+        longaddr &= ~0x180000;  // limit to 512K
 
     *pOffset = longaddr;
     uint16_t maskmode = memreg & 3;
@@ -1443,7 +1482,7 @@ void CMotherboard::ProcessRtcWrite(uint16_t address, uint8_t byte)
 //    2560    512 bytes  - RESERVED
 //    3072  16384 bytes  - ROM image 16K
 //   19456   1024 bytes  - RESERVED
-//   20480               - RAM image 512/1024/2048/4096 KB
+//   20480               - RAM image 4096 KB
 //
 //  Board status (400 bytes):
 //      32      2 bytes  - configuration
@@ -1542,7 +1581,7 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     memcpy(pImageRom, m_pROM, 16 * 1024);
     // RAM
     uint8_t* pImageRam = pImage + 20480;
-    memcpy(pImageRam, m_pRAM, m_nRamSizeBytes);
+    memcpy(pImageRam, m_pRAM, 4096 * 1024);
 }
 void CMotherboard::LoadFromImage(const uint8_t* pImage)
 {
@@ -1556,11 +1595,6 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
         nRamSizeKbytes = 512;
     uint32_t newramsize = nRamSizeKbytes * 1024;
     //memcpy(&newramsize, pwImage, sizeof(newramsize));  // 4 bytes
-    if (m_nRamSizeBytes != newramsize)
-    {
-        ::realloc(m_pRAM, newramsize);
-        m_nRamSizeBytes = newramsize;
-    }
     pwImage += sizeof(m_nRamSizeBytes) / 2;
     m_PICflags = *pwImage++;
     m_PICRR = (uint8_t) * pwImage++;
@@ -1625,7 +1659,7 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     memcpy(m_pROM, pImageRom, 16 * 1024);
     // RAM
     const uint8_t* pImageRam = pImage + 20480;
-    memcpy(m_pRAM, pImageRam, m_nRamSizeBytes);
+    memcpy(m_pRAM, pImageRam, 4096 * 1024);
 }
 
 

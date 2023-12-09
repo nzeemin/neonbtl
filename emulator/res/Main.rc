@@ -86,7 +86,6 @@ BEGIN
     BEGIN
         MENUITEM "Load State…",                 ID_FILE_LOADSTATE
         MENUITEM "Save State…",                 ID_FILE_SAVESTATE
-        MENUITEM "Load Memory",                 ID_FILE_LOADMEMORY
         MENUITEM SEPARATOR
         MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT
         MENUITEM "Screenshot to Clipboard",     ID_FILE_SCREENSHOTTOCLIPBOARD
@@ -121,6 +120,8 @@ BEGIN
         MENUITEM "RAM 512 KB",                  ID_CONF_RAM512
         MENUITEM "RAM 1024 KB",                 ID_CONF_RAM1024
         MENUITEM "RAM 2048 KB",                 ID_CONF_RAM2048
+        MENUITEM "RAM 512+2048 KB",             ID_CONF_RAM512N2048
+        MENUITEM "RAM 2048+512 KB",             ID_CONF_RAM2048N512
         MENUITEM "RAM 4096 KB",                 ID_CONF_RAM4096
         MENUITEM SEPARATOR
         MENUITEM "MSX Mouse",                   ID_EMULATOR_MOUSE
