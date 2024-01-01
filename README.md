@@ -1,5 +1,7 @@
 # neonbtl
 
+[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
+[![Build status](https://ci.appveyor.com/api/projects/status/q0dmuth9x2sp3k1x?svg=true)](https://ci.appveyor.com/project/nzeemin/neonbtl)
 [![CodeFactor](https://www.codefactor.io/repository/github/nzeemin/neonbtl/badge)](https://www.codefactor.io/repository/github/nzeemin/neonbtl)
 
 **Neon Back to Life!** is an emulator of Soviet computer **Sojuz-Neon PK 11/16**.
@@ -7,25 +9,21 @@ This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (
 
 Soyuz-Neon is based on the N1806VM2 processor, so it is partially compatible with machines such as DVK, UKNC, NEMIGA, and in general inherits the instruction set and architecture from the DEC PDP-11 line of machines.
 
-[User Manual](docs/user-manual-en.md)
+[NeonBTL User Manual](docs/user-manual-en.md)
 
 Emulator status: Work in progress.
 
-[![License: LGPL v3](https://img.shields.io/badge/License-LGPL%20v3-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0)
-[![Build status](https://ci.appveyor.com/api/projects/status/q0dmuth9x2sp3k1x?svg=true)](https://ci.appveyor.com/project/nzeemin/neonbtl)
-[![CodeFactor](https://www.codefactor.io/repository/github/nzeemin/neonbtl/badge)](https://www.codefactor.io/repository/github/nzeemin/neonbtl)
-
-![](screenshot/NEONBTL.png)
+![](docs/neonbtl.png)
 
 
 ### Neon Back to Life!
 
 **Neon Back to Life!** — это эмулятор советского компьютера [Союз-Неон ПК-11/16](https://ru.wikipedia.org/wiki/%D0%A1%D0%BE%D1%8E%D0%B7-%D0%9D%D0%B5%D0%BE%D0%BD_%D0%9F%D0%9A-11/16).
-Этот компьютер выпускался в 1991-1992 годах на заводе "Квант" в г. Зеленограде, всего было выпущено 200-1000 экземпляров.
+Этот компьютер выпускался в 1991-1992 годах на заводе "Квант" в г. Зеленограде, всего было выпущено 200 экземпляров.
 
 Союз-Неон построен на процессоре Н1806ВМ2, поэтому он частично совместим с такими машинами как ДВК, УКНЦ, Немига, и в целом наследует систему команд и архитектуру от машин линейки DEC PDP-11.
 
-[Руководство пользователя эмулятора](docs/user-manual-ru.md)
+[Руководство пользователя эмулятора NeonBTL](docs/user-manual-ru.md)
 
 Состояние эмулятора: В процессе разработки.
 

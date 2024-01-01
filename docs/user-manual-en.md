@@ -10,6 +10,7 @@ The purpose of the NeonBTL emulator is to provide as complete emulation as possi
 
 This guide mainly refers to the Windows version of the NeonBTL emulator. There is a version of the emulator written in Qt, which uses the same emulation core but has a slightly different interface.
 
+
 ## Installation and Launch
 
 Download the latest version of the emulator.
@@ -20,9 +21,10 @@ The emulator is supplied in the form of an archive with binary files. Unzip the 
 
 To run the emulator, run the `NeonBTL.exe` file.
 
-```***TODO***: Screenshot```
+![](neonbtl.png)
 
 The emulator is designed to work on desktop versions of Windows, such as Windows XP, Windows Vista, Windows 7, etc. The amount of RAM used during operation depends on the selected screen mode.
+
 
 ## Usage
 
@@ -42,9 +44,48 @@ This is what the screen looks like after the memory test:
 ![](BootAfterMemTest.png)
 
 
+### Command line
+
+The emulator uses the following command-line options during startup:
+
+ * `/autostart` `/autostarton` — Turn on emulation auto-start
+ * `/noautostart` `/autostartoff` — Turn off the auto-start
+ * `/debug` `/debugon` `/debugger` — Turn on the debugger
+ * `/debugoff` `/nodebug` — Turn off the debugger
+ * `/sound` `/soundon` — Turn on the sound
+ * `/nosound` `/soundoff` — Turn off the sound
+ * `/diskN:filePath` — Attach the floppy disk image, N=0..1
+ * `/hard:filePath` — Attach the hard drive image
+
+Keys are processed sequentially one after the other, so if conflicting keys are used, the one specified later applies.
+
+
+### Keyboard layout
+The following mapping of the Soyuz-Neon keyboard to the PC keyboard is used:
+ - <kbd>К1</kbd>..<kbd>К5</kbd> = <kbd>F1</kbd>..<kbd>F5</kbd>
+ - <kbd>ПОМ</kbd> <kbd>УСТ</kbd> <kbd>ИСП</kbd> = <kbd>F6</kbd>..<kbd>F8</kbd>
+ - <kbd>СБРОС</kbd> = <kbd>F11</kbd>, <kbd>СТОП</kbd> = <kbd>F12</kbd>
+ - <kbd>АР2</kbd> = <kbd>Esc</kbd>, <kbd>ЗБ</kbd> = <kbd>Backspace</kbd>
+ - <kbd>Таб</kbd> = <kbd>Tab</kbd>, <kbd>ВВОД</kbd> = <kbd>Enter</kbd>
+ - <kbd>НР</kbd> = <kbd>LShift</kbd>, <kbd>УПР</kbd> = <kbd>LCtrl</kbd>
+ - <kbd>АЛФ</kbd> = <kbd>RShift</kbd>, <kbd>ГРАФ</kbd> = <kbd>RCtrl</kbd>
+
+
 ### Booting from a floppy disk
 
-```***TODO***```
+To boot from a floppy disk, it must first be "inserted into the floppy drive".
+Soyuz-Neon has two disk drives, `FD0` and `FD1`.
+To attach a disk image, select *Drives* > *Floppy FD0:* (or click the floppy disk icon on the toolbar), a standard file selection dialog will appear.
+Usually disk images for Soyuz-Neon have the `.dsk` extension.
+
+To boot from the disk, reset the machine (*Reset*), or restart the emulator, and then press *Run*.
+After the memory test, Soyuz-Neon attempts to boot from disk `FD0`.
+
+If the selected disk is a bootable disk, you will see the boot process.
+If the disk is not bootable, an error message like `?BOOT-U-No boot on volume` (`?BOOT-U-!Файл монитора не найден`) will be displayed.
+
+To disconnec the floppy diskette select *Drives* > *Floppy FDx:* again or click on the floppy diskette in the toolbar.
+
 
 ### Working in RT-11
 
@@ -64,6 +105,7 @@ COPY *.* FD1:
 ```
 
 ```***TODO***```
+
 
 ### Built-in debugger
 
@@ -133,28 +175,8 @@ The settings window is opened by the command *File > Settings*:
 
 The settings are stored in a text file with the same name as the emulator executable file, but with the extension ".ini". So for `NeonBTL.exe`, the settings file will be named `NeonBTL.ini`. The settings file is created automatically upon the first launch of the emulator. In addition to the settings from the *Settings* window, the settings file stores the position of the emulator window and other settings.
 
+
 ## Applications
-
-### Keyboard layout
-The following mapping of the Soyuz-Neon keyboard to the PC keyboard is used:
- - <kbd>К1</kbd>..<kbd>К5</kbd> = <kbd>F1</kbd>..<kbd>F5</kbd>
- - <kbd>ПОМ</kbd> <kbd>УСТ</kbd> <kbd>ИСП</kbd> = <kbd>F6</kbd>..<kbd>F8</kbd>
- - <kbd>СБРОС</kbd> = <kbd>F11</kbd>, <kbd>СТОП</kbd> = <kbd>F12</kbd>
- - <kbd>АР2</kbd> = <kbd>Esc</kbd>, <kbd>ЗБ</kbd> = <kbd>Backspace</kbd>
- - <kbd>Таб</kbd> = <kbd>Tab</kbd>, <kbd>ВВОД</kbd> = <kbd>Enter</kbd>
- - <kbd>НР</kbd> = <kbd>LShift</kbd>, <kbd>УПР</kbd> = <kbd>LCtrl</kbd>
- - <kbd>АЛФ</kbd> = <kbd>RShift</kbd>, <kbd>ГРАФ</kbd> = <kbd>RCtrl</kbd>
-
-### Command line
-The emulator uses the following command-line options during startup:
- * `/autostart` `/autostarton` — Turn on emulation auto-start
- * `/noautostart` `/autostartoff` — Turn off the auto-start
- * `/debug` `/debugon` `/debugger` — Turn on the debugger
- * `/debugoff` `/nodebug` — Turn off the debugger
- * `/sound` `/soundon` — Turn on the sound
- * `/nosound` `/soundoff` — Turn off the sound
- * `/diskN:filePath` — Attach the floppy disk image, N=0..1
- * `/hard:filePath` — Attach the hard drive image
 
 ### Books
  * [Documentation for DEC RT-11 (PDF), in English](http://www.bitsavers.org/pdf/dec/pdp11/rt11/)
