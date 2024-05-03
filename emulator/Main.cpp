@@ -56,6 +56,29 @@ LPCTSTR g_CommandLineHelp =
 //////////////////////////////////////////////////////////////////////
 
 
+BOOL nanosleep(LONGLONG ns)
+{
+    LARGE_INTEGER li;   // Time definition
+    HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    ASSERT(timer != NULL);
+    //if (!timer)
+    //    return FALSE;
+    // Set timer properties
+    li.QuadPart = -ns;
+    if (!SetWaitableTimer(timer, &li, 0, NULL, NULL, FALSE))
+    {
+        CloseHandle(timer);
+        ASSERT(FALSE);
+        return FALSE;
+    }
+    // Start & wait for timer
+    WaitForSingleObject(timer, INFINITE);
+    // Clean resources
+    CloseHandle(timer);
+    // Slept without problems
+    return TRUE;
+}
+
 int APIENTRY _tWinMain(
     HINSTANCE hInstance,
     HINSTANCE hPrevInstance,
@@ -129,23 +152,30 @@ int APIENTRY _tWinMain(
             ::DispatchMessage(&msg);
         }
 
-        if (g_okEmulatorRunning /*&& Settings_GetRealSpeed()*/)
+        if (g_okEmulatorRunning && !Settings_GetSound())
         {
-            //if (true/*Settings_GetRealSpeed() == 0*/)
-            //    ::Sleep(1);  // We should not consume 100% of CPU
-            //else
+            if (Settings_GetRealSpeed() == 0)
+                ::Sleep(1);  // We should not consume 100% of CPU
+            else
             {
                 // Slow down to 25 frames per second
-                LARGE_INTEGER nFrameFinishTime;  // Frame start time
+                LARGE_INTEGER nFrameFinishTime;
                 ::QueryPerformanceCounter(&nFrameFinishTime);
                 LONGLONG nTimeElapsed = (nFrameFinishTime.QuadPart - nFrameStartTime.QuadPart)
-                        * 1000 / nPerformanceFrequency.QuadPart;
-                if (nTimeElapsed > 0 && nTimeElapsed < 20)  // 1000 millisec / 25 = 40 millisec
+                    * 1000ll / nPerformanceFrequency.QuadPart;
+                LONGLONG nFrameDelay = 1000ll / 25 - 9;  // 1000 millisec / 25 = 40 millisec
+                if (Settings_GetRealSpeed() == 0x7ffe)  // Speed 25%
+                    nFrameDelay = 1000ll / 25 * 4 - 4;
+                else if (Settings_GetRealSpeed() == 0x7fff)  // Speed 50%
+                    nFrameDelay = 1000ll / 25 * 2 - 3;
+                else if (Settings_GetRealSpeed() == 2)  // Speed 200%
+                    nFrameDelay = 1000ll / 25 / 2 - 5;
+                if (nTimeElapsed > 0 && nTimeElapsed < nFrameDelay)
                 {
-                    LONG nTimeToSleep = (LONG)(20 - nTimeElapsed);
-                    ::Sleep((DWORD) nTimeToSleep / 2);
-                    ScreenView_ScanKeyboard();
-                    ::Sleep((DWORD) nTimeToSleep / 2);
+                    LONGLONG nTimeToSleep = (nFrameDelay - nTimeElapsed);
+                    ::Sleep(nTimeToSleep);
+                    //LARGE_INTEGER nSleepFinishTime;
+                    //::QueryPerformanceCounter(&nFrameFinishTime);
                 }
             }
         }

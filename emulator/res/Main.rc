@@ -117,6 +117,19 @@ BEGIN
         MENUITEM "Sound",                       ID_EMULATOR_SOUND
         MENUITEM "Covox",                       ID_EMULATOR_COVOX
         MENUITEM SEPARATOR
+        MENUITEM "Speed 25%",                   ID_EMULATOR_SPEED25
+        MENUITEM "Speed 50%",                   ID_EMULATOR_SPEED50
+        MENUITEM "Speed 100%",                  ID_EMULATOR_REALSPEED
+        MENUITEM "Speed 200%",                  ID_EMULATOR_SPEED200
+        MENUITEM "Speed MAX",                   ID_EMULATOR_SPEEDMAX
+    END
+    POPUP "&Configuration"
+    BEGIN
+        MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0
+        MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1
+        MENUITEM SEPARATOR
+        MENUITEM "IDE HDD",                     ID_EMULATOR_HARDDRIVE
+        MENUITEM SEPARATOR
         MENUITEM "RAM 512 KB",                  ID_CONF_RAM512
         MENUITEM "RAM 1024 KB",                 ID_CONF_RAM1024
         MENUITEM "RAM 2048 KB",                 ID_CONF_RAM2048
@@ -125,13 +138,6 @@ BEGIN
         MENUITEM "RAM 4096 KB",                 ID_CONF_RAM4096
         MENUITEM SEPARATOR
         MENUITEM "MSX Mouse",                   ID_EMULATOR_MOUSE
-    END
-    POPUP "&Drives"
-    BEGIN
-        MENUITEM "Floppy 0",                    ID_EMULATOR_FLOPPY0
-        MENUITEM "Floppy 1",                    ID_EMULATOR_FLOPPY1
-        MENUITEM SEPARATOR
-        MENUITEM "IDE HDD",                     ID_EMULATOR_HARDDRIVE
     END
     POPUP "Debug"
     BEGIN

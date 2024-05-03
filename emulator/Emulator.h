@@ -13,7 +13,6 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #pragma once
 
 #include "emubase\Board.h"
-#include "Views.h"
 
 //////////////////////////////////////////////////////////////////////
 
@@ -59,6 +58,7 @@ void Emulator_Start();
 void Emulator_Stop();
 void Emulator_Reset();
 bool Emulator_SystemFrame();
+void Emulator_SetSpeed(uint16_t realspeed);
 
 void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8]);
 

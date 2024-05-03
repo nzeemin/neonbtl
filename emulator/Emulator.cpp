@@ -37,6 +37,7 @@ uint16_t m_EmulatorWatches[MAX_BREAKPOINTCOUNT];
 
 bool m_okEmulatorSound = false;
 bool m_okEmulatorCovox = false;
+uint16_t m_wEmulatorSoundSpeed = 100;
 
 bool m_okEmulatorSerial = false;
 FILE* m_fpEmulatorSerialOut = nullptr;
@@ -365,6 +366,24 @@ void Emulator_RemoveAllWatches()
     m_wEmulatorWatchesCount = 0;
 }
 
+void Emulator_SetSpeed(uint16_t realspeed)
+{
+    uint16_t speedpercent;
+    switch (realspeed)
+    {
+    case 0: speedpercent = 200; break;
+    case 1: speedpercent = 100; break;
+    case 2: speedpercent = 200; break;
+    case 0x7fff: speedpercent = 50; break;
+    case 0x7ffe: speedpercent = 25; break;
+    default: speedpercent = 100; break;
+    }
+    m_wEmulatorSoundSpeed = speedpercent;
+
+    if (m_okEmulatorSound)
+        SoundGen_SetSpeed(m_wEmulatorSoundSpeed);
+}
+
 void Emulator_SetSound(bool soundOnOff)
 {
     if (m_okEmulatorSound != soundOnOff)
@@ -372,6 +391,7 @@ void Emulator_SetSound(bool soundOnOff)
         if (soundOnOff)
         {
             SoundGen_Initialize(Settings_GetSoundVolume());
+            SoundGen_SetSpeed(m_wEmulatorSoundSpeed);
             g_pBoard->SetSoundGenCallback(Emulator_SoundGenCallback);
         }
         else
