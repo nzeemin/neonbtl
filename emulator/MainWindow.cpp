@@ -102,7 +102,7 @@ void MainWindow_RegisterClass()
     ScreenView_RegisterClass();
     KeyboardView_RegisterClass();
     MemoryView_RegisterClass();
-    DebugView_RegisterClass();
+    DebugView_RegisterClasses();
     //MemoryMapView_RegisterClass();
     DisasmView_RegisterClass();
     ConsoleView_RegisterClass();
@@ -1163,6 +1163,7 @@ void MainWindow_UpdateAllViews()
     Emulator_OnUpdate();
     DebugView_OnUpdate();
     DisasmView_OnUpdate();
+    ConsoleView_OnUpdate();
 
     // Update screen
     InvalidateRect(g_hwndScreen, NULL, TRUE);

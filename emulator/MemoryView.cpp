@@ -189,10 +189,10 @@ void MemoryView_AdjustWindowLayout()
     RECT rc;  GetClientRect(g_hwndMemory, &rc);
 
     if (m_hwndMemoryTab != (HWND)INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndMemoryTab, NULL, 0, 0, rc.right, rc.bottom, SWP_NOZORDER);
+        SetWindowPos(m_hwndMemoryTab, NULL, 40, 0, rc.right - 40, rc.bottom, SWP_NOZORDER);
 
     TabCtrl_AdjustRect(m_hwndMemoryTab, FALSE, &rc);
-    ::InflateRect(&rc, -4, -4);
+    ::InflateRect(&rc, 0, -4);
 
     if (m_hwndMemoryViewer != (HWND) INVALID_HANDLE_VALUE)
         SetWindowPos(m_hwndMemoryViewer, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_NOZORDER);

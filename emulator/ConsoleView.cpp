@@ -255,6 +255,11 @@ void ConsoleView_PrintConsolePrompt()
     ::SetWindowText(m_hwndConsolePrompt, buffer);
 }
 
+void ConsoleView_OnUpdate()
+{
+    ConsoleView_PrintConsolePrompt();
+}
+
 // Print register name, octal value and binary value
 void ConsoleView_PrintRegister(LPCTSTR strName, WORD value)
 {
