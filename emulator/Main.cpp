@@ -56,29 +56,6 @@ LPCTSTR g_CommandLineHelp =
 //////////////////////////////////////////////////////////////////////
 
 
-BOOL nanosleep(LONGLONG ns)
-{
-    LARGE_INTEGER li;   // Time definition
-    HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
-    ASSERT(timer != NULL);
-    //if (!timer)
-    //    return FALSE;
-    // Set timer properties
-    li.QuadPart = -ns;
-    if (!SetWaitableTimer(timer, &li, 0, NULL, NULL, FALSE))
-    {
-        CloseHandle(timer);
-        ASSERT(FALSE);
-        return FALSE;
-    }
-    // Start & wait for timer
-    WaitForSingleObject(timer, INFINITE);
-    // Clean resources
-    CloseHandle(timer);
-    // Slept without problems
-    return TRUE;
-}
-
 int APIENTRY _tWinMain(
     HINSTANCE hInstance,
     HINSTANCE hPrevInstance,
@@ -154,8 +131,8 @@ int APIENTRY _tWinMain(
 
         if (g_okEmulatorRunning && !Settings_GetSound())
         {
-            if (Settings_GetRealSpeed() == 0)
-                ::Sleep(1);  // We should not consume 100% of CPU
+            if (Settings_GetRealSpeed() == 0)  // MAX speed
+                ;  // Consume 100% of one CPU core
             else
             {
                 // Slow down to 25 frames per second
@@ -175,7 +152,7 @@ int APIENTRY _tWinMain(
                     LONGLONG nTimeToSleep = (nFrameDelay - nTimeElapsed);
                     ::Sleep(nTimeToSleep);
                     //LARGE_INTEGER nSleepFinishTime;
-                    //::QueryPerformanceCounter(&nFrameFinishTime);
+                    //::QueryPerformanceCounter(&nSleepFinishTime);
                 }
             }
         }
@@ -195,7 +172,6 @@ endprog:
 
     return (int) msg.wParam;
 }
-
 
 //
 //   FUNCTION: InitInstance(HINSTANCE, int)

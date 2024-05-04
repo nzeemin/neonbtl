@@ -469,8 +469,9 @@ bool Emulator_SystemFrame()
     if (nTicksElapsed >= 1200)
     {
         double dFramesPerSecond = m_nFrameCount * 1000.0 / nTicksElapsed;
+        double dSpeed = dFramesPerSecond / 25.0 * 100;
         TCHAR buffer[16];
-        swprintf_s(buffer, 16, _T("FPS: %05.2f"), dFramesPerSecond);
+        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%03.f%%"), dSpeed);
         MainWindow_SetStatusbarText(StatusbarPartFPS, buffer);
 
         bool floppyEngine = g_pBoard->IsFloppyEngineOn();
