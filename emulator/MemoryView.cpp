@@ -131,7 +131,7 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
             0,
             CLASSNAME_MEMORYVIEW, NULL,
             WS_CHILD | WS_VSCROLL | WS_TABSTOP,
-            4, 28, rcClient.right, rcClient.bottom,
+            32 + 4, 28, rcClient.right, rcClient.bottom,
             g_hwndMemory, NULL, g_hInst, NULL);
     m_hwndMemoryToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
             WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER | CCS_VERT,
@@ -188,16 +188,28 @@ void MemoryView_AdjustWindowLayout()
 {
     RECT rc;  GetClientRect(g_hwndMemory, &rc);
 
+    // Get cxChar, cyLine
+    HDC hdc = ::GetDC(g_hwndDebug);
+    HFONT hFont = CreateMonospacedFont();
+    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
+    ::ReleaseDC(g_hwndDebug, hdc);
+
+    int cxTab = 4 + cxChar * 91 + 4 + ::GetSystemMetrics(SM_CXVSCROLL);
+    int cxViewer = 28 + cxTab;
+
     if (m_hwndMemoryTab != (HWND)INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndMemoryTab, NULL, 40, 0, rc.right - 40, rc.bottom, SWP_NOZORDER);
+        SetWindowPos(m_hwndMemoryTab, NULL, 40, 0, cxTab, rc.bottom, SWP_NOZORDER);
 
     TabCtrl_AdjustRect(m_hwndMemoryTab, FALSE, &rc);
     ::InflateRect(&rc, 0, -4);
 
     if (m_hwndMemoryViewer != (HWND) INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndMemoryViewer, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_NOZORDER);
+        SetWindowPos(m_hwndMemoryViewer, NULL, rc.left, rc.top, cxViewer, rc.bottom - rc.top, SWP_NOZORDER);
     if (m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE)
-        SetWindowPos(m_hwndProcessListViewer, NULL, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_NOZORDER);
+        SetWindowPos(m_hwndProcessListViewer, NULL, rc.left, rc.top, cxViewer, rc.bottom - rc.top, SWP_NOZORDER);
 }
 
 LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -684,7 +696,7 @@ void MemoryView_OnDraw(HDC hdc)
     int xRight = 32 + 4 + cxChar * 27 + m_PostionIncrement * 8 + cxChar / 2;
     HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
     ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
-    ::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
+    //::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
 
     HBRUSH hbrHighlight = ::CreateSolidBrush(colorHighlight);
     ::SelectObject(hdc, hbrHighlight);
