@@ -41,7 +41,7 @@ int     m_NumeralMode = MEMMODENUM_OCT;
 WORD    m_wBaseAddress = 0xFFFF;
 WORD    m_wCurrentAddress = 0xFFFF;
 BOOL    m_okMemoryByteMode = FALSE;
-int     m_PostionIncrement = 100;  // Increment by X to the next word
+int     m_PositionIncrement = 100;  // Increment by X to the next word
 
 void MemoryView_AdjustWindowLayout();
 void MemoryView_OnTabChange();
@@ -234,7 +234,7 @@ LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     default:
         return CallWindowProc(m_wndprocMemoryToolWindow, hWnd, message, wParam, lParam);
     }
-    return (LRESULT)FALSE;
+    return FALSE;
 }
 
 LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -269,11 +269,11 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
         MemoryView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
     case WM_KEYDOWN:
-        return (LRESULT) MemoryView_OnKeyDown(wParam, lParam);
+        return MemoryView_OnKeyDown(wParam, lParam);
     case WM_MOUSEWHEEL:
-        return (LRESULT) MemoryView_OnMouseWheel(wParam, lParam);
+        return MemoryView_OnMouseWheel(wParam, lParam);
     case WM_VSCROLL:
-        return (LRESULT) MemoryView_OnVScroll(LOWORD(wParam), HIWORD(wParam));
+        return MemoryView_OnVScroll(LOWORD(wParam), HIWORD(wParam));
     case WM_SETFOCUS:
     case WM_KILLFOCUS:
         ::InvalidateRect(hWnd, NULL, TRUE);
@@ -281,7 +281,7 @@ LRESULT CALLBACK MemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam,
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
-    return (LRESULT)FALSE;
+    return FALSE;
 }
 
 void MemoryView_OnTabChange()
@@ -297,7 +297,7 @@ int MemoryView_GetAddressByPoint(int mousex, int mousey)
     int line = mousey / m_cyLineMemory - 1;
     if (line < 0) line = 0;
     else if (line >= m_nPageSize) return -1;
-    int pos = (mousex - (32 + 4) - 9 * m_cxChar + m_cxChar / 2) / m_PostionIncrement;
+    int pos = (mousex - (32 + 4) - 9 * m_cxChar + m_cxChar / 2) / m_PositionIncrement;
     if (pos < 0) pos = 0;
     else if (pos > 7) pos = 7;
 
@@ -550,18 +550,18 @@ void MemoryView_SelectAddress()
 
 void MemoryView_GotoAddress(WORD wAddress)
 {
-    m_wCurrentAddress = wAddress & ((WORD)~1);  // Address should be even
+    m_wCurrentAddress = wAddress & ((uint16_t)~1);  // Address should be even
     Settings_SetDebugMemoryAddress(m_wCurrentAddress);
 
     int addroffset = wAddress - m_wBaseAddress;
     if (addroffset < 0)
     {
-        WORD baseaddr = (m_wCurrentAddress & 0xFFF0);  // Base address should be 16-byte aligned
+        uint16_t baseaddr = (m_wCurrentAddress & 0xFFF0);  // Base address should be 16-byte aligned
         MemoryView_ScrollTo(baseaddr);
     }
     else if (addroffset >= m_nPageSize * 16)
     {
-        WORD baseaddr = (WORD)((m_wCurrentAddress & 0xFFF0) - (m_nPageSize - 1) * 16);
+        WORD baseaddr = (uint16_t)(m_wCurrentAddress & 0xFFF0);
         MemoryView_ScrollTo(baseaddr);
     }
 
@@ -614,8 +614,8 @@ void MemoryView_GetCurrentValueRect(LPRECT pRect, int cxChar, int cyLine)
     int line = addroffset / 16;
     int pos = addroffset & 15;
 
-    pRect->left = 32 + 4 + cxChar * 9 + m_PostionIncrement * (pos / 2) - cxChar / 2;
-    pRect->right = pRect->left + m_PostionIncrement - 1;
+    pRect->left = 32 + 4 + cxChar * 9 + m_PositionIncrement * (pos / 2) - cxChar / 2;
+    pRect->right = pRect->left + m_PositionIncrement - 1;
     pRect->top = (line + 1) * cyLine - 1;
     pRect->bottom = pRect->top + cyLine + 1;
 }
@@ -687,13 +687,13 @@ void MemoryView_OnDraw(HDC hdc)
     GetClientRect(m_hwndMemoryViewer, &rcClient);
 
     if (m_NumeralMode == MEMMODENUM_OCT)
-        m_PostionIncrement = cxChar * 7;
+        m_PositionIncrement = cxChar * 7;
     else
-        m_PostionIncrement = cxChar * 5;
+        m_PositionIncrement = cxChar * 5;
     if (m_okMemoryByteMode)
-        m_PostionIncrement += cxChar;
+        m_PositionIncrement += cxChar;
 
-    int xRight = 32 + 4 + cxChar * 27 + m_PostionIncrement * 8 + cxChar / 2;
+    //int xRight = 32 + 4 + cxChar * 27 + m_PositionIncrement * 8 + cxChar / 2;
     HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
     ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
     //::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
@@ -705,7 +705,6 @@ void MemoryView_OnDraw(HDC hdc)
     m_cxChar = cxChar;
     m_cyLineMemory = cyLine;
 
-    TCHAR buffer[7];
     const TCHAR* ADDRESS_LINE_OCT_WORDS = _T("  addr   0      2      4      6      10     12     14     16");
     const TCHAR* ADDRESS_LINE_OCT_BYTES = _T("  addr   0   1   2   3   4   5   6   7   10  11  12  13  14  15  16  17");
     const TCHAR* ADDRESS_LINE_HEX_WORDS = _T("  addr   0    2    4    6    8    a    c    e");
@@ -736,6 +735,8 @@ void MemoryView_OnDraw(HDC hdc)
         TCHAR wchars[16];
         for (int j = 0; j < 8; j++)    // Draw words as octal value
         {
+            TCHAR buffer[7];
+
             // Get word from memory
             int addrtype;
             BOOL okValid;
@@ -743,7 +744,7 @@ void MemoryView_OnDraw(HDC hdc)
             WORD word = MemoryView_GetWordFromMemory(address, okValid, addrtype, wChanged);
 
             if (address == m_wCurrentAddress)
-                ::PatBlt(hdc, x - cxChar / 2, y, m_PostionIncrement, cyLine, PATCOPY);
+                ::PatBlt(hdc, x - cxChar / 2, y, m_PositionIncrement, cyLine, PATCOPY);
 
             if (okValid)
             {
@@ -795,7 +796,7 @@ void MemoryView_OnDraw(HDC hdc)
             wchars[j * 2 + 1] = wch2;
 
             address += 2;
-            x += m_PostionIncrement;
+            x += m_PositionIncrement;
         }
 
         // Highlight characters at right

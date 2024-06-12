@@ -126,45 +126,45 @@ void DebugView_Create(HWND hwndParent, int x, int y, int width, int height)
     RECT rcClient;  GetClientRect(g_hwndDebug, &rcClient);
 
     m_hwndDebugProcViewer = CreateWindowEx(
-        0,
-        CLASSNAME_DEBUGPROCVIEW, NULL,
-        WS_CHILD | WS_VISIBLE,
-        0, 0, rcClient.right, rcClient.bottom,
-        g_hwndDebug, NULL, g_hInst, NULL);
+            0,
+            CLASSNAME_DEBUGPROCVIEW, NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, 0, rcClient.right, rcClient.bottom,
+            g_hwndDebug, NULL, g_hInst, NULL);
 
     m_hwndDebugStackViewer = CreateWindowEx(
-        0,
-        CLASSNAME_DEBUGSTACKVIEW, NULL,
-        WS_CHILD | WS_VISIBLE,
-        0, 0, rcClient.right, rcClient.bottom,
-        g_hwndDebug, NULL, g_hInst, NULL);
+            0,
+            CLASSNAME_DEBUGSTACKVIEW, NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, 0, rcClient.right, rcClient.bottom,
+            g_hwndDebug, NULL, g_hInst, NULL);
 
     m_hwndDebugPortsViewer = CreateWindowEx(
-        0,
-        CLASSNAME_DEBUGPORTSVIEW, NULL,
-        WS_CHILD | WS_VISIBLE,
-        0, 0, rcClient.right, rcClient.bottom,
-        g_hwndDebug, NULL, g_hInst, NULL);
+            0,
+            CLASSNAME_DEBUGPORTSVIEW, NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, 0, rcClient.right, rcClient.bottom,
+            g_hwndDebug, NULL, g_hInst, NULL);
 
     m_hwndDebugBreaksViewer = CreateWindowEx(
-        0,
-        CLASSNAME_DEBUGBREAKSVIEW, NULL,
-        WS_CHILD | WS_VISIBLE,
-        0, 0, rcClient.right, rcClient.bottom,
-        g_hwndDebug, NULL, g_hInst, NULL);
+            0,
+            CLASSNAME_DEBUGBREAKSVIEW, NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, 0, rcClient.right, rcClient.bottom,
+            g_hwndDebug, NULL, g_hInst, NULL);
 
     m_hwndDebugMemoryViewer = CreateWindowEx(
-        0,
-        CLASSNAME_DEBUGMEMORYVIEW, NULL,
-        WS_CHILD | WS_VISIBLE,
-        0, 0, rcClient.right, rcClient.bottom,
-        g_hwndDebug, NULL, g_hInst, NULL);
+            0,
+            CLASSNAME_DEBUGMEMORYVIEW, NULL,
+            WS_CHILD | WS_VISIBLE,
+            0, 0, rcClient.right, rcClient.bottom,
+            g_hwndDebug, NULL, g_hInst, NULL);
 
     m_hwndDebugToolbar = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
-        WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER | CCS_VERT,
-        4, 4, 32, rcClient.bottom, m_hwndDebugProcViewer,
-        (HMENU)102,
-        g_hInst, NULL);
+            WS_CHILD | WS_VISIBLE | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT | TBSTYLE_TOOLTIPS | CCS_NOPARENTALIGN | CCS_NODIVIDER | CCS_VERT,
+            4, 4, 32, rcClient.bottom, m_hwndDebugProcViewer,
+            (HMENU)102,
+            g_hInst, NULL);
 
     TBADDBITMAP addbitmap;
     addbitmap.hInst = g_hInst;
@@ -343,21 +343,21 @@ LRESULT CALLBACK DebugProcViewViewerWndProc(HWND hWnd, UINT message, WPARAM wPar
         ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
 
-        DebugProcView_DoDraw(hdc);
+            DebugProcView_DoDraw(hdc);
 
-        EndPaint(hWnd, &ps);
-    }
-    break;
+            EndPaint(hWnd, &ps);
+        }
+        break;
     case WM_LBUTTONDOWN:
         ::SetFocus(hWnd);
         break;
-    //case WM_RBUTTONDOWN:
-    //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-    //    break;
+        //case WM_RBUTTONDOWN:
+        //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    break;
     case WM_KEYDOWN:
         return (LRESULT)DebugView_OnKeyDown(wParam, lParam);
     case WM_SETFOCUS:
@@ -480,10 +480,10 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
         uint16_t ppib = g_pBoard->GetPortView(0161032);
         TCHAR bufhp[32];
         _sntprintf(bufhp, 32, _T("HALTpin:%s%s%s%s"),
-            (ppib & 1) == 0 ? _T(" EF0") : _T(""),
-            (ppib & 2) == 0 ? _T(" EF1") : _T(""),
-            (ppib & 8) == 0 ? _T(" IHLT") : _T(""),
-            (ppib & 4) == 4 ? _T(" IOINT") : _T(""));
+                (ppib & 1) == 0 ? _T(" EF0") : _T(""),
+                (ppib & 2) == 0 ? _T(" EF1") : _T(""),
+                (ppib & 8) == 0 ? _T(" IHLT") : _T(""),
+                (ppib & 4) == 4 ? _T(" IOINT") : _T(""));
         TextOut(hdc, x, y + 14 * cyLine, bufhp, (int)_tcslen(bufhp));
     }
 
@@ -510,21 +510,21 @@ LRESULT CALLBACK DebugStackViewViewerWndProc(HWND hWnd, UINT message, WPARAM wPa
         ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
 
-        DebugStackView_DoDraw(hdc);
+            DebugStackView_DoDraw(hdc);
 
-        EndPaint(hWnd, &ps);
-    }
-    break;
+            EndPaint(hWnd, &ps);
+        }
+        break;
     case WM_LBUTTONDOWN:
         ::SetFocus(hWnd);
         break;
-    //case WM_RBUTTONDOWN:
-    //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-    //    break;
+        //case WM_RBUTTONDOWN:
+        //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    break;
     case WM_KEYDOWN:
         return (LRESULT)DebugView_OnKeyDown(wParam, lParam);
     case WM_SETFOCUS:
@@ -612,21 +612,21 @@ LRESULT CALLBACK DebugPortsViewViewerWndProc(HWND hWnd, UINT message, WPARAM wPa
         ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
 
-        DebugPortsView_DoDraw(hdc);
+            DebugPortsView_DoDraw(hdc);
 
-        EndPaint(hWnd, &ps);
-    }
-    break;
+            EndPaint(hWnd, &ps);
+        }
+        break;
     case WM_LBUTTONDOWN:
         ::SetFocus(hWnd);
         break;
-    //case WM_RBUTTONDOWN:
-    //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-    //    break;
+        //case WM_RBUTTONDOWN:
+        //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    break;
     case WM_KEYDOWN:
         return (LRESULT)DebugView_OnKeyDown(wParam, lParam);
     case WM_SETFOCUS:
@@ -742,15 +742,15 @@ LRESULT CALLBACK DebugBreaksViewViewerWndProc(HWND hWnd, UINT message, WPARAM wP
         ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
 
-        DebugBreaksView_DoDraw(hdc);
+            DebugBreaksView_DoDraw(hdc);
 
-        EndPaint(hWnd, &ps);
-    }
-    break;
+            EndPaint(hWnd, &ps);
+        }
+        break;
     case WM_LBUTTONDOWN:
         ::SetFocus(hWnd);
         break;
@@ -831,21 +831,21 @@ LRESULT CALLBACK DebugMemoryViewViewerWndProc(HWND hWnd, UINT message, WPARAM wP
         ::PostMessage(g_hwnd, WM_COMMAND, wParam, lParam);
         break;
     case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
 
-        DebugMemoryView_DoDraw(hdc);
+            DebugMemoryView_DoDraw(hdc);
 
-        EndPaint(hWnd, &ps);
-    }
-    break;
+            EndPaint(hWnd, &ps);
+        }
+        break;
     case WM_LBUTTONDOWN:
         ::SetFocus(hWnd);
         break;
-    //case WM_RBUTTONDOWN:
-    //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-    //    break;
+        //case WM_RBUTTONDOWN:
+        //    DebugView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    break;
     case WM_KEYDOWN:
         return (LRESULT)DebugView_OnKeyDown(wParam, lParam);
     case WM_SETFOCUS:
