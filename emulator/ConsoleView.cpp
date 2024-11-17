@@ -475,7 +475,9 @@ void ConsoleView_CmdShowHelp(const ConsoleCommandParams& /*params*/)
             _T("  so         Step Over; executes and stops after the current instruction\r\n")
             _T("  b          List all breakpoints\r\n")
             _T("  bXXXXXX    Set breakpoint at address XXXXXX\r\n")
+            _T("  bUXXXXXX or bHXXXXXX  Set breakpoint at USER or HALT address XXXXXX\r\n")
             _T("  bcXXXXXX   Remove breakpoint at address XXXXXX\r\n")
+            _T("  bcUXXXXXX or bcHXXXXXX  Remove breakpoint at USER or HALT address XXXXXX\r\n")
             _T("  bc         Remove all breakpoints\r\n")
             _T("  w          List all watches\r\n")
             _T("  wXXXXXX    Set watch at address XXXXXX\r\n")
@@ -647,6 +649,29 @@ void ConsoleView_CmdRemoveAllBreakpoints(const ConsoleCommandParams& /*params*/)
     DebugView_Redraw();
     DisasmView_Redraw();
 }
+
+void ConsoleView_CmdSetBreakpointUserAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_AddCPUBreakpoint(address, false);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to add breakpoint.\r\n"));
+
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+void ConsoleView_CmdSetBreakpointHaltAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_AddCPUBreakpoint(address, true);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to add breakpoint.\r\n"));
+
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
 void ConsoleView_CmdSetBreakpointAtAddress(const ConsoleCommandParams& params)
 {
     uint16_t address = params.paramOct1;
@@ -657,6 +682,27 @@ void ConsoleView_CmdSetBreakpointAtAddress(const ConsoleCommandParams& params)
     if (!result)
         ConsoleView_Print(_T("  Failed to add breakpoint.\r\n"));
 
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+
+void ConsoleView_CmdRemoveBreakpointUserAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_RemoveCPUBreakpoint(address, false);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to remove breakpoint.\r\n"));
+    DebugView_Redraw();
+    DisasmView_Redraw();
+}
+void ConsoleView_CmdRemoveBreakpointHaltAtAddress(const ConsoleCommandParams& params)
+{
+    uint16_t address = params.paramOct1;
+
+    bool result = Emulator_RemoveCPUBreakpoint(address, true);
+    if (!result)
+        ConsoleView_Print(_T("  Failed to remove breakpoint.\r\n"));
     DebugView_Redraw();
     DisasmView_Redraw();
 }
@@ -780,8 +826,12 @@ static ConsoleCommands[] =
     { _T("m"), ARGINFO_NONE, ConsoleView_CmdPrintMemoryDumpAtPC },
     { _T("g%ho"), ARGINFO_OCT, ConsoleView_CmdRunToAddress },
     { _T("g"), ARGINFO_NONE, ConsoleView_CmdRun },
+    { _T("bU%ho"), ARGINFO_OCT, ConsoleView_CmdSetBreakpointUserAtAddress },
+    { _T("bH%ho"), ARGINFO_OCT, ConsoleView_CmdSetBreakpointHaltAtAddress },
     { _T("b%ho"), ARGINFO_OCT, ConsoleView_CmdSetBreakpointAtAddress },
     { _T("b"), ARGINFO_NONE, ConsoleView_CmdPrintAllBreakpoints },
+    { _T("bcU%ho"), ARGINFO_OCT, ConsoleView_CmdRemoveBreakpointUserAtAddress },
+    { _T("bcH%ho"), ARGINFO_OCT, ConsoleView_CmdRemoveBreakpointHaltAtAddress },
     { _T("bc%ho"), ARGINFO_OCT, ConsoleView_CmdRemoveBreakpointAtAddress },
     { _T("bc"), ARGINFO_NONE, ConsoleView_CmdRemoveAllBreakpoints },
     { _T("w%ho"), ARGINFO_OCT, ConsoleView_CmdSetWatchAtAddress },

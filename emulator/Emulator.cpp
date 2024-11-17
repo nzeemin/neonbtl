@@ -236,7 +236,7 @@ bool Emulator_AddCPUBreakpoint(uint16_t address, bool ishalt)
     {
         if (m_EmulatorCPUBps[i] > bpvalue)  // found the place
         {
-            memcpy(m_EmulatorCPUBps + i + 1, m_EmulatorCPUBps + i, sizeof(uint16_t) * (m_wEmulatorCPUBpsCount - i));
+            memcpy(m_EmulatorCPUBps + i + 1, m_EmulatorCPUBps + i, sizeof(uint32_t) * (m_wEmulatorCPUBpsCount - i));
             m_EmulatorCPUBps[i] = bpvalue;
             break;
         }

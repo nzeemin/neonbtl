@@ -5,7 +5,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/nzeemin/neonbtl/badge)](https://www.codefactor.io/repository/github/nzeemin/neonbtl)
 
 **Neon Back to Life!** is an emulator of Soviet computer **Sojuz-Neon PK 11/16**.
-This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (near Moscow), and a total of 200-1000 units were produced.
+This computer was manufactured in 1991-1992 at the "Kvant" plant in Zelenograd (near Moscow), and a total of 200 units were produced.
 
 Soyuz-Neon is based on the N1806VM2 processor, so it is partially compatible with machines such as DVK, UKNC, NEMIGA, and in general inherits the instruction set and architecture from the DEC PDP-11 line of machines.
 
