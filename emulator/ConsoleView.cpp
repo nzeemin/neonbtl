@@ -599,11 +599,12 @@ void ConsoleView_CmdStepInto(const ConsoleCommandParams& /*params*/)
 void ConsoleView_CmdStepOver(const ConsoleCommandParams& /*params*/)
 {
     CProcessor* pProc = ConsoleView_GetCurrentProcessor();
+    bool okHaltMode = pProc->IsHaltMode();
 
     int instrLength = ConsoleView_PrintDisassemble(pProc, pProc->GetPC(), TRUE, FALSE);
     uint16_t bpaddress = (uint16_t)(pProc->GetPC() + instrLength * 2);
 
-    Emulator_SetTempCPUBreakpoint(bpaddress);
+    Emulator_SetTempCPUBreakpoint(bpaddress, okHaltMode);
     Emulator_Start();
 }
 void ConsoleView_CmdRun(const ConsoleCommandParams& /*params*/)
@@ -613,23 +614,28 @@ void ConsoleView_CmdRun(const ConsoleCommandParams& /*params*/)
 void ConsoleView_CmdRunToAddress(const ConsoleCommandParams& params)
 {
     uint16_t address = params.paramOct1;
+    CProcessor* pProc = ConsoleView_GetCurrentProcessor();
+    bool okHaltMode = pProc->IsHaltMode();
 
-    Emulator_SetTempCPUBreakpoint(address);
+    Emulator_SetTempCPUBreakpoint(address, okHaltMode);
     Emulator_Start();
 }
 
 void ConsoleView_CmdPrintAllBreakpoints(const ConsoleCommandParams& /*params*/)
 {
-    const uint16_t* pbps = Emulator_GetCPUBreakpointList();
-    if (pbps == nullptr || *pbps == 0177777)
+    const uint32_t* pbps = Emulator_GetCPUBreakpointList();
+    if (pbps == nullptr || *pbps == NOBREAKPOINT)
     {
         ConsoleView_Print(_T("  No breakpoints.\r\n"));
     }
     else
     {
-        while (*pbps != 0177777)
+        while (*pbps != NOBREAKPOINT)
         {
-            ConsoleView_PrintFormat(_T("  %06ho\r\n"), *pbps);
+            uint32_t bpvalue = *pbps;
+            uint16_t address = bpvalue & 0xffff;
+            TCHAR huch = (bpvalue & BREAKPOINT_HALT) != 0 ? _T('H') : _T('U');
+            ConsoleView_PrintFormat(_T("  %c%06ho\r\n"), huch, address);
             pbps++;
         }
     }
@@ -644,8 +650,10 @@ void ConsoleView_CmdRemoveAllBreakpoints(const ConsoleCommandParams& /*params*/)
 void ConsoleView_CmdSetBreakpointAtAddress(const ConsoleCommandParams& params)
 {
     uint16_t address = params.paramOct1;
+    CProcessor* pProc = ConsoleView_GetCurrentProcessor();
+    bool okHaltMode = pProc->IsHaltMode();
 
-    bool result = Emulator_AddCPUBreakpoint(address);
+    bool result = Emulator_AddCPUBreakpoint(address, okHaltMode);
     if (!result)
         ConsoleView_Print(_T("  Failed to add breakpoint.\r\n"));
 
@@ -655,8 +663,10 @@ void ConsoleView_CmdSetBreakpointAtAddress(const ConsoleCommandParams& params)
 void ConsoleView_CmdRemoveBreakpointAtAddress(const ConsoleCommandParams& params)
 {
     uint16_t address = params.paramOct1;
+    CProcessor* pProc = ConsoleView_GetCurrentProcessor();
+    bool okHaltMode = pProc->IsHaltMode();
 
-    bool result = Emulator_RemoveCPUBreakpoint(address);
+    bool result = Emulator_RemoveCPUBreakpoint(address, okHaltMode);
     if (!result)
         ConsoleView_Print(_T("  Failed to remove breakpoint.\r\n"));
     DebugView_Redraw();

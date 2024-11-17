@@ -781,14 +781,19 @@ void DebugBreaksView_DoDraw(HDC hdc)
     int x = cxChar / 2, y = cyLine / 2;
     TextOut(hdc, x, y, _T("Breakpts"), 8);
 
-    const uint16_t* pbps = Emulator_GetCPUBreakpointList();
-    if (*pbps != 0177777)
+    const uint32_t* pbps = Emulator_GetCPUBreakpointList();
+    if (*pbps != NOBREAKPOINT)
     {
         x += cxChar;
         y += cyLine;
-        while (*pbps != 0177777)
+        while (*pbps != NOBREAKPOINT)
         {
-            DrawOctalValue(hdc, x, y, *pbps);
+            uint32_t bpvalue = *pbps;
+            uint16_t address = bpvalue & 0xffff;
+            TCHAR buffer[8];
+            buffer[0] = (bpvalue & BREAKPOINT_HALT) != 0 ? _T('H') : _T('U');
+            PrintOctalValue(buffer + 1, address);
+            TextOut(hdc, x, y, buffer, 7);
             y += cyLine;
             pbps++;
         }

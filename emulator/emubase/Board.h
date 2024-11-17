@@ -77,6 +77,10 @@ enum NeonConfiguration
 #define PIC_MODE_MASK    255  // Mask for mode bits, usage: (m_PICflags & PIC_MODE_MASK)
 #define PIC_CMD_POLL     256  // Flag for Poll Command
 
+// Breakpoints
+#define NOBREAKPOINT 0xFFFFFFFF
+#define BREAKPOINT_HALT 0x80000000
+
 
 //////////////////////////////////////////////////////////////////////
 // Special key codes
@@ -177,7 +181,7 @@ public:  // Memory access
     uint32_t    GetRamSizeBytes() const { return m_nRamSizeBytes; }
 public:  // Debug
     void        DebugTicks();  // One Debug CPU tick -- use for debug step or debug breakpoint
-    void        SetCPUBreakpoints(const uint16_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
+    void        SetCPUBreakpoints(const uint32_t* bps) { m_CPUbps = bps; } // Set CPU breakpoint list
     uint32_t    GetTrace() const { return m_dwTrace; }
     void        SetTrace(uint32_t dwTrace);
 public:  // System control
@@ -287,7 +291,7 @@ private:
     void        ProcessMouseWrite(uint8_t byte);
     void        DoSound(uint16_t s0, uint16_t s1, uint16_t s2);
 private:
-    const uint16_t* m_CPUbps;  // CPU breakpoint list, ends with 177777 value
+    const uint32_t* m_CPUbps;  // CPU breakpoint list, ends with NOBREAKPOINT value
     uint32_t    m_dwTrace;  // Trace flags
 private:
     SOUNDGENCALLBACK m_SoundGenCallback;

@@ -518,8 +518,9 @@ bool CMotherboard::SystemFrame()
 
             if (m_CPUbps != nullptr)  // Check for breakpoints
             {
-                const uint16_t* pbps = m_CPUbps;
-                while (*pbps != 0177777) { if (m_pCPU->GetPC() == *pbps++) return false; }
+                uint32_t cpucurrent = (m_pCPU->GetPC() & 0xffff) | (m_pCPU->IsHaltMode() ? BREAKPOINT_HALT : 0);
+                const uint32_t* pbps = m_CPUbps;
+                while (*pbps != NOBREAKPOINT) { if (cpucurrent == *pbps++) return false; }
             }
 
             if ((procticks & 3) == 3)  // Every 4th tick

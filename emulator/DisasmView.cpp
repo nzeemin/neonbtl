@@ -267,17 +267,20 @@ void DisasmView_OnLButtonDown(int mousex, int mousey)
     if (pLineItem->type == LINETYPE_NONE)
         return;
 
+    CProcessor* pProc = g_pBoard->GetCPU();
+    bool okHaltMode = pProc->IsHaltMode();
+
     // Try to and add/remove breakpoint for the line
     uint16_t address = pLineItem->address;
-    if (!Emulator_IsBreakpoint(address))
+    if (!Emulator_IsBreakpoint(address, okHaltMode))
     {
-        bool result = Emulator_AddCPUBreakpoint(address);
+        bool result = Emulator_AddCPUBreakpoint(address, okHaltMode);
         if (!result)
             AlertWarningFormat(_T("Failed to add breakpoint at %06ho."), address);
     }
     else
     {
-        bool result = Emulator_RemoveCPUBreakpoint(address);
+        bool result = Emulator_RemoveCPUBreakpoint(address, okHaltMode);
         if (!result)
             AlertWarningFormat(_T("Failed to remove breakpoint at %06ho."), address);
     }
@@ -747,6 +750,7 @@ int DisasmView_DrawDisassemble(HDC hdc, const CProcessor* pProc, uint16_t curren
     ::SetTextColor(hdc, colorText);
 
     uint16_t proccurrent = pProc->GetPC();
+    bool prochalt = pProc->IsHaltMode();
 
     // Draw breakpoint zone
     COLORREF colorBreakptZone = Settings_GetColor(ColorDebugBreakptZone);
@@ -788,7 +792,7 @@ int DisasmView_DrawDisassemble(HDC hdc, const CProcessor* pProc, uint16_t curren
             continue;
         }
 
-        if (Emulator_IsBreakpoint(address))  // Breakpoint
+        if (Emulator_IsBreakpoint(address, prochalt))  // Breakpoint
         {
             DisasmView_DrawBreakpoint(hdc, cxChar / 2, y, cyLine);
         }
