@@ -501,7 +501,7 @@ bool CMotherboard::SystemFrame()
 {
     const int soundSamplesPerFrame = SOUNDSAMPLERATE / 25;
     int soundBrasErr = 0;
-    int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;//DEBUG
+    int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;
 
     for (int frameticks = 0; frameticks < 20000; frameticks++)
     {
@@ -526,9 +526,9 @@ bool CMotherboard::SystemFrame()
             if ((procticks & 3) == 3)  // Every 4th tick
             {
                 TimerTick();
-                //snd0 += m_snd.GetOutput(0) ? 1 : 0;
-                //snd1 += m_snd.GetOutput(1) ? 1 : 0;
-                //snd2 += m_snd.GetOutput(2) ? 1 : 0;
+                snd0 += m_snd.GetOutput(0) ? 1 : 0;
+                snd1 += m_snd.GetOutput(1) ? 1 : 0;
+                snd2 += m_snd.GetOutput(2) ? 1 : 0;
                 snl0 += m_snl.GetOutput(0) ? 1 : 0;
                 snl1 += m_snl.GetOutput(1) ? 1 : 0;
                 snl2 += m_snl.GetOutput(2) ? 1 : 0;
@@ -550,9 +550,9 @@ bool CMotherboard::SystemFrame()
         {
             soundBrasErr -= 20000;
             //DebugLogFormat(_T("SoundSNL %02d  %2d %2d %2d  %2d %2d %2d\r\n"), soundTicks, snd0, snd1, snd2, snl0, snl1, snl2);
-            uint16_t s0 = (uint16_t)((soundTicks - snl0) * 512 / soundTicks);
-            uint16_t s1 = (uint16_t)((soundTicks - snl1) * 512 / soundTicks);
-            uint16_t s2 = (uint16_t)((soundTicks - snl2) * 512 / soundTicks);
+            uint16_t s0 = (uint16_t)((snd0 * 255 / soundTicks) * (snl0 * 255 / soundTicks));
+            uint16_t s1 = (uint16_t)((snd1 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
+            uint16_t s2 = (uint16_t)((snd2 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
             DoSound(s0, s1, s2);
             soundTicks = 0; snl0 = snl1 = snl2 = 0; snd0 = snd1 = snd2 = 0;
         }
@@ -1673,7 +1673,7 @@ void CMotherboard::DoSound(uint16_t s0, uint16_t s1, uint16_t s2)
     if (m_SoundGenCallback == nullptr)
         return;
 
-    uint16_t sound = (s0 + s1 + s2) * 21;
+    uint16_t sound = (uint16_t)(((uint32_t)s0 + (uint32_t)s1 + (uint32_t)s2) / 3);
 
     (*m_SoundGenCallback)(sound, sound);
 }

@@ -216,7 +216,7 @@ void DebugView_AdjustWindowLayout()
     int cxStack = cxChar * 17 + cxChar / 2;
     int cxPorts = cxChar * 22;
     int cxBreaks = cxChar * 9;
-    int cxMemory = 4 + cxChar * 24 + 4 + cxChar * 22 + 4;
+    int cxMemory = 4 + cxChar * 24 + 4 + cxChar * 12 + 4;
 
     int xDebug = 0;
     if (m_hwndDebugProcViewer != (HWND)INVALID_HANDLE_VALUE)
@@ -967,15 +967,18 @@ void DebugView_DrawMemoryMap(HDC hdc, int x, int y, const CProcessor* pProc)
 void DebugView_DrawHRandUR(HDC hdc, int x, int y)
 {
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    TCHAR buffer[24];
+    TCHAR buffer[16];
 
     for (int i = 0; i < 8; i++)
     {
         uint16_t hr = g_pBoard->GetPortView((uint16_t)(0161200 + i * 2));
         uint16_t ur = g_pBoard->GetPortView((uint16_t)(0161220 + i * 2));
-        const TCHAR format[] = _T("HR%d %06o UR%d %06o");
-        _sntprintf(buffer, 24, format, i, hr, i, ur);
+        const TCHAR formatH[] = _T("HR%d %06o");
+        _sntprintf(buffer, 24, formatH, i, hr, i, ur);
         TextOut(hdc, x, y + cyLine * (7 - i), buffer, (int)_tcslen(buffer));
+        const TCHAR formatU[] = _T("UR%d %06o");
+        _sntprintf(buffer, 24, formatU, i, hr, i, ur);
+        TextOut(hdc, x, y + cyLine * (8 + 7 - i), buffer, (int)_tcslen(buffer));
     }
 }
 
