@@ -37,6 +37,10 @@ BYTE m_ScreenKeyState[256];
 uint8_t m_KeyboardMatrix[8];
 POINT m_LastMousePos;
 
+BOOL bEnter = FALSE;
+BOOL bNumpadEnter = FALSE;
+BOOL bEntPressed = FALSE;
+
 void ScreenView_CreateDisplay();
 void ScreenView_OnDraw(HDC hdc);
 void ScreenView_OnRButtonDown(int mousex, int mousey);
@@ -157,6 +161,26 @@ LRESULT CALLBACK ScreenViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
     case WM_RBUTTONDOWN:
         ScreenView_OnRButtonDown(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+        if (wParam == VK_RETURN)
+        {
+            if (lParam & 0x1000000)
+                bNumpadEnter = TRUE;
+            else
+                bEnter = TRUE;
+        }
+        break;
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        if (wParam == VK_RETURN)
+        {
+            if (lParam & 0x1000000)
+                bNumpadEnter = FALSE;
+            else
+                bEnter = FALSE;
+        }
+        break;
     case WM_SETCURSOR:
         if (::GetFocus() == g_hwndScreen)
         {
@@ -269,7 +293,7 @@ void ScreenView_PrepareScreen()
 const uint16_t arrPcscan2VscanRus[256] =    // Device keys from PC keys, RUS
 {
     /*         0      1      2      3      4      5      6      7      8      9      a      b      c      d      e      f  */
-    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
+    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, 0x780, NOKEY,
     /*1*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*2*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x420, 0x610, 0x508, 0x510, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*3*/    0x720, 0x102, 0x104, 0x103, 0x008, 0x110, 0x105, 0x020, 0x006, 0x706, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
@@ -290,7 +314,7 @@ const uint16_t arrPcscan2VscanRus[256] =    // Device keys from PC keys, RUS
 const uint16_t arrPcscan2VscanLat[256] =    // Device keys from PC keys, LAT
 {
     /*         0      1      2      3      4      5      6      7      8      9      a      b      c      d      e      f  */
-    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, NOKEY, NOKEY,
+    /*0*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x503, 0x180, NOKEY, NOKEY, NOKEY, 0x608, 0x780, NOKEY,
     /*1*/    NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, 0x080, NOKEY, NOKEY, NOKEY, NOKEY,
     /*2*/    0x408, NOKEY, NOKEY, NOKEY, NOKEY, 0x420, 0x610, 0x508, 0x510, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
     /*3*/    0x720, 0x102, 0x104, 0x103, 0x008, 0x110, 0x105, 0x020, 0x006, 0x706, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY, NOKEY,
@@ -318,11 +342,36 @@ void ScreenView_ScanKeyboard()
     BYTE keys[256];
     VERIFY(::GetKeyboardState(keys));
 
+    if (keys[VK_RETURN] & 128)
+    {
+        if (bEnter && bNumpadEnter)
+            keys[VK_RETURN + 1] = 128;
+        if (!bEnter && bNumpadEnter)
+        {
+            keys[VK_RETURN] = 0;
+            keys[VK_RETURN + 1] = 128;
+        }
+        bEntPressed = TRUE;
+    }
+    else
+    {
+        if (bEntPressed)
+        {
+            if (bEnter) keys[VK_RETURN + 1] = 128;
+            if (bNumpadEnter) keys[VK_RETURN + 1] = 128;
+        }
+        else
+        {
+            bEnter = FALSE;
+            bNumpadEnter = FALSE;
+        }
+        bEntPressed = FALSE;
+    }
+
     //TODO: Выбираем таблицу маппинга в зависимости от флага РУС/ЛАТ
     const uint16_t* pTable = arrPcscan2VscanLat;
 
-    uint8_t matrix[8];
-    ::memset(matrix, 0, sizeof(matrix));
+    uint8_t matrix[8] = {};
 
     // Check every key for state change
     for (int scan = 0; scan < 256; scan++)
