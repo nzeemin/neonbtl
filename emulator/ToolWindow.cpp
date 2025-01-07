@@ -13,7 +13,7 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 #include "stdafx.h"
 #include "Main.h"
 #include "ToolWindow.h"
-#include <Windowsx.h>
+#include <windowsx.h>
 
 //////////////////////////////////////////////////////////////////////
 
@@ -79,11 +79,16 @@ LRESULT CALLBACK ToolWindow_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPAR
             HGDIOBJ hOldFont = ::SelectObject(hdc, hfont);
             ::SetTextColor(hdc, ::GetSysColor(COLOR_CAPTIONTEXT));
             ::SetBkMode(hdc, TRANSPARENT);
-            ::DrawText(hdc, buffer, (int) wcslen(buffer), &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            ::DrawText(hdc, buffer, (int)wcslen(buffer), &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             ::SelectObject(hdc, hOldFont);
-            ::DeleteObject(hfont);
+            VERIFY(::DeleteObject(hfont));
 
-            ReleaseDC(hWnd, hdc);
+            //RECT rcClose;
+            //rcClose.right = rcWindow.right;  rcClose.top = 0;  rcClose.bottom = TOOLWINDOW_CAPTION_HEIGHT;
+            //rcClose.left = rcWindow.right - 18;
+            //::DrawFrameControl(hdc, &rcClose, DFC_CAPTION, DFCS_CAPTIONCLOSE | DFCS_FLAT);
+
+            VERIFY(::ReleaseDC(hWnd, hdc));
         }
         break;
     case WM_SETTEXT:

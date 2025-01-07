@@ -694,7 +694,8 @@ void MemoryView_OnDraw(HDC hdc)
         m_PositionIncrement += cxChar;
 
     //int xRight = 32 + 4 + cxChar * 27 + m_PositionIncrement * 8 + cxChar / 2;
-    HGDIOBJ hOldBrush = ::SelectObject(hdc, ::GetSysColorBrush(COLOR_BTNFACE));
+    HBRUSH hbrSeparator = ::GetSysColorBrush(COLOR_BTNFACE);
+    HGDIOBJ hOldBrush = ::SelectObject(hdc, hbrSeparator);
     ::PatBlt(hdc, 32, 0, 4, rcClient.bottom, PATCOPY);
     //::PatBlt(hdc, xRight, 0, 4, rcClient.bottom, PATCOPY);
 
@@ -725,6 +726,13 @@ void MemoryView_OnDraw(HDC hdc)
     for (;;)    // Draw lines
     {
         uint16_t lineAddress = address;
+
+        if ((lineAddress & 0x0FFF) == 0)  // Draw separator
+        {
+            ::SelectObject(hdc, hbrSeparator);
+            ::PatBlt(hdc, 5 * cxChar, y - 2, cxChar * 91, 2, PATCOPY);
+            ::SelectObject(hdc, hbrHighlight);
+        }
 
         if (m_NumeralMode == MEMMODENUM_OCT)
             DrawOctalValue(hdc, 6 * cxChar, y, address);
