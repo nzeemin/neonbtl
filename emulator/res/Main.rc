@@ -117,10 +117,12 @@ BEGIN
         MENUITEM "Sound",                       ID_EMULATOR_SOUND
         MENUITEM "Covox",                       ID_EMULATOR_COVOX
         MENUITEM SEPARATOR
+        MENUITEM "Speed 10%",                   ID_EMULATOR_SPEED10
         MENUITEM "Speed 25%",                   ID_EMULATOR_SPEED25
         MENUITEM "Speed 50%",                   ID_EMULATOR_SPEED50
         MENUITEM "Speed 100%",                  ID_EMULATOR_REALSPEED
         MENUITEM "Speed 200%",                  ID_EMULATOR_SPEED200
+        MENUITEM "Speed 400%",                  ID_EMULATOR_SPEED400
         MENUITEM "Speed MAX",                   ID_EMULATOR_SPEEDMAX
     END
     POPUP "&Configuration"

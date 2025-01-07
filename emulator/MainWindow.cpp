@@ -775,6 +775,9 @@ bool MainWindow_DoCommand(int commandId)
     case ID_EMULATOR_MOUSE:
         MainWindow_DoEmulatorMouse();
         break;
+    case ID_EMULATOR_SPEED10:
+        MainWindow_DoEmulatorSpeed(0x7ffd);
+        break;
     case ID_EMULATOR_SPEED25:
         MainWindow_DoEmulatorSpeed(0x7ffe);
         break;
@@ -789,6 +792,9 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_EMULATOR_SPEED200:
         MainWindow_DoEmulatorSpeed(2);
+        break;
+    case ID_EMULATOR_SPEED400:
+        MainWindow_DoEmulatorSpeed(3);
         break;
     case ID_EMULATOR_FLOPPY0:
         MainWindow_DoEmulatorFloppy(0);
