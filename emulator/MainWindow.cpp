@@ -654,13 +654,15 @@ void MainWindow_UpdateMenu()
     UINT speedcmd = 0;
     switch (Settings_GetRealSpeed())
     {
+    case 0x7ffd: speedcmd = ID_EMULATOR_SPEED10;   break;
     case 0x7ffe: speedcmd = ID_EMULATOR_SPEED25;   break;
     case 0x7fff: speedcmd = ID_EMULATOR_SPEED50;   break;
     case 0:      speedcmd = ID_EMULATOR_SPEEDMAX;  break;
     case 1:      speedcmd = ID_EMULATOR_REALSPEED; break;
     case 2:      speedcmd = ID_EMULATOR_SPEED200;  break;
+    case 3:      speedcmd = ID_EMULATOR_SPEED400;  break;
     }
-    CheckMenuRadioItem(hMenu, ID_EMULATOR_SPEED25, ID_EMULATOR_SPEED200, speedcmd, MF_BYCOMMAND);
+    CheckMenuRadioItem(hMenu, ID_EMULATOR_SPEED10, ID_EMULATOR_SPEED400, speedcmd, MF_BYCOMMAND);
 
     UINT ramcmd = ID_CONF_RAM512;
     switch (Settings_GetConfiguration() & NEON_COPT_RAMSIZE_MASK)
