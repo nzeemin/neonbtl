@@ -105,9 +105,10 @@ struct PIT8253_chan
     uint16_t    count;      // Counter reload value
     uint16_t    latchvalue; // Latched counter value
     bool        gate;       // Gate input line
+    bool        gateprev;   // Gate previous level
     bool        writehi;
     bool        readhi;
-    bool        output;
+    bool        output;     // Current output level: false = low, true = high
 public:
     PIT8253_chan();
 };
@@ -140,8 +141,11 @@ inline bool PIT8253::GetOutput(uint8_t chan) const
 inline void PIT8253::Tick()
 {
     Tick(0);
+    m_chan[0].gateprev = m_chan[0].gate;
     Tick(1);
+    m_chan[1].gateprev = m_chan[1].gate;
     Tick(2);
+    m_chan[2].gateprev = m_chan[2].gate;
 }
 
 

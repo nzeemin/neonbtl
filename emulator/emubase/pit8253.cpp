@@ -18,7 +18,8 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 //////////////////////////////////////////////////////////////////////
 
 PIT8253_chan::PIT8253_chan() :
-    control(0), phase(0), value(0), count(0), latchvalue(0), gate(true), writehi(false), readhi(false), output(false)
+    control(0), phase(0), value(0), count(0), latchvalue(0), gate(true), gateprev(true),
+    writehi(false), readhi(false), output(false)
 {
 }
 
@@ -117,7 +118,7 @@ void PIT8253::Tick(uint8_t channel)
             1|low     |1       |     |2   |internal delay when counter loaded
             2|low     |n       |n..1 |3   |counting down
             3|high    |infinity|0..1 |3   |counting down
-         */
+        */
         if (chan.phase != 0)
         {
             if (chan.phase == 1)
@@ -142,8 +143,42 @@ void PIT8253::Tick(uint8_t channel)
             }
         }
         break;
-    case 1:
-        //TODO
+    case 1:  // Hardware Retriggerable One-Shot AKA Programmable One-Shot
+        /*
+        phase|output  |length  |value|next|comment
+        -----+--------+--------+-----+----+----------------------------------
+            0|high    |infinity|     |1   |counting down
+            1|high    |1       |     |2   |internal delay to load counter
+            2|low     |n       |n..1 |3   |counting down
+            3|high    |infinity|0..1 |3   |counting down
+        */
+        if (chan.phase == 0)  // Counting down
+        {
+            if (!chan.gateprev && chan.gate)  // gate rising-edge sensitive
+                chan.phase = 1;
+            chan.value--;
+            return;
+        }
+        if (chan.phase == 1)  // counter load cycle, output goes low
+        {
+            chan.value = chan.count;
+            chan.output = false;
+            chan.phase = 2;
+            chan.value--;
+            return;
+        }
+        if (chan.phase == 2)  // counting down
+        {
+            if (chan.value == 0)  // counter wrapped, output goes high
+            {
+                chan.output = true;
+                chan.phase = 3;
+            }
+            chan.value--;
+            return;
+        }
+        // chan.phase == 3
+        chan.value--;
         break;
     case 2:  // Rate Generator
         /*
@@ -154,9 +189,16 @@ void PIT8253::Tick(uint8_t channel)
             2|high    |n       |n..2 |3   |counting down
             3|low     |1       |1    |2   |reload counter
         */
-        if (!chan.gate || chan.phase == 0)
+        if (!chan.gate)  // gate low or mode control write forces output high
         {
             chan.output = true;
+            return;
+        }
+        if (chan.phase == 0)
+        {
+            chan.output = true;
+            if (!chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
+                chan.phase = 1;
             return;
         }
         if (chan.phase == 1)
@@ -204,11 +246,45 @@ void PIT8253::Tick(uint8_t channel)
             chan.value = chan.count;
         chan.output = (chan.value > chan.count / 2);
         break;
-    case 4:
-        //TODO
-        break;
-    case 5:
-        //TODO
+    case 4:  // Software Trigger Strobe
+    case 5:  // Hardware Trigger Strobe
+        /*
+        phase|output  |length  |value|next|comment
+        -----+--------+--------+-----+----+----------------------------------
+            0|high    |infinity|0..1 |0   |waiting for count/counting down
+            1|high    |1       |     |2   |internal delay when counter loaded
+            2|high    |n       |n..1 |3   |counting down
+            3|low     |1       |0    |0   |strobe
+        */
+        if (chan.gate == 0 && mode == 4)  // gate low in mode 4 disables counting
+            return;
+        if (chan.phase == 0)
+        {
+            if (!chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
+                chan.phase = 1;
+            return;
+        }
+        if (chan.phase == 1)
+        {
+            chan.phase = 2;
+            chan.value = chan.count;
+            return;
+        }
+        if (chan.phase == 2)
+        {
+            if (chan.value > 0)
+                chan.value--;
+            else  // counter has hit zero, set output to low
+            {
+                chan.output = false;
+                chan.phase = 3;
+            }
+            return;
+        }
+        // chan.phase == 3
+        chan.phase = 0;
+        chan.value--;
+        chan.output = true;
         break;
     }
 }
