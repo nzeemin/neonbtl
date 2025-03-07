@@ -64,6 +64,8 @@ CMotherboard::CMotherboard()
     m_keypos = 0;
     m_mousest = m_mousedx = m_mousedy = 0;
 
+    m_rtcticks = 0;
+
     SetConfiguration(0);  // Default configuration
 
 #ifdef _DEBUG
@@ -361,9 +363,11 @@ void CMotherboard::ResetDevices()
 
     // Reset timer
     //TODO
+
+    m_rtcticks = 0;
 }
 
-void CMotherboard::Tick50()  // 50 Hz timer
+void CMotherboard::Tick50()  // 64 Hz / 50 Hz timer
 {
     //NOTE: На разных платах на INT5 ВН59 идет либо сигнал от RTC 64 Гц либо кадровая синхронизация 50 Гц
     SetPICInterrupt(5);  // Сигнал 50 Гц приводит к прерыванию 5
@@ -487,14 +491,14 @@ void CMotherboard::DebugTicks()
     m_pFloppyCtl->Periodic();
 }
 
-
 /*
-Каждый фрейм равен 1/25 секунды = 40 мс = 20000 тиков, 1 тик = 2 мкс.
+Каждый фрейм равен 1/25 секунды = 40 мс = 40000 тиков, 1 тик = 1 мкс.
 В каждый фрейм происходит:
-* 320000 тиков ЦП - 16 раз за тик - 8 МГц
+* 320000 тиков ЦП - 8 раз за тик - 8 МГц
 * программируемый таймер - на каждый 4-й тик процессора - 2 МГц
-* 2 тика 50 Гц, в 0-й и 10000-й тик фрейма
-* 625 тиков FDD - каждый 32-й тик (300 RPM = 5 оборотов в секунду)
+* 2 тика 50 Гц
+* 2.56 тика 64 Гц
+* 625 тиков FDD - каждый 64-й тик (300 RPM = 5 оборотов в секунду)
 * 882 тиков звука (для частоты 22050 Гц)
 */
 bool CMotherboard::SystemFrame()
@@ -503,9 +507,9 @@ bool CMotherboard::SystemFrame()
     int soundBrasErr = 0;
     int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;
 
-    for (int frameticks = 0; frameticks < 20000; frameticks++)
+    for (int frameticks = 0; frameticks < 40000; frameticks++)
     {
-        for (int procticks = 0; procticks < 16; procticks++)  // CPU ticks
+        for (int procticks = 0; procticks < 8; procticks++)  // CPU ticks
         {
 #if !defined(PRODUCT)
             if ((m_dwTrace & TRACE_CPU) != 0 && m_pCPU->GetInternalTick() == 0)
@@ -536,19 +540,26 @@ bool CMotherboard::SystemFrame()
             }
         }
 
-        if (frameticks % 10000 == 5000)
-            Tick50();  // 1/50 timer event
+        //if (frameticks % 20000 == 10000)
+        //    Tick50();  // 1/50 timer event
 
-        if (frameticks % 32 == 0)  // FDD tick
+        m_rtcticks++;
+        if (m_rtcticks >= 15625)  // 64 Hz RTC tick
+        {
+            m_rtcticks = 0;
+            Tick50();
+        }
+
+        if (frameticks % 64 == 0)  // FDD tick
             m_pFloppyCtl->Periodic();
 
         if (m_pHardDrive != nullptr)
             m_pHardDrive->Periodic();
 
         soundBrasErr += soundSamplesPerFrame;
-        if (2 * soundBrasErr >= 20000)
+        if (2 * soundBrasErr >= 40000)
         {
-            soundBrasErr -= 20000;
+            soundBrasErr -= 40000;
             //DebugLogFormat(_T("SoundSNL %02d  %2d %2d %2d  %2d %2d %2d\r\n"), soundTicks, snd0, snd1, snd2, snl0, snl1, snl2);
             uint16_t s0 = (uint16_t)((snd0 * 255 / soundTicks) * (snl0 * 255 / soundTicks));
             uint16_t s1 = (uint16_t)((snd1 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
@@ -1567,10 +1578,10 @@ void CMotherboard::SaveToImage(uint8_t* pImage)
     *pImageTimer++ = (uint8_t)lnow->tm_mday;  // Day of month
     *pImageTimer++ = (uint8_t)lnow->tm_mon;  // Month
     *pImageTimer++ = (uint8_t)(lnow->tm_year % 100);  // Year
-    *pImageTimer++ = 0;
-    *pImageTimer++ = 0;
-    *pImageTimer++ = 0;
-    *pImageTimer++ = 0;
+    *pImageTimer++ = 0;  // RESERVED
+    *pImageTimer++ = 0;  // RESERVED
+    *(uint16_t*)pImageTimer = m_rtcticks;
+    pImageTimer += 2;
     memcpy(pImageTimer, m_rtcmemory, sizeof(m_rtcmemory));  // 50 bytes
 
     // CPU status
@@ -1648,7 +1659,9 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
     pImageTimer++;  // Day of month
     pImageTimer++;  // Month
     pImageTimer++;  // Year
-    pImageTimer += 4;
+    pImageTimer += 2;  // RESERVED
+    m_rtcticks = *(const uint16_t*)pImageTimer;
+    pImageTimer += 2;
     memcpy(m_rtcmemory, pImageTimer, sizeof(m_rtcmemory));  // 50 bytes
 
     // CPU status

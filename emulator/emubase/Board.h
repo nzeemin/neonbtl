@@ -282,6 +282,7 @@ private:  // Ports/devices: implementation
     PIT8253     m_snd, m_snl;
     uint8_t     m_rtcalarmsec, m_rtcalarmmin, m_rtcalarmhour;
     uint8_t     m_rtcmemory[50];
+    uint16_t    m_rtcticks;         // Counter for 64 Hz RTC ticks
 private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);
