@@ -363,8 +363,6 @@ void CMotherboard::ResetDevices()
 
     // Reset timer
     //TODO
-
-    m_rtcticks = 0;
 }
 
 void CMotherboard::Tick50()  // 64 Hz / 50 Hz timer
@@ -540,6 +538,7 @@ bool CMotherboard::SystemFrame()
             }
         }
 
+        m_rtcticks++;
         if (m_timer50or64)
         {
             if (frameticks % 20000 == 10000)  // 50 Hz
@@ -550,7 +549,6 @@ bool CMotherboard::SystemFrame()
             if (m_rtcticks >= 15625)  // 64 Hz RTC tick
                 Tick50();
         }
-        m_rtcticks++;
         if (m_rtcticks >= 15625) m_rtcticks = 0;
 
         if (frameticks % 64 == 0)  // FDD tick
