@@ -130,6 +130,8 @@ void Settings_SetWindowMaximized(BOOL flag);
 BOOL Settings_GetWindowMaximized();
 void Settings_SetConfiguration(int configuration);
 int  Settings_GetConfiguration();
+void Settings_SetTimer64or50(BOOL flag);
+BOOL Settings_GetTimer64or50();
 void Settings_SetFloppyFilePath(int slot, LPCTSTR sFilePath);
 void Settings_GetFloppyFilePath(int slot, LPTSTR buffer);
 void Settings_SetHardFilePath(LPCTSTR sFilePath);

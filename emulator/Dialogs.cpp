@@ -290,6 +290,9 @@ INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM /*l
             SendMessage(hVolume, TBM_SETTICFREQ, 0x1000, 0);
             SendMessage(hVolume, TBM_SETPOS, TRUE, (LPARAM)Settings_GetSoundVolume());
 
+            int timerCtlId = Settings_GetTimer64or50() ? IDC_TIMER50 : IDC_TIMER64;
+            CheckRadioButton(hDlg, IDC_TIMER64, IDC_TIMER50, timerCtlId);
+
             return (INT_PTR)FALSE;
         }
     case WM_COMMAND:
@@ -300,6 +303,10 @@ INT_PTR CALLBACK SettingsProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM /*l
                 HWND hVolume = GetDlgItem(hDlg, IDC_VOLUME);
                 DWORD volume = SendMessage(hVolume, TBM_GETPOS, 0, 0);
                 Settings_SetSoundVolume((WORD)volume);
+
+                bool timer64or50 = IsDlgButtonChecked(hDlg, IDC_TIMER50) == BST_CHECKED;
+                Settings_SetTimer64or50(timer64or50);
+                Emulator_SetTimer64or50(timer64or50);
             }
 
             EndDialog(hDlg, LOWORD(wParam));

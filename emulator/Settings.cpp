@@ -236,6 +236,8 @@ int Settings_GetConfiguration()
     return (int) dwValue;
 }
 
+SETTINGS_GETSET_DWORD(Timer64or50, _T("Timer64or50"), BOOL, FALSE);
+
 void Settings_GetFloppyFilePath(int slot, LPTSTR buffer)
 {
     TCHAR bufValueName[8];

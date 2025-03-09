@@ -191,6 +191,7 @@ public:  // Debug
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     uint16_t    GetConfiguration() const { return m_Configuration; }
+    void        SetTimer50or64(bool value) { m_timer50or64 = value; }
     void        LoadROM(const uint8_t* pBuffer);  // Load 16 KB ROM image from the buffer
     void        Reset();  // Reset computer
     void        Tick50();           // Tick 50 Hz
@@ -283,6 +284,7 @@ private:  // Ports/devices: implementation
     uint8_t     m_rtcalarmsec, m_rtcalarmmin, m_rtcalarmhour;
     uint8_t     m_rtcmemory[50];
     uint16_t    m_rtcticks;         // Counter for 64 Hz RTC ticks
+    bool        m_timer50or64;      // Timer frequency: false = 64 Hz RTC, true = 50 Hz
 private:
     void        ProcessPICWrite(bool a, uint8_t byte);
     uint8_t     ProcessPICRead(bool a);

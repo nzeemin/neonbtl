@@ -216,6 +216,7 @@ BOOL InitInstance(HINSTANCE /*hInstance*/, int /*nCmdShow*/)
     if (!Emulator_InitConfiguration((NeonConfiguration)conf))
         return FALSE;
 
+    Emulator_SetTimer64or50(Settings_GetTimer64or50() != 0);
     Emulator_SetSound(Settings_GetSound() != 0);
     Emulator_SetCovox(Settings_GetSoundCovox() != 0);
 

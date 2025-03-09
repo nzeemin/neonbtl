@@ -540,15 +540,18 @@ bool CMotherboard::SystemFrame()
             }
         }
 
-        //if (frameticks % 20000 == 10000)
-        //    Tick50();  // 1/50 timer event
-
-        m_rtcticks++;
-        if (m_rtcticks >= 15625)  // 64 Hz RTC tick
+        if (m_timer50or64)
         {
-            m_rtcticks = 0;
-            Tick50();
+            if (frameticks % 20000 == 10000)  // 50 Hz
+                Tick50();
         }
+        else
+        {
+            if (m_rtcticks >= 15625)  // 64 Hz RTC tick
+                Tick50();
+        }
+        m_rtcticks++;
+        if (m_rtcticks >= 15625) m_rtcticks = 0;
 
         if (frameticks % 64 == 0)  // FDD tick
             m_pFloppyCtl->Periodic();

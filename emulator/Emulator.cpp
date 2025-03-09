@@ -222,6 +222,11 @@ void Emulator_Reset()
     MainWindow_UpdateAllViews();
 }
 
+void Emulator_SetTimer64or50(bool value)
+{
+    g_pBoard->SetTimer50or64(value);
+}
+
 bool Emulator_AddCPUBreakpoint(uint16_t address, bool ishalt)
 {
     if (m_wEmulatorCPUBpsCount == MAX_BREAKPOINTCOUNT - 1)

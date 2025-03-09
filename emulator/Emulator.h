@@ -36,6 +36,7 @@ extern uint16_t g_wEmulatorPrevCpuPC;  // Previous PC value
 bool Emulator_Init();
 bool Emulator_InitConfiguration(NeonConfiguration configuration);
 void Emulator_Done();
+void Emulator_SetTimer64or50(bool value);
 
 bool Emulator_AddCPUBreakpoint(uint16_t address, bool ishalt);
 bool Emulator_RemoveCPUBreakpoint(uint16_t address, bool ishalt);
