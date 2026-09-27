@@ -574,6 +574,7 @@ void CALLBACK PrepareScreenLine624x450(uint32_t* pImageBits, const uint32_t* pLi
 void CALLBACK PrepareScreenLine832x600(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1040x750(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
+void CALLBACK PrepareScreenLine1456x1050(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 void CALLBACK PrepareScreenLine1664x1200(uint32_t* pImageBits, const uint32_t* pLineBits, int line);
 
 struct ScreenModeStruct
@@ -590,6 +591,7 @@ static ScreenModeReference[] =
     {  832,  600, PrepareScreenLine832x600  },  //  832 x 600   1       2
     { 1040,  750, PrepareScreenLine1040x750 },  // 1040 x 750   1.25    2.5
     { 1248,  900, PrepareScreenLine1248x900 },  // 1248 x 900   1.5     3
+    { 1456, 1050, PrepareScreenLine1456x1050 }, // 1456 x 1050  1.75    3.5
     { 1664, 1200, PrepareScreenLine1664x1200 }, // 1664 x 1200  2       4
 };
 
@@ -1246,6 +1248,48 @@ void CALLBACK PrepareScreenLine1248x900(uint32_t* pImageBits, const uint32_t* pL
     memcpy(pBits2, pBits, sizeof(uint32_t) * 1248);
     uint32_t* pBits3 = pBits2 + 1248;
     memcpy(pBits3, pBits, sizeof(uint32_t) * 1248);
+}
+
+void CALLBACK PrepareScreenLine1456x1050(uint32_t* pImageBits, const uint32_t* pLineBits, int line)
+{
+    bool even = (line & 1) == 0;
+    uint32_t* pBits = pImageBits + (1050 - 1 - line / 2 * 7) * 1456;
+    if (!even)
+        pBits -= 1456 * 4;
+
+    uint32_t* p = pBits;
+    for (int x = 0; x < 832; x += 4)  // x1.75 - mapping every 4 pixels into 7 pixels
+    {
+        uint32_t color1 = *pLineBits++;
+        uint32_t color2 = *pLineBits++;
+        uint32_t color3 = *pLineBits++;
+        uint32_t color4 = *pLineBits++;
+        *p++ = color1;
+        *p++ = AVERAGERGB(color1, color2);
+        *p++ = color2;
+        *p++ = AVERAGERGB(color2, color3);
+        *p++ = color3;
+        *p++ = AVERAGERGB(color3, color4);
+        *p++ = color4;
+    }
+
+    // x3.5 vertically - each source line occupies 3 rows, duplicated
+    memcpy(pBits - 1456, pBits, sizeof(uint32_t) * 1456);
+    memcpy(pBits - 1456 * 2, pBits, sizeof(uint32_t) * 1456);
+
+    if (!even)  // odd line - blend with the even line's row to fill the gap row between them
+    {
+        uint32_t* pBits1 = pBits;
+        uint32_t* pBits12 = pBits1 + 1456;
+        uint32_t* pBits2 = pBits12 + 1456;
+        for (int x = 0; x < 1456; x++)
+        {
+            uint32_t color1 = *pBits1++;
+            uint32_t color2 = *pBits2++;
+            uint32_t color12 = AVERAGERGB(color1, color2);
+            *pBits12++ = color12;
+        }
+    }
 }
 
 void CALLBACK PrepareScreenLine1664x1200(uint32_t* pImageBits, const uint32_t* pLineBits, int line)

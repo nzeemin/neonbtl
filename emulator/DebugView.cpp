@@ -460,6 +460,17 @@ void DebugView_DrawProcessor(HDC hdc, const CProcessor* pProc, int x, int y, WOR
         TextOut(hdc, x + cxChar * (15 + 15 - i), y + 10 * cyLine, buffera, 1);
     }
 
+    // PSW TNZVC flags as letters: letter if bit set, '-' otherwise
+    ::SetTextColor(hdc, colorText);
+    static const TCHAR* flagchars = _T("TNZVC");
+    for (int i = 0; i < 5; i++)
+    {
+        int bit = 4 - i;  // T=4, N=3, Z=2, V=1, C=0
+        WORD bitpos = 1 << bit;
+        buffera[0] = (psw & bitpos) ? flagchars[i] : '-';
+        TextOut(hdc, x + cxChar * (15 + 15 - bit), y + 13 * cyLine, buffera, 1);
+    }
+
     // CPSW value
     ::SetTextColor(hdc, arrRChanged[10] ? colorChanged : colorText);
     TextOut(hdc, x, y + 11 * cyLine, _T("PS'"), 3);

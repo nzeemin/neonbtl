@@ -839,16 +839,10 @@ int CMotherboard::TranslateAddress(uint16_t address, bool okHaltMode, bool /*okE
 
     if (address >= 0160000)
     {
-        if (address < 0170000)
+        if (address < 0174000)  // Диапазон 160000-173777 это устройства ввода-вывода
         {
             *pOffset = address;
             return ADDRTYPE_IO;
-        }
-
-        if (address < 0174000)  // Диапазон 170000-173777 не отвечает
-        {
-            *pOffset = 0;
-            return ADDRTYPE_DENY;
         }
 
         // Область памяти эмулируемых регистров, только для режима USER

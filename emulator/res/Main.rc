@@ -84,8 +84,8 @@ IDC_APPLICATION MENU
 BEGIN
     POPUP "&File"
     BEGIN
-        MENUITEM "Load State…",                 ID_FILE_LOADSTATE
-        MENUITEM "Save State…",                 ID_FILE_SAVESTATE
+        MENUITEM "Load State...",                 ID_FILE_LOADSTATE
+        MENUITEM "Save State...",                 ID_FILE_SAVESTATE
         MENUITEM SEPARATOR
         MENUITEM "Screenshot",                  ID_FILE_SCREENSHOT
         MENUITEM "Screenshot to Clipboard",     ID_FILE_SCREENSHOTTOCLIPBOARD
@@ -106,7 +106,8 @@ BEGIN
         MENUITEM "832 x 600",                   ID_VIEW_SCREENMODE2
         MENUITEM "1040 x 750",                  ID_VIEW_SCREENMODE3
         MENUITEM "1248 x 900",                  ID_VIEW_SCREENMODE4
-        MENUITEM "1664 x 1200",                 ID_VIEW_SCREENMODE5
+        MENUITEM "1456 x 1050",                 ID_VIEW_SCREENMODE5
+        MENUITEM "1664 x 1200",                 ID_VIEW_SCREENMODE6
     END
     POPUP "&Emulator"
     BEGIN
@@ -184,7 +185,7 @@ CAPTION "About"
 FONT 8, "MS Shell Dlg", 400, 0, 0xCC
 BEGIN
     LTEXT           "NEONBTL Version 1.0",IDC_STATIC,10,10,119,8,SS_NOPREFIX
-    LTEXT           "Copyright (C) 2015-2025",IDC_STATIC,10,20,119,8
+    LTEXT           "Copyright (C) 2015-2026",IDC_STATIC,10,20,119,8
     DEFPUSHBUTTON   "OK",IDOK,211,10,57,15,WS_GROUP
     LTEXT           "Author:\r\nNikita Zimin (nzeemin@gmail.com)",IDC_STATIC,10,36,188,36
     LTEXT           "Special thanks to:\r\nAlexander Xolodov, Alexey Kisly, Andrey Titov AKA Titus",IDC_STATIC,10,54,188,22
