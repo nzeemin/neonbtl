@@ -44,7 +44,7 @@ FILE* m_fpEmulatorSerialOut = nullptr;
 
 long m_nFrameCount = 0;
 uint32_t m_dwTickCount = 0;
-uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every 25 frames
+uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every FRAMERATE frames
 long m_nUptimeFrameCount = 0;
 
 uint8_t* g_pEmulatorRam = nullptr;  // RAM values - for change tracking
@@ -489,7 +489,7 @@ bool Emulator_SystemFrame()
     if (nTicksElapsed >= 1200)
     {
         double dFramesPerSecond = m_nFrameCount * 1000.0 / nTicksElapsed;
-        double dSpeed = dFramesPerSecond / 25.0 * 100;
+        double dSpeed = dFramesPerSecond / FRAMERATE * 100;
         TCHAR buffer[16];
         _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%03.f%%"), dSpeed);
         MainWindow_SetStatusbarText(StatusbarPartFPS, buffer);
@@ -501,9 +501,9 @@ bool Emulator_SystemFrame()
         m_dwTickCount = dwCurrentTicks;
     }
 
-    // Calculate emulator uptime (25 frames per second)
+    // Calculate emulator uptime (FRAMERATE frames per second)
     m_nUptimeFrameCount++;
-    if (m_nUptimeFrameCount >= 25)
+    if (m_nUptimeFrameCount >= FRAMERATE)
     {
         m_dwEmulatorUptime++;
         m_nUptimeFrameCount = 0;

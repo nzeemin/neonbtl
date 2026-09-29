@@ -490,22 +490,22 @@ void CMotherboard::DebugTicks()
 }
 
 /*
-Каждый фрейм равен 1/25 секунды = 40 мс = 40000 тиков, 1 тик = 1 мкс.
+Каждый фрейм равен 1/50 секунды = 20 мс = 20000 тиков, 1 тик = 1 мкс.
 В каждый фрейм происходит:
-* 320000 тиков ЦП - 8 раз за тик - 8 МГц
+* 160000 тиков ЦП - 8 раз за тик - 8 МГц
 * программируемый таймер - на каждый 4-й тик процессора - 2 МГц
-* 2 тика 50 Гц
-* 2.56 тика 64 Гц
-* 625 тиков FDD - каждый 64-й тик (300 RPM = 5 оборотов в секунду)
-* 882 тиков звука (для частоты 22050 Гц)
+* 1 тик 50 Гц
+* 1.28 тика 64 Гц
+* 312(.5) тиков FDD - каждый 64-й тик (300 RPM = 5 оборотов в секунду)
+* 441 тиков звука (для частоты 22050 Гц)
 */
 bool CMotherboard::SystemFrame()
 {
-    const int soundSamplesPerFrame = SOUNDSAMPLERATE / 25;
+    const int soundSamplesPerFrame = SOUNDSAMPLERATE / 50;
     int soundBrasErr = 0;
     int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;
 
-    for (int frameticks = 0; frameticks < 40000; frameticks++)
+    for (int frameticks = 0; frameticks < 20000; frameticks++)
     {
         for (int procticks = 0; procticks < 8; procticks++)  // CPU ticks
         {
@@ -541,7 +541,7 @@ bool CMotherboard::SystemFrame()
         m_rtcticks++;
         if (m_timer50or64)
         {
-            if (frameticks % 20000 == 10000)  // 50 Hz
+            if (frameticks == 0)  // 50 Hz
                 Tick50();
         }
         else
@@ -558,9 +558,9 @@ bool CMotherboard::SystemFrame()
             m_pHardDrive->Periodic();
 
         soundBrasErr += soundSamplesPerFrame;
-        if (2 * soundBrasErr >= 40000)
+        if (2 * soundBrasErr >= 20000)
         {
-            soundBrasErr -= 40000;
+            soundBrasErr -= 20000;
             //DebugLogFormat(_T("SoundSNL %02d  %2d %2d %2d  %2d %2d %2d\r\n"), soundTicks, snd0, snd1, snd2, snl0, snl1, snl2);
             uint16_t s0 = (uint16_t)((snd0 * 255 / soundTicks) * (snl0 * 255 / soundTicks));
             uint16_t s1 = (uint16_t)((snd1 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
