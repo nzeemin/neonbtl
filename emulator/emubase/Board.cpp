@@ -65,6 +65,8 @@ CMotherboard::CMotherboard()
     m_mousest = m_mousedx = m_mousedy = 0;
 
     m_rtcticks = 0;
+    m_SoundChanges = 0;
+    m_SoundPrevValue = 0;
 
     SetConfiguration(0);  // Default configuration
 
@@ -502,6 +504,7 @@ void CMotherboard::DebugTicks()
 bool CMotherboard::SystemFrame()
 {
     const int soundSamplesPerFrame = SOUNDSAMPLERATE / 50;
+    m_SoundChanges = 0;
     int soundBrasErr = 0;
     int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;
 
@@ -1684,10 +1687,14 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
 
 void CMotherboard::DoSound(uint16_t s0, uint16_t s1, uint16_t s2)
 {
+    uint16_t sound = (uint16_t)(((uint32_t)s0 + (uint32_t)s1 + (uint32_t)s2) / 3);
+
+    if (sound != m_SoundPrevValue)
+        m_SoundChanges++;
+    m_SoundPrevValue = sound;
+
     if (m_SoundGenCallback == nullptr)
         return;
-
-    uint16_t sound = (uint16_t)(((uint32_t)s0 + (uint32_t)s1 + (uint32_t)s2) / 3);
 
     (*m_SoundGenCallback)(sound, sound);
 }

@@ -44,6 +44,7 @@ FILE* m_fpEmulatorSerialOut = nullptr;
 
 long m_nFrameCount = 0;
 uint32_t m_dwTickCount = 0;
+int m_nEmulatorSoundChanges = 0;
 uint32_t m_dwEmulatorUptime = 0;  // Machine uptime, seconds, from turn on or reset, increments every FRAMERATE frames
 long m_nUptimeFrameCount = 0;
 
@@ -204,8 +205,10 @@ void Emulator_Stop()
     MainWindow_UpdateWindowTitle();
     MainWindow_UpdateMenu();
 
-    // Reset FPS indicator
+    // Reset FPS and Sound indicators
     MainWindow_SetStatusbarText(StatusbarPartFPS, nullptr);
+    MainWindow_SetStatusbarText(StatusbarPartSound, nullptr);
+    m_nEmulatorSoundChanges = 0;
 
     MainWindow_UpdateAllViews();
 }
@@ -515,6 +518,15 @@ bool Emulator_SystemFrame()
         TCHAR buffer[20];
         swprintf_s(buffer, 20, _T("Uptime: %02d:%02d:%02d"), hours, minutes, seconds);
         MainWindow_SetStatusbarText(StatusbarPartUptime, buffer);
+    }
+
+    // Update "Sound" indicator every 1/5 second
+    m_nEmulatorSoundChanges += g_pBoard->GetSoundChanges();
+    if (m_nUptimeFrameCount % (FRAMERATE / 5) == 0)
+    {
+        bool soundOn = m_nEmulatorSoundChanges > 0;
+        MainWindow_SetStatusbarText(StatusbarPartSound, soundOn ? _T("Sound") : nullptr);
+        m_nEmulatorSoundChanges = 0;
     }
 
     return true;
