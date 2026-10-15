@@ -145,6 +145,7 @@ BEGIN
     POPUP "Debug"
     BEGIN
         MENUITEM "Debug Views",                 ID_VIEW_DEBUG
+        MENUITEM "Instructions History",        ID_VIEW_INSTRHISTORY
         MENUITEM "Display List",                ID_VIEW_DISPLAY_LIST
         MENUITEM "Disasm Subtitles",            ID_DEBUG_SUBTITLES
         MENUITEM SEPARATOR

@@ -118,6 +118,7 @@
 #define ID_DEBUG_GOTO_ADDRESS           32902
 #define ID_VIEW_DISPLAY_LIST            32905
 #define ID_VIEW_PROCESS_LIST            32906
+#define ID_VIEW_INSTRHISTORY            32907
 #define ID_HELP_COMMAND_LINE_HELP       32921
 #define IDC_STATIC                      -1
 

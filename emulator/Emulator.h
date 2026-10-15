@@ -67,8 +67,23 @@ void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8]);
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
 
+// Instruction history, always recorded
+const int INSTR_HISTORY_SIZE = 256;  // Must be a power of two
+
+struct InstructionRecord
+{
+    uint16_t pc;
+    uint16_t words[4];  // Opcode and the next words, enough for the longest instruction
+    uint16_t psw;       // Processor status word before the instruction
+    bool     halt;      // true = HALT mode, false = USER mode
+};
+
+int Emulator_GetHistoryLength();
+const InstructionRecord& Emulator_GetHistoryRecord(int index);  // index 0 = most recent
+void Emulator_ClearHistory();
+
 #if !defined(PRODUCT)
-// Set trace flags (TRACE_xxx) and install/remove the instruction callback accordingly
+// Set trace flags (TRACE_xxx); the instruction callback itself is always installed
 void Emulator_SetTrace(uint32_t dwTrace);
 #endif
 

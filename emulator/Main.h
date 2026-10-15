@@ -45,6 +45,8 @@ BOOL MainWindow_InitStatusbar();
 void MainWindow_ShowHideDebug();
 void MainWindow_ShowHideToolbar();
 void MainWindow_ShowHideKeyboard();
+void MainWindow_AdjustWindowLayout();
+void MainWindow_ShowHideInstrHistory();
 void MainWindow_AdjustWindowSize();
 
 void MainWindow_SetToolbarImage(int commandId, int imageIndex);
@@ -145,6 +147,8 @@ void Settings_SetScreenHeightMode(int mode);
 int  Settings_GetScreenHeightMode();
 void Settings_SetDebug(BOOL flag);
 BOOL Settings_GetDebug();
+void Settings_SetInstrHistory(BOOL flag);
+BOOL Settings_GetInstrHistory();
 void Settings_GetDebugFontName(LPTSTR buffer);
 void Settings_SetDebugFontName(LPCTSTR sFontName);
 void Settings_SetDebugMemoryMode(WORD mode);

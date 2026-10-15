@@ -285,6 +285,8 @@ SETTINGS_GETSET_DWORD(Toolbar, _T("Toolbar"), BOOL, TRUE);
 
 SETTINGS_GETSET_DWORD(Debug, _T("Debug"), BOOL, FALSE);
 
+SETTINGS_GETSET_DWORD(InstrHistory, _T("InstrHistory"), BOOL, FALSE);
+
 void Settings_GetDebugFontName(LPTSTR buffer)
 {
     if (!Settings_LoadStringValue(_T("DebugFontName"), buffer, 32))

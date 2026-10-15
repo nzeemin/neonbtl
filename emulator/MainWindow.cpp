@@ -104,6 +104,7 @@ void MainWindow_RegisterClass()
     MemoryView_RegisterClass();
     DebugView_RegisterClasses();
     //MemoryMapView_RegisterClass();
+    InstrHistoryView_RegisterClass();
     DisasmView_RegisterClass();
     ConsoleView_RegisterClass();
 }
@@ -489,7 +490,20 @@ void MainWindow_AdjustWindowLayout()
         RECT rcDisasm;  GetWindowRect(g_hwndDisasm, &rcDisasm);
         int yDebug = cyDebug + 4;
         int cyDisasm = rcDisasm.bottom - rcDisasm.top;
-        SetWindowPos(g_hwndDisasm, NULL, cxScreen + 4, yDebug, cxDebug, cyDisasm, SWP_NOZORDER);
+
+        // Row of views, left to right: Disasm, Instr History (if shown)
+        bool okHistory = Settings_GetInstrHistory() && g_hwndInstrHistory != INVALID_HANDLE_VALUE;
+        int cxDisasm = cxDebug;
+        if (okHistory)
+            cxDisasm = min(DisasmView_GetWidth(), cxDebug);  // With History shown to the right, Disasm has limited width
+        SetWindowPos(g_hwndDisasm, NULL, cxScreen + 4, yDebug, cxDisasm, cyDisasm, SWP_NOZORDER);
+        if (okHistory)
+        {
+            int cxRowLeft = cxDebug - cxDisasm - 4;
+            int cxHistory = min(InstrHistoryView_GetWidth(), cxRowLeft);
+            if (cxHistory < 0) cxHistory = 0;
+            SetWindowPos(g_hwndInstrHistory, NULL, cxScreen + 4 + cxDisasm + 4, yDebug, cxHistory, cyDisasm, SWP_NOZORDER);
+        }
 
         int yMemory = cyDebug + 4 + cyDisasm + 4;
         int cyMemory = rc.bottom - yMemory;
@@ -519,6 +533,8 @@ void MainWindow_ShowHideDebug()
             DestroyWindow(g_hwndDebug);
         if (g_hwndDisasm != INVALID_HANDLE_VALUE)
             DestroyWindow(g_hwndDisasm);
+        if (g_hwndInstrHistory != INVALID_HANDLE_VALUE)
+            DestroyWindow(g_hwndInstrHistory);
         if (g_hwndMemory != INVALID_HANDLE_VALUE)
             DestroyWindow(g_hwndMemory);
         //if (g_hwndMemoryMap != INVALID_HANDLE_VALUE)
@@ -553,6 +569,8 @@ void MainWindow_ShowHideDebug()
             DebugView_Create(g_hwnd, xDebugLeft, 4, cxDebugWidth, cyDebugHeight);
         if (g_hwndDisasm == INVALID_HANDLE_VALUE)
             DisasmView_Create(g_hwnd, xDebugLeft, yDisasmTop, cxDebugWidth, cyDisasmHeight);
+        if (g_hwndInstrHistory == INVALID_HANDLE_VALUE && Settings_GetInstrHistory())
+            InstrHistoryView_Create(g_hwnd, xDebugLeft, yDisasmTop, cxDebugWidth, cyDisasmHeight);
         if (g_hwndMemory == INVALID_HANDLE_VALUE)
             MemoryView_Create(g_hwnd, xDebugLeft, yMemoryTop, cxDebugWidth, cyMemoryHeight);
         m_hwndSplitter = SplitterWindow_Create(g_hwnd, g_hwndDisasm, g_hwndMemory);
@@ -599,6 +617,27 @@ void MainWindow_ShowHideKeyboard()
     }
 
     MainWindow_AdjustWindowSize();
+    MainWindow_AdjustWindowLayout();
+    MainWindow_UpdateMenu();
+}
+
+void MainWindow_ShowHideInstrHistory()
+{
+    if (!Settings_GetInstrHistory())
+    {
+        if (g_hwndInstrHistory != INVALID_HANDLE_VALUE)
+        {
+            ::DestroyWindow(g_hwndInstrHistory);
+            g_hwndInstrHistory = (HWND)INVALID_HANDLE_VALUE;
+        }
+    }
+    else if (Settings_GetDebug())
+    {
+        // The position and size will be set by MainWindow_AdjustWindowLayout()
+        if (g_hwndInstrHistory == INVALID_HANDLE_VALUE)
+            InstrHistoryView_Create(g_hwnd, 0, 0, 0, 0);
+    }
+
     MainWindow_AdjustWindowLayout();
     MainWindow_UpdateMenu();
 }
@@ -692,6 +731,8 @@ void MainWindow_UpdateMenu()
     // Debug menu
     BOOL okDebug = Settings_GetDebug();
     CheckMenuItem(hMenu, ID_VIEW_DEBUG, (okDebug ? MF_CHECKED : MF_UNCHECKED));
+    CheckMenuItem(hMenu, ID_VIEW_INSTRHISTORY, (Settings_GetInstrHistory() ? MF_CHECKED : MF_UNCHECKED));
+    EnableMenuItem(hMenu, ID_VIEW_INSTRHISTORY, (okDebug ? MF_ENABLED : MF_DISABLED));
     EnableMenuItem(hMenu, ID_DEBUG_SUBTITLES, (okDebug ? MF_ENABLED : MF_DISABLED));
     EnableMenuItem(hMenu, ID_DEBUG_STEPINTO, (okDebug ? MF_ENABLED : MF_DISABLED));
     EnableMenuItem(hMenu, ID_DEBUG_STEPOVER, (okDebug ? MF_ENABLED : MF_DISABLED));
@@ -814,6 +855,13 @@ bool MainWindow_DoCommand(int commandId)
         break;
     case ID_VIEW_DEBUG:
         MainWindow_DoViewDebug();
+        break;
+    case ID_VIEW_INSTRHISTORY:
+        if (Settings_GetDebug())
+        {
+            Settings_SetInstrHistory(!Settings_GetInstrHistory());
+            MainWindow_ShowHideInstrHistory();
+        }
         break;
     case ID_VIEW_DISPLAY_LIST:
         MainWindow_DoDebugDisplayList();
@@ -1181,6 +1229,7 @@ void MainWindow_UpdateAllViews()
     Emulator_OnUpdate();
     DebugView_OnUpdate();
     DisasmView_OnUpdate();
+    InstrHistoryView_OnUpdate();
     ConsoleView_OnUpdate();
 
     // Update screen
@@ -1191,6 +1240,8 @@ void MainWindow_UpdateAllViews()
         InvalidateRect(g_hwndDebug, NULL, TRUE);
     if (g_hwndDisasm != NULL)
         InvalidateRect(g_hwndDisasm, NULL, TRUE);
+    if (g_hwndInstrHistory != NULL)
+        InvalidateRect(g_hwndInstrHistory, NULL, TRUE);
     if (g_hwndMemory != NULL)
         InvalidateRect(g_hwndMemory, NULL, TRUE);
     //if (g_hwndMemoryMap != NULL)
