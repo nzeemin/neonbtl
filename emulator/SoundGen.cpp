@@ -94,6 +94,20 @@ void SoundGen_Initialize(WORD volume)
     InitializeCriticalSection(&waveCriticalSection);
     bufcurpos = 0;
 
+    // Prime the queue with silence so timing jitter of the emulation loop does not cause underruns
+    for (int i = 0; i < PRIME_BLOCKS; i++)
+    {
+        WAVEHDR* block = &waveBlocks[waveCurrentBlock];
+        memset(block->lpData, 0, BLOCK_SIZE);
+        block->dwBufferLength = BLOCK_SIZE;
+        waveOutPrepareHeader(hWaveOut, block, sizeof(WAVEHDR));
+        waveOutWrite(hWaveOut, block, sizeof(WAVEHDR));
+        EnterCriticalSection(&waveCriticalSection);
+        waveFreeBlockCount--;
+        LeaveCriticalSection(&waveCriticalSection);
+        waveCurrentBlock = (waveCurrentBlock + 1) % BLOCK_COUNT;
+    }
+
     m_SoundGenInitialized = true;
     //waveOutSetPlaybackRate(hWaveOut,0x00008000);
 }
@@ -143,7 +157,14 @@ void CALLBACK SoundGen_FeedDAC(unsigned short L, unsigned short R)
     if (!m_SoundGenInitialized)
         return;
 
-    //DebugLogFormat(_T("FeedDAC %04X\r\n"), L);
+    // One-pole high-pass filter (about 17 Hz at 22050 Hz), emulates the C24 coupling capacitor: removes DC offset
+    static int prevInL = 0, prevOutL = 0, prevInR = 0, prevOutR = 0;
+    int inL = (short)L, inR = (short)R;
+    prevOutL = inL - prevInL + prevOutL * 995 / 1000;  prevInL = inL;
+    prevOutR = inR - prevInR + prevOutR * 995 / 1000;  prevInR = inR;
+    L = (unsigned short)(short)max(-32768, min(32767, prevOutL));
+    R = (unsigned short)(short)max(-32768, min(32767, prevOutR));
+
     unsigned int word = ((unsigned int)R << 16) + L;
     memcpy(&buffer[bufcurpos], &word, 4);
     bufcurpos += 4;

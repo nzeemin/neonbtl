@@ -505,7 +505,7 @@ bool CMotherboard::SystemFrame()
     const int soundSamplesPerFrame = SOUNDSAMPLERATE / 50;
     m_SoundChanges = 0;
     int soundBrasErr = 0;
-    int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0, snd0 = 0, snd1 = 0, snd2 = 0;
+    int snl0 = 0, snl1 = 0, snl2 = 0, soundTicks = 0;  // only SNL outputs go to the speaker
 
     for (int frameticks = 0; frameticks < 20000; frameticks++)
     {
@@ -525,9 +525,6 @@ bool CMotherboard::SystemFrame()
             if ((procticks & 3) == 3)  // Every 4th tick
             {
                 TimerTick();
-                snd0 += m_snd.GetOutput(0) ? 1 : 0;
-                snd1 += m_snd.GetOutput(1) ? 1 : 0;
-                snd2 += m_snd.GetOutput(2) ? 1 : 0;
                 snl0 += m_snl.GetOutput(0) ? 1 : 0;
                 snl1 += m_snl.GetOutput(1) ? 1 : 0;
                 snl2 += m_snl.GetOutput(2) ? 1 : 0;
@@ -559,11 +556,13 @@ bool CMotherboard::SystemFrame()
         {
             soundBrasErr -= 20000;
             //DebugLogFormat(_T("SoundSNL %02d  %2d %2d %2d  %2d %2d %2d\r\n"), soundTicks, snd0, snd1, snd2, snl0, snl1, snl2);
-            uint16_t s0 = (uint16_t)((snd0 * 255 / soundTicks) * (snl0 * 255 / soundTicks));
-            uint16_t s1 = (uint16_t)((snd1 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
-            uint16_t s2 = (uint16_t)((snd2 * 255 / soundTicks) * (snl1 * 255 / soundTicks));
+            // Each channel is the average of its 1-bit output over the sample period, scaled to 0..0x7FFF
+            const int ticks = soundTicks > 0 ? soundTicks : 1;
+            uint16_t s0 = (uint16_t)(snl0 * 0x7FFF / ticks);
+            uint16_t s1 = (uint16_t)(snl1 * 0x7FFF / ticks);
+            uint16_t s2 = (uint16_t)(snl2 * 0x7FFF / ticks);
             DoSound(s0, s1, s2);
-            soundTicks = 0; snl0 = snl1 = snl2 = 0; snd0 = snd1 = snd2 = 0;
+            soundTicks = 0; snl0 = snl1 = snl2 = 0;
         }
 
         //if (m_ParallelOutCallback != nullptr)
@@ -1681,7 +1680,9 @@ void CMotherboard::LoadFromImage(const uint8_t* pImage)
 
 void CMotherboard::DoSound(uint16_t s0, uint16_t s1, uint16_t s2)
 {
-    uint16_t sound = (uint16_t)(((uint32_t)s0 + (uint32_t)s1 + (uint32_t)s2) / 3);
+    // Mix three unsigned channels (0..0x7FFF each), then remove DC offset to get signed 16-bit range +-0x4000
+    int32_t mixed = (int32_t)(((uint32_t)s0 + (uint32_t)s1 + (uint32_t)s2) / 3);
+    uint16_t sound = (uint16_t)(int16_t)(mixed - 0x4000);
 
     if (sound != m_SoundPrevValue)
         m_SoundChanges++;

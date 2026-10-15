@@ -612,9 +612,10 @@ void CALLBACK Emulator_SoundGenCallback(unsigned short L, unsigned short R)
     {
         // Get lower byte from printer port output register
         unsigned short data = g_pBoard->GetPrinterOutPort();
-        // Merge with channel data
-        L += (data << 7);
-        R += (data << 7);
+        // Merge with channel data: both are signed, covox byte is centered; halve the sum to avoid overflow
+        int covox = (int)((data & 0xff) << 7) - 0x4000;
+        L = (unsigned short)(short)(((int)(short)L + covox) / 2);
+        R = (unsigned short)(short)(((int)(short)R + covox) / 2);
     }
 
     SoundGen_FeedDAC(L, R);

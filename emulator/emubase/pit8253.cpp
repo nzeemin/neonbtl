@@ -17,9 +17,16 @@ NEONBTL. If not, see <http://www.gnu.org/licenses/>. */
 
 //////////////////////////////////////////////////////////////////////
 
+// Mode bits 110 and 111 are aliases of modes 2 and 3; software (e.g. the sound demos) relies on that
+static inline uint8_t PIT8253_GetMode(const PIT8253_chan& chan)
+{
+    uint8_t mode = (chan.control >> 1) & 7;
+    return (mode >= 6) ? (mode & 3) : mode;
+}
+
 PIT8253_chan::PIT8253_chan() :
     control(0), phase(0), value(0), count(0), latchvalue(0), gate(true), gateprev(true),
-    writehi(false), readhi(false), output(false)
+    writehi(false), readhi(false), output(false), loaded(false)
 {
 }
 
@@ -45,7 +52,8 @@ void PIT8253::Write(uint8_t address, uint8_t byte)
         else
         {
             chan.phase = 0;
-            uint8_t mode = (chan.control >> 1) & 7;
+            chan.loaded = false;
+            uint8_t mode = PIT8253_GetMode(chan);
             chan.output = (mode != 0);
         }
     }
@@ -57,19 +65,24 @@ void PIT8253::Write(uint8_t address, uint8_t byte)
         {
         case 1:  // read/write counter lo byte
             chan.count = byte;
+            chan.loaded = true;
             break;
         case 2:  // read/write counter hi byte
             chan.count = (chan.count & 0x00ff) | (byte << 8);
+            chan.loaded = true;
             break;
         case 3:  // read/write lo byte first, then hi byte
             if (chan.writehi)
+            {
                 chan.count = (chan.count & 0x00ff) | (byte << 8);
+                chan.loaded = true;
+            }
             else
                 chan.count = byte;
             chan.writehi = !chan.writehi;
             break;
         }
-        uint8_t mode = (chan.control >> 1) & 7;
+        uint8_t mode = PIT8253_GetMode(chan);
         switch (mode)
         {
         case 2: case 3:
@@ -107,7 +120,7 @@ uint8_t PIT8253::Read(uint8_t address)
 void PIT8253::Tick(uint8_t channel)
 {
     PIT8253_chan& chan = m_chan[channel];
-    uint8_t mode = (chan.control >> 1) & 7;
+    uint8_t mode = PIT8253_GetMode(chan);
     switch (mode)
     {
     case 0:  // Interrupt on Terminal Count
@@ -154,7 +167,7 @@ void PIT8253::Tick(uint8_t channel)
         */
         if (chan.phase == 0)  // Counting down
         {
-            if (!chan.gateprev && chan.gate)  // gate rising-edge sensitive
+            if (chan.loaded && !chan.gateprev && chan.gate)  // gate rising-edge sensitive
                 chan.phase = 1;
             chan.value--;
             return;
@@ -194,10 +207,12 @@ void PIT8253::Tick(uint8_t channel)
             chan.output = true;
             return;
         }
+        if (chan.phase != 0 && chan.loaded && !chan.gateprev && chan.gate)  // gate rising reloads the counter
+            chan.phase = 1;
         if (chan.phase == 0)
         {
             chan.output = true;
-            if (!chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
+            if (chan.loaded && !chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
                 chan.phase = 1;
             return;
         }
@@ -209,7 +224,9 @@ void PIT8253::Tick(uint8_t channel)
         }
         if (chan.phase == 2)
         {
-            if (chan.value <= 2)
+            if (chan.value == 0)  // value 0 is the start of a 65536 count
+                chan.value = 0xffff;
+            else if (chan.value <= 2)
                 chan.phase = 3;
             else
                 chan.value--;
@@ -240,11 +257,17 @@ void PIT8253::Tick(uint8_t channel)
             return;
         }
         // chan.phase == 2
-        if (chan.value > 1)
-            chan.value--;
-        else
-            chan.value = chan.count;
-        chan.output = (chan.value > chan.count / 2);
+        {
+            const uint32_t count = chan.count == 0 ? 65536 : chan.count;  // zero count means 65536
+            if (chan.value == 0)  // value 0 is the start of a 65536 count
+                chan.value = 0xffff;
+            else if (chan.value > 1)
+                chan.value--;
+            else
+                chan.value = chan.count;
+            const uint32_t value = chan.value == 0 ? 65536 : chan.value;
+            chan.output = (value > count / 2);
+        }
         break;
     case 4:  // Software Trigger Strobe
     case 5:  // Hardware Trigger Strobe
@@ -260,7 +283,7 @@ void PIT8253::Tick(uint8_t channel)
             return;
         if (chan.phase == 0)
         {
-            if (!chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
+            if (chan.loaded && !chan.gateprev && chan.gate)  // gate rising reloads count and initiates counting
                 chan.phase = 1;
             return;
         }

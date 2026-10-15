@@ -20,6 +20,7 @@ UKNCBTL. If not, see <http://www.gnu.org/licenses/>. */
 #define BUFSIZE     ((SOUNDSAMPLERATE / 25) * 4)
 #define BLOCK_COUNT 8
 #define BLOCK_SIZE  BUFSIZE
+#define PRIME_BLOCKS 3
 
 void SoundGen_Initialize(WORD volume);
 void SoundGen_Finalize();

@@ -117,6 +117,7 @@ struct PIT8253_chan
     bool        writehi;
     bool        readhi;
     bool        output;     // Current output level: false = low, true = high
+    bool        loaded;     // Count was written after the last control word; gate edges do nothing until then
 public:
     PIT8253_chan();
 };
