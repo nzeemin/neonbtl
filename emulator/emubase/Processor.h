@@ -79,6 +79,7 @@ protected:  // Interrupt processing
     bool        m_EVNTreset;        // EVNT interrupt request reset
 protected:
     CMotherboard* m_pBoard;
+    INSTRUCTIONCALLBACK m_pInstructionCallback;  ///< Called before each instruction execution, nullptr = off
 
 public:  // Register control
     uint16_t    GetPSW() const { return m_psw; }  // Get the processor status word register value
@@ -128,6 +129,8 @@ public:  // Processor control
     int         GetInternalTick() const { return m_internalTick; }
     void        ClearInternalTick() { m_internalTick = 0; }
     uint16_t    GetInstructionPC() const { return m_instructionpc; }  // Address of the current instruction
+    // Assign callback for instruction execution, nullptr to remove
+    void        SetInstructionCallback(INSTRUCTIONCALLBACK callback) { m_pInstructionCallback = callback; }
 
 public:  // Saving/loading emulator status (pImage addresses up to 32 bytes)
     void        SaveToImage(uint8_t* pImage) const;

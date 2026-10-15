@@ -465,6 +465,40 @@ void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8])
 }
 
 
+#if !defined(PRODUCT)
+
+void CALLBACK Emulator_Instruction_Callback(const CProcessor* pProc, uint16_t address, uint16_t opcode)
+{
+    address &= ~1;
+    bool okHaltMode = pProc->IsHaltMode();
+
+    uint16_t memory[4];
+    memory[0] = opcode;
+    int addrtype;
+    for (uint16_t i = 1; i < 4; i++)
+        memory[i] = g_pBoard->GetWordView(address + i * 2, okHaltMode, true, &addrtype);
+
+    TCHAR bufaddr[8];
+    bufaddr[0] = okHaltMode ? 'H' : 'U';
+    PrintOctalValue(bufaddr + 1, address);
+
+    TCHAR instr[8];
+    TCHAR args[32];
+    DisassembleInstruction(memory, address, instr, args);
+
+    DebugLogFormat(_T("%s\t%s\t%s\r\n"), bufaddr, instr, args);
+}
+
+void Emulator_SetTrace(uint32_t dwTrace)
+{
+    g_pBoard->SetTrace(dwTrace);
+
+    bool okInstructionTrace = (dwTrace & TRACE_CPU) != 0;
+    g_pBoard->SetInstructionCallback(okInstructionTrace ? Emulator_Instruction_Callback : nullptr);
+}
+
+#endif // !PRODUCT
+
 bool Emulator_SystemFrame()
 {
     g_pBoard->SetCPUBreakpoints(m_wEmulatorCPUBpsCount > 0 ? m_EmulatorCPUBps : nullptr);

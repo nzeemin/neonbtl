@@ -332,6 +332,7 @@ CProcessor::CProcessor(CMotherboard* pBoard)
 {
     ASSERT(pBoard != nullptr);
     m_pBoard = pBoard;
+    m_pInstructionCallback = nullptr;
 
     memset(m_R, 0, sizeof(m_R));
     m_psw = m_savepsw = 0777;
@@ -615,6 +616,9 @@ void CProcessor::FetchInstruction()
 
 void CProcessor::TranslateInstruction()
 {
+    if (m_pInstructionCallback != nullptr)
+        m_pInstructionCallback(this, m_instructionpc, m_instruction);
+
     // Prepare values to help decode the command
     m_regdest  = GetDigit(m_instruction, 0);
     m_methdest = GetDigit(m_instruction, 1);
