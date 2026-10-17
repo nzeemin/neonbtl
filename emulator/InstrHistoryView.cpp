@@ -305,7 +305,9 @@ void InstrHistoryView_DoDraw(HDC hdc)
     HFONT hFont = CreateMonospacedFont();
     HGDIOBJ hOldFont = SelectObject(hdc, hFont);
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
-    COLORREF colorOld = SetTextColor(hdc, Settings_GetColor(ColorDebugText));
+    COLORREF colorText = Settings_GetColor(ColorDebugText);
+    COLORREF colorInterrupt = Settings_GetColor(ColorDebugJumpHint);  // For now, until it gets its own color
+    COLORREF colorOld = SetTextColor(hdc, colorText);
     SetBkMode(hdc, TRANSPARENT);
 
     RECT rcClient;  GetClientRect(m_hwndInstrHistoryViewer, &rcClient);
@@ -319,16 +321,27 @@ void InstrHistoryView_DoDraw(HDC hdc)
 
         const InstructionRecord& record = m_InstrHistorySnapshot[index];
 
-        TCHAR strInstr[8];
-        TCHAR strArg[32];
-        DisassembleInstruction(record.words, record.pc, strInstr, strArg);
-
         TCHAR bufaddr[7];
         PrintOctalValue(bufaddr, record.pc);
 
         TCHAR buffer[80];
-        _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%3d %c%s %s %s"),
-                index, record.halt ? _T('H') : _T('U'), bufaddr, strInstr, strArg);
+        if (record.interrupt)  // words: vector, new PC, new PSW
+        {
+            TCHAR bufvector[7];
+            PrintOctalValue(bufvector, record.words[0]);
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%3d %c%s INT %s %s"),
+                    index, record.halt ? _T('H') : _T('U'), bufaddr, bufvector, Emulator_GetInterruptName(record.words[0]));
+        }
+        else
+        {
+            TCHAR strInstr[8];
+            TCHAR strArg[32];
+            DisassembleInstruction(record.words, record.pc, strInstr, strArg);
+
+            _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, _T("%3d %c%s %s %s"),
+                    index, record.halt ? _T('H') : _T('U'), bufaddr, strInstr, strArg);
+        }
+        SetTextColor(hdc, record.interrupt ? colorInterrupt : colorText);
         TextOut(hdc, x, y, buffer, static_cast<int>(_tcslen(buffer)));
 
         y -= cyLine;

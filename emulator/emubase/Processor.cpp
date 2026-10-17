@@ -333,6 +333,7 @@ CProcessor::CProcessor(CMotherboard* pBoard)
     ASSERT(pBoard != nullptr);
     m_pBoard = pBoard;
     m_pInstructionCallback = nullptr;
+    m_pInterruptCallback = nullptr;
 
     memset(m_R, 0, sizeof(m_R));
     m_psw = m_savepsw = 0777;
@@ -482,6 +483,8 @@ bool CProcessor::InterruptProcessing()
 
     if (intrVector != 0xFFFF)
     {
+        uint16_t oldPc = GetPC();  // PC where the interrupt appears, for m_pInterruptCallback
+
         m_internalTick += EMT_TIMING;  //ANYTHING UNKNOWN WILL CAUSE EXCEPTION (EMT)
 
         m_waitmode = false;
@@ -502,6 +505,9 @@ bool CProcessor::InterruptProcessing()
             //DebugLogFormat(_T("%c%06ho\tCPU HALT INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), currMode ? _T('H') : _T('U'), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetPSW(new_psw);
             SetPC(new_pc);
+
+            if (m_pInterruptCallback != nullptr)
+                m_pInterruptCallback(this, oldPc, intrVector & 0377, currMode);
         }
         else  // USER mode interrupt
         {
@@ -523,6 +529,9 @@ bool CProcessor::InterruptProcessing()
             //DebugLogFormat(_T("%c%06ho\tCPU USER INT vector=%06ho PC=%06ho PSW=%06ho\r\n"), currMode ? _T('H') : _T('U'), GetInstructionPC(), intrVector, new_pc, new_psw);
             SetLPSW((uint8_t)(new_psw & 0xff));
             SetPC(new_pc);
+
+            if (m_pInterruptCallback != nullptr)
+                m_pInterruptCallback(this, oldPc, intrVector, currMode);
         }
 
         return true;

@@ -64,6 +64,7 @@ enum NeonConfiguration
 #define TRACE_NONE         0  // Turn off all tracing
 #define TRACE_FLOPPY    0100  // Trace floppies
 #define TRACE_CPU      01000  // Trace CPU instructions
+#define TRACE_CPUINT   02000  // Trace CPU interrupts
 #define TRACE_ALL    0177777  // Trace all
 
 // Emulator image constants
@@ -101,6 +102,16 @@ typedef void (CALLBACK* PARALLELOUTCALLBACK)(uint8_t byte);
 //   address    Address of the instruction, PC value before the fetch
 //   opcode     First word of the instruction as fetched
 typedef void (CALLBACK* INSTRUCTIONCALLBACK)(const CProcessor* pProc, uint16_t address, uint16_t opcode);
+
+// Interrupt callback -- called by CPU when an interrupt or trap has been taken: the old PC/PSW
+// are saved and the new PC/PSW are loaded from the vector
+// Input:
+//   pProc      Processor that took the interrupt;
+//              pProc->GetPC() / GetPSW() are the handler address and PSW
+//   oldPc      PC where the interrupt appeared: the address of the code that was interrupted
+//   vector     Interrupt vector address
+//   okHalt     true = the interrupted code was running in HALT mode
+typedef void (CALLBACK* INTERRUPTCALLBACK)(const CProcessor* pProc, uint16_t oldPc, uint16_t vector, bool okHalt);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -199,6 +210,8 @@ public:  // Debug
     void        SetTrace(uint32_t dwTrace);
     // Assign callback for CPU instruction execution, nullptr to remove
     void        SetInstructionCallback(INSTRUCTIONCALLBACK callback);
+    // Assign callback for CPU interrupts, nullptr to remove
+    void        SetInterruptCallback(INTERRUPTCALLBACK callback);
 public:  // System control
     void        SetConfiguration(uint16_t conf);
     uint16_t    GetConfiguration() const { return m_Configuration; }

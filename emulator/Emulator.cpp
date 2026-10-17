@@ -103,6 +103,7 @@ bool Emulator_LoadNeonRom()
 }
 
 void CALLBACK Emulator_Instruction_Callback(const CProcessor* pProc, uint16_t address, uint16_t opcode);
+void CALLBACK Emulator_Interrupt_Callback(const CProcessor* pProc, uint16_t oldPc, uint16_t vector, bool okHalt);
 
 bool Emulator_Init()
 {
@@ -128,6 +129,7 @@ bool Emulator_Init()
     g_pBoard = new CMotherboard();
 
     g_pBoard->SetInstructionCallback(Emulator_Instruction_Callback);
+    g_pBoard->SetInterruptCallback(Emulator_Interrupt_Callback);
 
     g_pBoard->Reset();
     Emulator_ClearHistory();
@@ -150,6 +152,7 @@ void Emulator_Done()
     CProcessor::Done();
 
     g_pBoard->SetInstructionCallback(nullptr);
+    g_pBoard->SetInterruptCallback(nullptr);
     g_pBoard->SetSoundGenCallback(nullptr);
     SoundGen_Finalize();
 
@@ -496,23 +499,52 @@ void Emulator_ClearHistory()
     m_InstrHistoryLength = 0;
 }
 
+// Take the next slot of the history ring; the caller fills the record
+static InstructionRecord& Emulator_AddHistoryRecord()
+{
+    InstructionRecord& record = m_InstrHistory[m_InstrHistoryHead];
+    m_InstrHistoryHead = (m_InstrHistoryHead + 1) & (INSTR_HISTORY_SIZE - 1);
+    if (m_InstrHistoryLength < INSTR_HISTORY_SIZE)
+        m_InstrHistoryLength++;
+    return record;
+}
+
+// Short name of the interrupt vector
+LPCTSTR Emulator_GetInterruptName(uint16_t vector)
+{
+    switch (vector)
+    {
+    case 0000: return _T("START");
+    case 0004: return _T("BUS/ILLG");
+    case 0010: return _T("RSVD/FIS");
+    case 0014: return _T("BPT/TBIT");
+    case 0020: return _T("IOT");
+    case 0024: return _T("ACLO");
+    case 0030: return _T("EMT");
+    case 0034: return _T("TRAP");
+    case 0100: return _T("EVNT");
+    case 0170: return _T("HALT");
+    case 0174: return _T("BUSERR");
+    case 0274: return _T("VIRQ");
+    default:   return _T("???");
+    }
+}
+
 // Called by the CPU before each instruction is executed; installed always, records history and writes trace
 void CALLBACK Emulator_Instruction_Callback(const CProcessor* pProc, uint16_t address, uint16_t opcode)
 {
     address &= ~1;
     bool okHaltMode = pProc->IsHaltMode();
 
-    InstructionRecord& record = m_InstrHistory[m_InstrHistoryHead];
+    InstructionRecord& record = Emulator_AddHistoryRecord();
     record.pc = address;
     record.psw = pProc->GetPSW();
     record.halt = okHaltMode;
+    record.interrupt = false;
     record.words[0] = opcode;
     int addrtype;
     for (int i = 1; i < 4; i++)
         record.words[i] = g_pBoard->GetWordView(address + i * 2, okHaltMode, true, &addrtype);
-    m_InstrHistoryHead = (m_InstrHistoryHead + 1) & (INSTR_HISTORY_SIZE - 1);
-    if (m_InstrHistoryLength < INSTR_HISTORY_SIZE)
-        m_InstrHistoryLength++;
 
 #if !defined(PRODUCT)
     if ((g_pBoard->GetTrace() & TRACE_CPU) == 0)
@@ -527,6 +559,35 @@ void CALLBACK Emulator_Instruction_Callback(const CProcessor* pProc, uint16_t ad
     DisassembleInstruction(record.words, address, instr, args);
 
     DebugLogFormat(_T("%s\t%s\t%s\r\n"), bufaddr, instr, args);
+#endif // !PRODUCT
+}
+
+// Called by the CPU when an interrupt has been taken, the new PC/PSW are already loaded;
+// installed always, records history and writes trace
+void CALLBACK Emulator_Interrupt_Callback(const CProcessor* pProc, uint16_t oldPc, uint16_t vector, bool okHalt)
+{
+    InstructionRecord& record = Emulator_AddHistoryRecord();
+    record.pc = oldPc;
+    record.words[0] = vector;
+    record.words[1] = pProc->GetPC();
+    record.words[2] = pProc->GetPSW();
+    record.words[3] = 0;
+    record.psw = pProc->GetPSW();
+    record.halt = okHalt;
+    record.interrupt = true;
+
+#if !defined(PRODUCT)
+    if ((g_pBoard->GetTrace() & TRACE_CPUINT) == 0)
+        return;
+
+    TCHAR bufaddr[8], bufvector[7], bufnewpc[7];
+    bufaddr[0] = okHalt ? 'H' : 'U';
+    PrintOctalValue(bufaddr + 1, oldPc);
+    PrintOctalValue(bufvector, vector);
+    PrintOctalValue(bufnewpc, pProc->GetPC());
+
+    DebugLogFormat(_T("%s\tINT\t%s\t%s\t%s\r\n"),
+            bufaddr, bufvector, Emulator_GetInterruptName(vector), bufnewpc);
 #endif // !PRODUCT
 }
 

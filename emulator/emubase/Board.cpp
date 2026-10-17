@@ -147,6 +147,11 @@ void CMotherboard::SetInstructionCallback(INSTRUCTIONCALLBACK callback)
     m_pCPU->SetInstructionCallback(callback);
 }
 
+void CMotherboard::SetInterruptCallback(INTERRUPTCALLBACK callback)
+{
+    m_pCPU->SetInterruptCallback(callback);
+}
+
 void CMotherboard::Reset()
 {
     m_pCPU->SetDCLOPin(true);

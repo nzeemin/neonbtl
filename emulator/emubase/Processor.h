@@ -80,6 +80,7 @@ protected:  // Interrupt processing
 protected:
     CMotherboard* m_pBoard;
     INSTRUCTIONCALLBACK m_pInstructionCallback;  ///< Called before each instruction execution, nullptr = off
+    INTERRUPTCALLBACK m_pInterruptCallback;      ///< Called when an interrupt is taken, nullptr = off
 
 public:  // Register control
     uint16_t    GetPSW() const { return m_psw; }  // Get the processor status word register value
@@ -131,6 +132,8 @@ public:  // Processor control
     uint16_t    GetInstructionPC() const { return m_instructionpc; }  // Address of the current instruction
     // Assign callback for instruction execution, nullptr to remove
     void        SetInstructionCallback(INSTRUCTIONCALLBACK callback) { m_pInstructionCallback = callback; }
+    // Assign callback for interrupts, nullptr to remove
+    void        SetInterruptCallback(INTERRUPTCALLBACK callback) { m_pInterruptCallback = callback; }
 
 public:  // Saving/loading emulator status (pImage addresses up to 32 bytes)
     void        SaveToImage(uint8_t* pImage) const;

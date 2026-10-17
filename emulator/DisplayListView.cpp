@@ -1,4 +1,4 @@
-/*  This file is part of NEONBTL.
+ï»¿/*  This file is part of NEONBTL.
 NEONBTL is free software: you can redistribute it and/or modify it under the terms
 of the GNU Lesser General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version.
@@ -144,7 +144,7 @@ void DiaplayList_FillTreeView()
     tvins.item = item;
     HTREEITEM hRoot = (HTREEITEM)::SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
-    for (int line = -2; line < 300; line++)  // Öèêë ïî ñòðîêàì -2..299, ïåðâûå äâå ñòðîêè íå âèäíû
+    for (int line = -2; line < 300; line++)  // Ð¦Ð¸ÐºÐ» Ð¿Ð¾ ÑÑ‚Ñ€Ð¾ÐºÐ°Ð¼ -2..299, Ð¿ÐµÑ€Ð²Ñ‹Ðµ Ð´Ð²Ðµ ÑÑ‚Ñ€Ð¾ÐºÐ¸ Ð½Ðµ Ð²Ð¸Ð´Ð½Ñ‹
     {
         uint16_t linelo = pBoard->GetRAMWordView(tasaddr);
         uint16_t linehi = pBoard->GetRAMWordView(tasaddr + 2);
@@ -155,23 +155,23 @@ void DiaplayList_FillTreeView()
         HTREEITEM hLine = (HTREEITEM)SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
-        bool firstOtr = true;  // Ïðèçíàê ïåðâîãî îòðåçêà â ñòðîêå
-        int bar = 52;  // Ñ÷¸ò÷èê ïîëîñîê îò 52 ê 0
-        for (int otrno = 1; ; otrno++)  // Öèêë ïî âèäåîîòðåçêàì ñòðîêè, äî ïîëíîãî çàïîëíåíèÿ ñòðîêè
+        bool firstOtr = true;  // ÐŸÑ€Ð¸Ð·Ð½Ð°Ðº Ð¿ÐµÑ€Ð²Ð¾Ð³Ð¾ Ð¾Ñ‚Ñ€ÐµÐ·ÐºÐ° Ð² ÑÑ‚Ñ€Ð¾ÐºÐµ
+        int bar = 52;  // Ð¡Ñ‡Ñ‘Ñ‚Ñ‡Ð¸Ðº Ð¿Ð¾Ð»Ð¾ÑÐ¾Ðº Ð¾Ñ‚ 52 Ðº 0
+        for (int otrno = 1; ; otrno++)  // Ð¦Ð¸ÐºÐ» Ð¿Ð¾ Ð²Ð¸Ð´ÐµÐ¾Ð¾Ñ‚Ñ€ÐµÐ·ÐºÐ°Ð¼ ÑÑ‚Ñ€Ð¾ÐºÐ¸, Ð´Ð¾ Ð¿Ð¾Ð»Ð½Ð¾Ð³Ð¾ Ð·Ð°Ð¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ñ ÑÑ‚Ñ€Ð¾ÐºÐ¸
         {
             uint16_t otrlo = pBoard->GetRAMWordView(lineaddr);
             uint16_t otrhi = pBoard->GetRAMWordView(lineaddr + 2);
             lineaddr += 4;
-            // Ïîëó÷àåì ïàðàìåòðû îòðåçêà
-            int otrcount = 32 - (otrhi >> 10) & 037;  // Äëèíà îòðåçêà â 32-ðàçðÿäíûõ ñëîâàõ
+            // ÐŸÐ¾Ð»ÑƒÑ‡Ð°ÐµÐ¼ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹ Ð¾Ñ‚Ñ€ÐµÐ·ÐºÐ°
+            int otrcount = 32 - (otrhi >> 10) & 037;  // Ð”Ð»Ð¸Ð½Ð° Ð¾Ñ‚Ñ€ÐµÐ·ÐºÐ° Ð² 32-Ñ€Ð°Ð·Ñ€ÑÐ´Ð½Ñ‹Ñ… ÑÐ»Ð¾Ð²Ð°Ñ…
             if (otrcount == 0) otrcount = 32;
-            // Îïðåäåëÿåì, ñêîëüêî 16-ïèêñåëüíûõ ïîëîñîê íóæíî çàïîëíèòü
+            // ÐžÐ¿Ñ€ÐµÐ´ÐµÐ»ÑÐµÐ¼, ÑÐºÐ¾Ð»ÑŒÐºÐ¾ 16-Ð¿Ð¸ÐºÑÐµÐ»ÑŒÐ½Ñ‹Ñ… Ð¿Ð¾Ð»Ð¾ÑÐ¾Ðº Ð½ÑƒÐ¶Ð½Ð¾ Ð·Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÑŒ
             int barcount = otrcount * 2;
             if (!firstOtr) barcount--;
             if (barcount > bar) barcount = bar;
             bar -= barcount;
 
-            uint16_t vd = (otrhi >> 8) & 3;  // áèòû VD1 VD0
+            uint16_t vd = (otrhi >> 8) & 3;  // Ð±Ð¸Ñ‚Ñ‹ VD1 VD0
             LPCTSTR vdstr;
             switch (vd)
             {
@@ -180,7 +180,7 @@ void DiaplayList_FillTreeView()
             case 1:  vdstr = _T("vd52 "); break;
             default: vdstr = _T("vd52s"); break;
             }
-            uint16_t vm = (otrhi & 0x8000) >> 13 | (otrhi >> 6) & 3;  // áèòû PB VN1 VN0
+            uint16_t vm = (otrhi & 0x8000) >> 13 | (otrhi >> 6) & 3;  // Ð±Ð¸Ñ‚Ñ‹ PB VN1 VN0
             LPCTSTR vmstr;
             switch (vm)
             {
@@ -191,7 +191,7 @@ void DiaplayList_FillTreeView()
             case 6:  vmstr = _T("VM4 "); break;
             default: vmstr = _T("VM8 "); break;
             }
-            uint16_t palno = (otrhi >> 4) & 3;  // PN1 PN0 - íîìåð ïàëèòðû
+            uint16_t palno = (otrhi >> 4) & 3;  // PN1 PN0 - Ð½Ð¾Ð¼ÐµÑ€ Ð¿Ð°Ð»Ð¸Ñ‚Ñ€Ñ‹
 
             _sntprintf(buffer, buffersize, _T("%d: %06o:%06o dwlen:%d %s %s pal:%d"), otrno, otrhi, otrlo, otrcount, vdstr, vmstr, palno);
             tvins.hParent = hLine;
