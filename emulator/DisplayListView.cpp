@@ -155,7 +155,6 @@ void DiaplayList_FillTreeView()
         HTREEITEM hLine = (HTREEITEM)SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
         uint32_t lineaddr = (((uint32_t)linelo) << 2) | (((uint32_t)(linehi & 0x000f)) << 18);
-        bool firstOtr = true;  // Признак первого отрезка в строке
         int bar = 52;  // Счётчик полосок от 52 к 0
         for (int otrno = 1; ; otrno++)  // Цикл по видеоотрезкам строки, до полного заполнения строки
         {
@@ -165,11 +164,10 @@ void DiaplayList_FillTreeView()
             // Получаем параметры отрезка
             int otrcount = 32 - (otrhi >> 10) & 037;  // Длина отрезка в 32-разрядных словах
             if (otrcount == 0) otrcount = 32;
-            // Определяем, сколько 16-пиксельных полосок нужно заполнить
+            // Определяем, сколько 16-пиксельных полосок занимает отрезок;
+            // если отрезок не последний в строке, то его последняя полоска - бордюр
             int barcount = otrcount * 2;
-            if (!firstOtr) barcount--;
-            if (barcount > bar) barcount = bar;
-            bar -= barcount;
+            bar -= (barcount < bar) ? barcount : bar;
 
             uint16_t vd = (otrhi >> 8) & 3;  // биты VD1 VD0
             LPCTSTR vdstr;
@@ -198,7 +196,6 @@ void DiaplayList_FillTreeView()
             ::SendMessage(m_hwndDisplayListTreeView, TVM_INSERTITEM, 0, (LPARAM)&tvins);
 
             if (bar <= 0) break;
-            firstOtr = false;
         }
     }
 
