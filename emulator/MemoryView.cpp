@@ -31,6 +31,7 @@ HWND m_hwndMemoryViewer = (HWND)INVALID_HANDLE_VALUE;
 HWND m_hwndMemoryToolbar = (HWND)INVALID_HANDLE_VALUE;
 
 HWND m_hwndProcessListViewer = (HWND)INVALID_HANDLE_VALUE;
+HWND m_hwndPaletteViewer = (HWND)INVALID_HANDLE_VALUE;
 
 int m_cxChar = 0;
 int m_cyLineMemory = 0;  // Line height in pixels
@@ -62,6 +63,7 @@ WORD MemoryView_GetWordFromMemory(WORD address, BOOL& okValid, int& addrtype, WO
 void MemoryView_OnDraw(HDC hdc);
 
 void ProcessListView_OnDraw(HDC hdc);
+void PaletteView_OnDraw(HDC hdc);
 
 
 //////////////////////////////////////////////////////////////////////
@@ -83,6 +85,10 @@ void MemoryView_RegisterClass()
     wcex.lpszMenuName   = NULL;
     wcex.lpszClassName  = CLASSNAME_MEMORYVIEW;
     wcex.hIconSm        = NULL;
+    RegisterClassEx(&wcex);
+
+    wcex.lpfnWndProc = PaletteViewViewerWndProc;
+    wcex.lpszClassName = CLASSNAME_PALETTEVIEW;
     RegisterClassEx(&wcex);
 
     wcex.lpfnWndProc = ProcessListViewViewerWndProc;
@@ -123,6 +129,8 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     TabCtrl_InsertItem(m_hwndMemoryTab, 2, &tie);
     tie.pszText = _T(" Process List ");
     TabCtrl_InsertItem(m_hwndMemoryTab, 3, &tie);
+    tie.pszText = _T(" Palettes ");
+    TabCtrl_InsertItem(m_hwndMemoryTab, 4, &tie);
 
     HFONT hFont = CreateDialogFont();
     ::SendMessage(m_hwndMemoryTab, WM_SETFONT, (WPARAM)hFont, NULL);
@@ -142,6 +150,13 @@ void MemoryView_Create(HWND hwndParent, int x, int y, int width, int height)
     m_hwndProcessListViewer = CreateWindowEx(
             0,
             CLASSNAME_PROCESSLISTVIEW, NULL,
+            WS_CHILD | WS_VSCROLL | WS_TABSTOP,
+            32 + 4, 0, rcClient.right, rcClient.bottom,
+            g_hwndMemory, NULL, g_hInst, NULL);
+
+    m_hwndPaletteViewer = CreateWindowEx(
+            0,
+            CLASSNAME_PALETTEVIEW, NULL,
             WS_CHILD | WS_VSCROLL | WS_TABSTOP,
             32 + 4, 0, rcClient.right, rcClient.bottom,
             g_hwndMemory, NULL, g_hInst, NULL);
@@ -210,6 +225,8 @@ void MemoryView_AdjustWindowLayout()
         SetWindowPos(m_hwndMemoryViewer, NULL, rc.left, rc.top, cxViewer, rc.bottom - rc.top, SWP_NOZORDER);
     if (m_hwndProcessListViewer != (HWND)INVALID_HANDLE_VALUE)
         SetWindowPos(m_hwndProcessListViewer, NULL, rc.left, rc.top, cxViewer, rc.bottom - rc.top, SWP_NOZORDER);
+    if (m_hwndPaletteViewer != (HWND)INVALID_HANDLE_VALUE)
+        SetWindowPos(m_hwndPaletteViewer, NULL, rc.left, rc.top, cxViewer, rc.bottom - rc.top, SWP_NOZORDER);
 }
 
 LRESULT CALLBACK MemoryViewWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -449,9 +466,13 @@ void MemoryView_UpdateWindowText()
         _sntprintf(buffer, sizeof(buffer) / sizeof(TCHAR) - 1, format, MemoryView_GetMemoryModeName(), m_wCurrentAddress);
         ::SetWindowText(g_hwndMemory, buffer);
     }
-    else
+    else if (m_Mode == MEMMODE_PS)
     {
         ::SetWindowText(g_hwndMemory, _T("Memory - Process List"));
+    }
+    else
+    {
+        ::SetWindowText(g_hwndMemory, _T("Memory - Palettes"));
     }
 }
 
@@ -503,6 +524,7 @@ void MemoryView_SetViewMode(MemoryViewMode mode)
     bool okShowMemory = m_Mode <= MEMMODE_USER;
     ::ShowWindow(m_hwndMemoryViewer, okShowMemory ? SW_NORMAL : SW_HIDE);
     ::ShowWindow(m_hwndProcessListViewer, m_Mode == MEMMODE_PS ? SW_NORMAL : SW_HIDE);
+    ::ShowWindow(m_hwndPaletteViewer, m_Mode == MEMMODE_PAL ? SW_NORMAL : SW_HIDE);
 
     if (okShowMemory)
     {
@@ -513,6 +535,11 @@ void MemoryView_SetViewMode(MemoryViewMode mode)
     {
         ::InvalidateRect(m_hwndProcessListViewer, NULL, TRUE);
         ::SetFocus(m_hwndProcessListViewer);
+    }
+    if (m_Mode == MEMMODE_PAL)
+    {
+        ::InvalidateRect(m_hwndPaletteViewer, NULL, TRUE);
+        ::SetFocus(m_hwndPaletteViewer);
     }
 
     TabCtrl_SetCurSel(m_hwndMemoryTab, m_Mode);
@@ -875,7 +902,8 @@ void ProcessListView_OnDraw(HDC hdc)
     uint16_t pdptr = pBoard->GetRAMWordView(020572); // pointer to first process-descriptor
     uint16_t freepr = pBoard->GetRAMWordView(020006); // pointer to first free process-descriptor
     uint16_t running = pBoard->GetRAMWordView(020016); // pointer to current process
-    //uint16_t maplen = pBoard->GetRAMWordView(020002); // length of ram-bit-map in bytes
+    int maplen = pBoard->GetRAMWordView(020002); // length of ram-bit-map in bytes
+    if (maplen > 256) maplen = 256;
 
     int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
 
@@ -884,7 +912,7 @@ void ProcessListView_OnDraw(HDC hdc)
 
     uint16_t procno = 1;
     int y = cyLine * 2;
-    while (pdptr != 0 && pdptr != freepr)
+    while (pdptr != 0 && pdptr != freepr && procno <= 64)  // limit protects from a broken list in uninitialized RAM
     {
         uint16_t procinfo[PROLENW];
         for (int i = 0; i < PROLENW; i++)
@@ -917,28 +945,28 @@ void ProcessListView_OnDraw(HDC hdc)
         else
             statestr = _T("I/O ");
 
-        LPCTSTR memstr = _T("No memory map  ");
-        //TCHAR bufmem[18];
+        // Memory map: one bit per 4K block, a zero bit means the block is used;
+        // the first 4 words are the low memory, the rest is the high memory
+        LPCTSTR memstr = _T("No memory map");
+        TCHAR bufmem[18];
         uint16_t pmem = procinfo[23];
         if (pmem != 0)
         {
-            //int memsum = 0, addrlo = maplen * 8, addrhi = 0;
-            //for (int i = 0; i < (maplen + 1) / 2; i++)
-            //{
-            //    uint16_t membits = MemoryView_GetWordFromHalt((uint16_t)(pmem + i * 2));
-            //    for (int b = 0; b < 16; b++)
-            //    {
-            //        if (membits & 1)
-            //        {
-            //            memsum += 1;
-            //        }
-            //        membits = membits >> 1;
-            //    }
-            //}
+            int memlow = 0, memhigh = 0;
+            for (int i = 0; i < (maplen + 1) / 2; i++)
+            {
+                uint16_t membits = MemoryView_GetWordFromHalt((uint16_t)(pmem + i * 2));
+                for (int b = 0; b < 16; b++)
+                {
+                    if ((membits & (1 << b)) == 0)
+                    {
+                        if (i < 4) memlow += 4; else memhigh += 4;
+                    }
+                }
+            }
 
-            //_sntprintf(bufmem, 17, _T("%3dk  %3dk  %3dk"), memsum, 0, 0);
-            //memstr = bufmem;
-            memstr = _T("");
+            _sntprintf(bufmem, 17, _T("%3dk  %3dk  %3dk"), memlow + memhigh, memlow, memhigh);
+            memstr = bufmem;
         }
 
         TCHAR buffer[256];
@@ -948,6 +976,225 @@ void ProcessListView_OnDraw(HDC hdc)
         pdptr = procinfo[34];  // p.dsucc
         procno++;
         y += cyLine;
+    }
+
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
+}
+
+
+//////////////////////////////////////////////////////////////////////
+
+// Total number of text lines: Block 0 (1 + 16), Block 1 (1 + 12), VM8 palettes (2 * (1 + 16))
+const int PALETTEVIEW_LINES = 64;
+
+int m_nPaletteTopLine = 0;  // First visible line
+
+static int PaletteView_GetPageLines(HWND hWnd)
+{
+    HDC hdc = ::GetDC(hWnd);
+    HFONT hFont = CreateMonospacedFont();
+    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+    SelectObject(hdc, hOldFont);
+    VERIFY(::DeleteObject(hFont));
+    ::ReleaseDC(hWnd, hdc);
+
+    RECT rcClient;  GetClientRect(hWnd, &rcClient);
+    int page = rcClient.bottom / cyLine;
+    return (page < 1) ? 1 : page;
+}
+
+static void PaletteView_UpdateScroll(HWND hWnd)
+{
+    SCROLLINFO si;
+    ZeroMemory(&si, sizeof(si));
+    si.cbSize = sizeof(si);
+    si.fMask = SIF_PAGE | SIF_POS | SIF_RANGE | SIF_DISABLENOSCROLL;
+    si.nMin = 0;
+    si.nMax = PALETTEVIEW_LINES - 1;
+    si.nPage = PaletteView_GetPageLines(hWnd);
+    si.nPos = m_nPaletteTopLine;
+    SetScrollInfo(hWnd, SB_VERT, &si, TRUE);
+}
+
+static void PaletteView_SetTopLine(HWND hWnd, int topline)
+{
+    int maxtop = PALETTEVIEW_LINES - PaletteView_GetPageLines(hWnd);
+    if (maxtop < 0) maxtop = 0;
+    if (topline > maxtop) topline = maxtop;
+    if (topline < 0) topline = 0;
+    if (topline == m_nPaletteTopLine)
+        return;
+
+    m_nPaletteTopLine = topline;
+    PaletteView_UpdateScroll(hWnd);
+    ::InvalidateRect(hWnd, NULL, TRUE);
+}
+
+LRESULT CALLBACK PaletteViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+
+            PaletteView_OnDraw(hdc);
+
+            EndPaint(hWnd, &ps);
+        }
+        break;
+    case WM_SIZE:
+        PaletteView_SetTopLine(hWnd, m_nPaletteTopLine);  // Clamp to the new page size
+        PaletteView_UpdateScroll(hWnd);
+        ::InvalidateRect(hWnd, NULL, TRUE);
+        break;
+    case WM_LBUTTONDOWN:
+        ::SetFocus(hWnd);
+        break;
+    case WM_VSCROLL:
+        switch (LOWORD(wParam))
+        {
+        case SB_LINEUP:     PaletteView_SetTopLine(hWnd, m_nPaletteTopLine - 1); break;
+        case SB_LINEDOWN:   PaletteView_SetTopLine(hWnd, m_nPaletteTopLine + 1); break;
+        case SB_PAGEUP:     PaletteView_SetTopLine(hWnd, m_nPaletteTopLine - PaletteView_GetPageLines(hWnd)); break;
+        case SB_PAGEDOWN:   PaletteView_SetTopLine(hWnd, m_nPaletteTopLine + PaletteView_GetPageLines(hWnd)); break;
+        case SB_TOP:        PaletteView_SetTopLine(hWnd, 0); break;
+        case SB_BOTTOM:     PaletteView_SetTopLine(hWnd, PALETTEVIEW_LINES); break;
+        case SB_THUMBTRACK:
+        case SB_THUMBPOSITION:
+            PaletteView_SetTopLine(hWnd, HIWORD(wParam));
+            break;
+        }
+        break;
+    case WM_MOUSEWHEEL:
+        {
+            int nDelta = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
+            PaletteView_SetTopLine(hWnd, m_nPaletteTopLine - nDelta * 3);
+        }
+        break;
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_ESCAPE:     ConsoleView_Activate(); break;
+        case VK_UP:         PaletteView_SetTopLine(hWnd, m_nPaletteTopLine - 1); break;
+        case VK_DOWN:       PaletteView_SetTopLine(hWnd, m_nPaletteTopLine + 1); break;
+        case VK_PRIOR:      PaletteView_SetTopLine(hWnd, m_nPaletteTopLine - PaletteView_GetPageLines(hWnd)); break;
+        case VK_NEXT:       PaletteView_SetTopLine(hWnd, m_nPaletteTopLine + PaletteView_GetPageLines(hWnd)); break;
+        case VK_HOME:       PaletteView_SetTopLine(hWnd, 0); break;
+        case VK_END:        PaletteView_SetTopLine(hWnd, PALETTEVIEW_LINES); break;
+        default:
+            return TRUE;
+        }
+        return FALSE;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+    }
+    return (LRESULT)FALSE;
+}
+
+// Palette group: name and the video mode (VN) index in the palette block
+struct PaletteViewGroup
+{
+    LPCTSTR name;
+    int vn;
+};
+
+static const PaletteViewGroup PaletteViewBlock0[] = { { _T("VM1"), 0 }, { _T("VM2"), 1 }, { _T("VM40"), 2 }, { _T("VM41"), 3 } };
+static const PaletteViewGroup PaletteViewBlock1[] = { { _T("VM1"), 0 }, { _T("VM2"), 1 }, { _T("VM4"), 2 } };
+
+void PaletteView_OnDraw(HDC hdc)
+{
+    ASSERT(g_pBoard != NULL);
+
+    HFONT hFont = CreateMonospacedFont();
+    HGDIOBJ hOldFont = SelectObject(hdc, hFont);
+
+    int cxChar, cyLine;  GetFontWidthAndHeight(hdc, &cxChar, &cyLine);
+    ::SetTextColor(hdc, Settings_GetColor(ColorDebugText));
+    ::SetBkMode(hdc, TRANSPARENT);
+
+    const CMotherboard* pBoard = g_pBoard;
+    uint16_t vdptaplo = pBoard->GetRAMWordView(0000004);  // VDPTAP
+    uint16_t vdptaphi = pBoard->GetRAMWordView(0000006);  // VDPTAP
+    uint32_t tapaddr = (((uint32_t)vdptaplo) << 2) | (((uint32_t)(vdptaphi & 0x000f)) << 18);
+
+    const int x0 = 32 + 4 + cxChar * 1;
+    const int cxCell = cxChar * 3;
+    const int xCells = x0 + cxChar * 11;
+    int y = -m_nPaletteTopLine * cyLine;
+    for (int block = 0; block < 2; block++)
+    {
+        const PaletteViewGroup* groups = (block == 0) ? PaletteViewBlock0 : PaletteViewBlock1;
+        int groupCount = (block == 0) ? (int)(sizeof(PaletteViewBlock0) / sizeof(PaletteViewBlock0[0]))
+                : (int)(sizeof(PaletteViewBlock1) / sizeof(PaletteViewBlock1[0]));
+
+        TCHAR buffer[32];
+        _sntprintf(buffer, 31, _T("Block %d"), block);
+        TextOut(hdc, x0, y, buffer, (int)_tcslen(buffer));
+        y += cyLine;
+
+        for (int g = 0; g < groupCount; g++)
+        {
+            for (int pal = 0; pal < 4; pal++)
+            {
+                _sntprintf(buffer, 31, _T("  %-4s #%d"), (pal == 0) ? groups[g].name : _T(""), pal);
+                TextOut(hdc, x0, y, buffer, (int)_tcslen(buffer));
+
+                uint32_t paladdr = tapaddr + block * 512 + groups[g].vn * 64 + pal * 16;
+                for (int i = 0; i < 16; i++)
+                {
+                    uint16_t hi = pBoard->GetRAMByteView(paladdr + i);
+                    uint16_t lo = pBoard->GetRAMByteView(paladdr + i + 256);
+                    COLORREF color = Color16Convert((uint16_t)(hi << 8 | lo));
+
+                    RECT rcCell;
+                    rcCell.left = xCells + i * cxCell;
+                    rcCell.right = rcCell.left + cxCell - 1;
+                    rcCell.top = y;
+                    rcCell.bottom = y + cyLine - 1;
+                    HBRUSH hbrCell = ::CreateSolidBrush(color);
+                    ::FillRect(hdc, &rcCell, hbrCell);
+                    VERIFY(::DeleteObject(hbrCell));
+                }
+                y += cyLine;
+            }
+        }
+    }
+
+    // VM8 palettes: two palettes of 256 colors, 16x16 matrix each, preceded and separated by an empty line
+    for (int pal = 0; pal < 2; pal++)
+    {
+        y += cyLine;
+        uint32_t paladdr = tapaddr + 1024 + pal * 512;
+        for (int row = 0; row < 16; row++)
+        {
+            if (row == 0)
+            {
+                TCHAR bufpal[16];
+                _sntprintf(bufpal, 15, _T("  %-4s #%d"), _T("VM8"), pal);  // same format as the block rows
+                TextOut(hdc, x0, y, bufpal, (int)_tcslen(bufpal));
+            }
+            for (int i = 0; i < 16; i++)
+            {
+                uint32_t offset = row * 16 + i;
+                uint16_t hi = pBoard->GetRAMByteView(paladdr + offset);
+                uint16_t lo = pBoard->GetRAMByteView(paladdr + offset + 256);
+                COLORREF color = Color16Convert((uint16_t)(hi << 8 | lo));
+
+                RECT rcCell;
+                rcCell.left = xCells + i * cxCell;
+                rcCell.right = rcCell.left + cxCell - 1;
+                rcCell.top = y;
+                rcCell.bottom = y + cyLine - 1;
+                HBRUSH hbrCell = ::CreateSolidBrush(color);
+                ::FillRect(hdc, &rcCell, hbrCell);
+                VERIFY(::DeleteObject(hbrCell));
+            }
+            y += cyLine;
+        }
     }
 
     SelectObject(hdc, hOldFont);

@@ -33,6 +33,7 @@ const LPCTSTR CLASSNAME_SPRITEVIEW      = CLASSNAMEPREFIX _T("SPRITE");
 const LPCTSTR CLASSNAME_CONSOLEVIEW     = CLASSNAMEPREFIX _T("CONSOLE");
 const LPCTSTR CLASSNAME_DISPLAYLISTVIEW = CLASSNAMEPREFIX _T("DISPLAYLIST");
 const LPCTSTR CLASSNAME_PROCESSLISTVIEW = CLASSNAMEPREFIX _T("PROCESSLIST");
+const LPCTSTR CLASSNAME_PALETTEVIEW     = CLASSNAMEPREFIX _T("PALETTE");
 
 
 //////////////////////////////////////////////////////////////////////
@@ -129,7 +130,8 @@ enum MemoryViewMode
     MEMMODE_HALT = 1,  // HALT mode memory
     MEMMODE_USER = 2,  // USER mode memory
     MEMMODE_PS   = 3,  // Process List
-    MEMMODE_LAST = 3,  // Last mode
+    MEMMODE_PAL  = 4,  // Palettes
+    MEMMODE_LAST = 4,  // Last mode
 };
 
 enum MemoryViewNumeralMode
@@ -181,5 +183,10 @@ LRESULT CALLBACK DisplayListViewViewerWndProc(HWND hWnd, UINT message, WPARAM wP
 // ProcessListView
 
 LRESULT CALLBACK ProcessListViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+//////////////////////////////////////////////////////////////////////
+// PaletteView
+
+LRESULT CALLBACK PaletteViewViewerWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 //////////////////////////////////////////////////////////////////////

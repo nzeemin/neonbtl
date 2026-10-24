@@ -66,6 +66,7 @@ void Emulator_UpdateKeyboardMatrix(const uint8_t matrix[8]);
 
 void Emulator_GetScreenSize(int scrmode, int* pwid, int* phei);
 void Emulator_PrepareScreenRGB32(void* pImageBits, int screenMode);
+uint32_t Color16Convert(uint16_t color);  // Palette 16-bit color to COLORREF
 
 // Instruction history, always recorded
 const int INSTR_HISTORY_SIZE = 256;  // Must be a power of two
